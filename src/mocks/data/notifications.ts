@@ -1,0 +1,30 @@
+export const mockNotifications = [
+    {
+        id: 'notif-1',
+        org_id: 'org-1',
+        project_id: 'prj-1',
+        created_at: '2025-01-20T10:00:00Z',
+        notification_type: 'TASK_ASSIGNED',
+        title: 'Công việc mới được giao',
+        body: 'Bạn đã được giao nhiệm vụ "Thiết kế Mock Data System".',
+        entity_type: 'TASK',
+        entity_id: 'task-1',
+        actor: { id: 'user-pm', full_name: 'Lê Văn PM' },
+        project: { id: 'prj-1', name: 'Worksphere Platform' },
+        is_read: false,
+    },
+    {
+        id: 'notif-2',
+        org_id: 'org-1',
+        project_id: 'prj-1',
+        created_at: '2025-01-19T09:00:00Z',
+        notification_type: 'COMMENT',
+        title: 'Bình luận mới',
+        body: 'Lê Văn PM đã bình luận trong công việc của bạn.',
+        entity_type: 'TASK',
+        entity_id: 'task-1',
+        actor: { id: 'user-pm', full_name: 'Lê Văn PM' },
+        project: { id: 'prj-1', name: 'Worksphere Platform' },
+        is_read: true,
+    }
+];

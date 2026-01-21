@@ -1,0 +1,81 @@
+export const mockUsers = [
+    {
+        id: 'user-sysadmin',
+        email: 'sysadmin@platform.com',
+        full_name: 'System Administrator',
+        status: 'ACTIVE',
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+    },
+    {
+        id: 'user-orgadmin',
+        email: 'admin@worksphere.com',
+        full_name: 'Nguyễn Văn Admin',
+        status: 'ACTIVE',
+        created_at: '2025-01-01T08:00:00Z',
+        updated_at: '2025-01-01T08:00:00Z',
+    },
+    {
+        id: 'user-ceo',
+        email: 'ceo@worksphere.com',
+        full_name: 'Trần Văn CEO',
+        status: 'ACTIVE',
+        created_at: '2025-01-01T09:00:00Z',
+        updated_at: '2025-01-01T09:00:00Z',
+    },
+    {
+        id: 'user-pm',
+        email: 'pm@worksphere.com',
+        full_name: 'Lê Văn PM',
+        status: 'ACTIVE',
+        created_at: '2025-01-02T10:00:00Z',
+        updated_at: '2025-01-02T10:00:00Z',
+    },
+    {
+        id: 'user-emp',
+        email: 'emp@worksphere.com',
+        full_name: 'Phạm Văn Nhân Viên',
+        status: 'ACTIVE',
+        created_at: '2025-01-03T11:00:00Z',
+        updated_at: '2025-01-03T11:00:00Z',
+    }
+];
+
+export const mockOrgMemberships = [
+    {
+        org_id: 'org-1',
+        user_id: 'user-orgadmin',
+        member_status: 'ACTIVE',
+        join_method: 'MANUAL',
+        activated_at: '2025-01-01T08:00:00Z',
+    },
+    {
+        org_id: 'org-1',
+        user_id: 'user-ceo',
+        member_status: 'ACTIVE',
+        join_method: 'MANUAL',
+        activated_at: '2025-01-01T09:00:00Z',
+    },
+    {
+        org_id: 'org-1',
+        user_id: 'user-pm',
+        member_status: 'ACTIVE',
+        join_method: 'INVITE',
+        activated_at: '2025-01-02T10:00:00Z',
+    },
+    {
+        org_id: 'org-1',
+        user_id: 'user-emp',
+        member_status: 'ACTIVE',
+        join_method: 'INVITE',
+        activated_at: '2025-01-03T11:00:00Z',
+    }
+];
+
+export const mockUserRoles = [
+    { user_id: 'user-sysadmin', role_code: 'SYS_ADMIN', org_id: null },
+    { user_id: 'user-orgadmin', role_code: 'ORG_ADMIN', org_id: 'org-1' },
+    { user_id: 'user-ceo', role_code: 'CEO', org_id: 'org-1' },
+    { user_id: 'user-pm', role_code: 'PROJECT_MANAGER', org_id: 'org-1' },
+    { user_id: 'user-emp', role_code: 'EMPLOYEE', org_id: 'org-1' },
+];

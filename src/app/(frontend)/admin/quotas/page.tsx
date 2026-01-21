@@ -1,0 +1,387 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+    Shield,
+    Users,
+    HardDrive,
+    Layers,
+    Save,
+    Search,
+    Info,
+    AlertCircle,
+    CheckCircle2,
+    TrendingUp,
+    Loader2,
+    Building2,
+    Edit3
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import AppLayout from '@/components/layout/AppLayout';
+import { useAuthStore } from '@/stores/authStore';
+import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface OrgQuota {
+    id: string;
+    org_name: string;
+    max_users: number;
+    current_users: number;
+    max_storage_gb: number;
+    current_storage_gb: number;
+    max_projects: number;
+    current_projects: number;
+    status: 'ACTIVE' | 'WARNING' | 'EXCEEDED';
+}
+
+export default function AdminQuotasPage() {
+    const { user } = useAuthStore();
+    const [quotas, setQuotas] = useState<OrgQuota[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [selectedOrg, setSelectedOrg] = useState<OrgQuota | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [filterType, setFilterType] = useState('ALL');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const isSysAdmin = user?.role === 'SYS_ADMIN';
+
+    useEffect(() => {
+        const fetchQuotas = async () => {
+            setLoading(true);
+            try {
+                // Mock data
+                await new Promise(r => setTimeout(r, 800));
+                setQuotas([
+                    {
+                        id: 'org1',
+                        org_name: 'TechCorp Global',
+                        max_users: 50,
+                        current_users: 42,
+                        max_storage_gb: 100,
+                        current_storage_gb: 85,
+                        max_projects: 20,
+                        current_projects: 18,
+                        status: 'WARNING'
+                    },
+                    {
+                        id: 'org2',
+                        org_name: 'Creative Studio',
+                        max_users: 10,
+                        current_users: 5,
+                        max_storage_gb: 20,
+                        current_storage_gb: 2,
+                        max_projects: 5,
+                        current_projects: 2,
+                        status: 'ACTIVE'
+                    },
+                    {
+                        id: 'org3',
+                        org_name: 'Fast Delivery Inc',
+                        max_users: 100,
+                        current_users: 98,
+                        max_storage_gb: 500,
+                        current_storage_gb: 490,
+                        max_projects: 50,
+                        current_projects: 52, // Over quota
+                        status: 'EXCEEDED'
+                    }
+                ]);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (user) fetchQuotas();
+    }, [user]);
+
+    const handleEditQuota = (org: OrgQuota) => {
+        setSelectedOrg(org);
+        setIsEditOpen(true);
+    };
+
+    const handleSaveQuota = async () => {
+        setIsSaving(true);
+        await new Promise(r => setTimeout(r, 1000));
+        setIsEditOpen(false);
+        setIsSaving(false);
+    };
+
+    if (!isSysAdmin) {
+        return (
+            <AppLayout>
+                <div className="flex flex-col items-center justify-center py-32 text-center h-[70vh]">
+                    <Shield size={48} className="text-rose-500 mb-6" />
+                    <h2 className="text-2xl font-black text-slate-900">Platform Management Restricted</h2>
+                    <p className="text-slate-500 mt-2 max-w-xs font-medium">Quota management is only accessible to System Administrators.</p>
+                </div>
+            </AppLayout>
+        );
+    }
+
+    const filteredQuotas = quotas.filter(q => {
+        const matchesSearch = q.org_name.toLowerCase().includes(searchQuery.toLowerCase());
+        if (filterType === 'ALL') return matchesSearch;
+        if (filterType === 'USERS') return matchesSearch && q.current_users / q.max_users >= 0.8;
+        if (filterType === 'STORAGE') return matchesSearch && q.current_storage_gb / q.max_storage_gb >= 0.8;
+        if (filterType === 'PROJECTS') return matchesSearch && q.current_projects / q.max_projects >= 0.8;
+        return matchesSearch;
+    });
+
+    return (
+        <AppLayout>
+            <div className="max-w-7xl mx-auto pb-20 animate-in fade-in duration-700" data-testid="admin-quotas-container">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Badge className="bg-blue-600 text-white border-none text-[10px] font-black tracking-widest uppercase">System Control</Badge>
+                        </div>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight" data-testid="admin-quotas-title">
+                            Organization Quotas
+                        </h1>
+                        <p className="text-slate-500 font-medium">Monitor and manage resource limits for all tenant organizations.</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
+                        <div className="px-4 py-2 border-r border-slate-100">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Organizations</p>
+                            <p className="text-lg font-black text-slate-900">{quotas.length}</p>
+                        </div>
+                        <div className="px-4 py-2">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Over Quota</p>
+                            <p className="text-lg font-black text-rose-600">{quotas.filter(q => q.status === 'EXCEEDED').length}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Main Table */}
+                <Card className="border-none shadow-sm bg-white overflow-hidden">
+                    <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+                        <div className="relative group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+                            <Input
+                                placeholder="Search organization..."
+                                className="pl-10 h-10 w-72 bg-white border-slate-200 rounded-xl text-sm font-semibold shadow-sm focus:ring-1 focus:ring-blue-500"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            <Select value={filterType} onValueChange={setFilterType}>
+                                <SelectTrigger className="w-[180px] h-10 border-slate-200 rounded-xl" data-testid="filter-quota-type">
+                                    <SelectValue placeholder="Xem theo giới hạn" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">Tất cả</SelectItem>
+                                    <SelectItem value="USERS">Cảnh báo Seats</SelectItem>
+                                    <SelectItem value="STORAGE">Cảnh báo Dung lượng</SelectItem>
+                                    <SelectItem value="PROJECTS">Cảnh báo Dự án</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Button variant="outline" size="sm" className="h-10 px-4 font-bold border-slate-200">
+                                <TrendingUp className="mr-2 h-4 w-4" /> Usage Optimization
+                            </Button>
+                        </div>
+                    </div>
+                    <CardContent className="p-0">
+                        <Table data-testid="quotas-table">
+                            <TableHeader>
+                                <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                                    <TableHead className="px-8 py-6 font-black text-slate-500 uppercase tracking-widest text-[10px]">Organization</TableHead>
+                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">User Seats</TableHead>
+                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Storage (GB)</TableHead>
+                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Projects</TableHead>
+                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Status</TableHead>
+                                    <TableHead className="text-right px-8"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {loading ? (
+                                    Array.from({ length: 3 }).map((_, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell className="px-8"><Skeleton className="h-6 w-48" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                                            <TableCell className="text-right px-8"><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : filteredQuotas.map((org) => (
+                                    <TableRow key={org.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <TableCell className="px-8 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+                                                    <Building2 size={18} />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-slate-900">{org.org_name}</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: {org.id}</span>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="space-y-1.5 w-32">
+                                                <div className="flex justify-between text-[10px] font-black text-slate-400">
+                                                    <span>{org.current_users}/{org.max_users}</span>
+                                                    <span>{Math.round((org.current_users / org.max_users) * 100)}%</span>
+                                                </div>
+                                                <Progress value={(org.current_users / org.max_users) * 100} className="h-1.5 bg-slate-100" />
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="space-y-1.5 w-32">
+                                                <div className="flex justify-between text-[10px] font-black text-slate-400">
+                                                    <span>{org.current_storage_gb}/{org.max_storage_gb}</span>
+                                                    <span>{Math.round((org.current_storage_gb / org.max_storage_gb) * 100)}%</span>
+                                                </div>
+                                                <Progress value={(org.current_storage_gb / org.max_storage_gb) * 100} className="h-1.5 bg-slate-100" />
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="space-y-1.5 w-32">
+                                                <div className="flex justify-between text-[10px] font-black text-slate-400">
+                                                    <span>{org.current_projects}/{org.max_projects}</span>
+                                                    <span>{Math.round((org.current_projects / org.max_projects) * 100)}%</span>
+                                                </div>
+                                                <Progress value={(org.current_projects / org.max_projects) * 100} className="h-1.5 bg-slate-100" />
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge className={cn(
+                                                "border-none font-bold text-[10px] uppercase tracking-widest px-2.5",
+                                                org.status === 'ACTIVE' ? "bg-emerald-50 text-emerald-700" :
+                                                    org.status === 'WARNING' ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
+                                            )}>
+                                                {org.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right px-8">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-9 w-9 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all rounded-xl"
+                                                onClick={() => handleEditQuota(org)}
+                                                data-testid={`edit-quota-${org.id}`}
+                                            >
+                                                <Edit3 size={18} />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+
+                {/* Edit Dialog */}
+                <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                    <DialogContent className="max-w-md" data-testid="edit-quota-dialog">
+                        <DialogHeader>
+                            <DialogTitle>Update Organization Quota</DialogTitle>
+                            <DialogDescription>
+                                Set hard limits for <strong>{selectedOrg?.org_name}</strong> resources.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-6 py-4">
+                            <div className="space-y-3">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                    <Users size={14} className="text-blue-500" /> Max User Seats
+                                </label>
+                                <Input type="number" defaultValue={selectedOrg?.max_users} className="h-11 font-bold" data-testid="input-max-users" />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                    <HardDrive size={14} className="text-blue-500" /> Max Storage (GB)
+                                </label>
+                                <Input type="number" defaultValue={selectedOrg?.max_storage_gb} className="h-11 font-bold" data-testid="input-max-storage" />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                    <Layers size={14} className="text-blue-500" /> Max Project Count
+                                </label>
+                                <Input type="number" defaultValue={selectedOrg?.max_projects} className="h-11 font-bold" data-testid="input-max-projects" />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="ghost" className="font-bold" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+                            <Button
+                                className="bg-blue-600 hover:bg-blue-700 font-bold px-8 shadow-lg shadow-blue-100"
+                                onClick={handleSaveQuota}
+                                disabled={isSaving}
+                                data-testid="save-quota-btn"
+                            >
+                                {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : "Save Changes"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Info Panel */}
+                <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <Card className="border-none shadow-sm bg-slate-900 text-white p-8 rounded-3xl overflow-hidden relative group">
+                        <div className="relative z-10 space-y-4">
+                            <div className="flex items-center gap-3 text-blue-400">
+                                <Info size={20} />
+                                <h4 className="text-sm font-black uppercase tracking-widest">Platform Note</h4>
+                            </div>
+                            <p className="text-xs font-semibold text-slate-400 leading-relaxed">
+                                Quotas are enforced at the API level. When an organization hits 90% of a limit, users will see a warning.
+                                At 100%, write operations will be blocked until the quota is increased.
+                            </p>
+                            <Button variant="link" className="p-0 h-auto text-blue-400 text-[10px] font-black uppercase tracking-widest">View Platform SLA</Button>
+                        </div>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-all duration-700"></div>
+                    </Card>
+
+                    <Card className="border-none shadow-sm bg-white p-8 rounded-3xl">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 text-emerald-600">
+                                <TrendingUp size={20} />
+                                <h4 className="text-sm font-black uppercase tracking-widest">Growth Forecast</h4>
+                            </div>
+                            <p className="text-xs font-semibold text-slate-500 leading-relaxed">
+                                Based on the last 30 days, <strong>Fast Delivery Inc</strong> will exceed their storage limit in 12 days.
+                                Consider proactive outreach for an upgrade plan.
+                            </p>
+                            <div className="p-3 bg-emerald-50 rounded-xl flex items-center gap-3 text-emerald-700">
+                                <CheckCircle2 size={16} />
+                                <span className="text-[10px] font-bold">Recommended: Business Tier (500GB)</span>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        </AppLayout>
+    );
+}

@@ -1,0 +1,1076 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ActivityEvent {
+  id            String       @id @db.Char(36)
+  org_id        String       @db.Char(36)
+  project_id    String?      @db.Char(36)
+  actor_user_id String       @db.Char(36)
+  activity_date DateTime     @db.Date
+  occurred_at   DateTime     @default(now()) @db.DateTime(0)
+  activity_type String       @db.VarChar(50)
+  entity_type   String?      @db.VarChar(50)
+  entity_id     String?      @db.Char(36)
+  summary       String       @db.VarChar(500)
+  metadata      Json?
+  actor         User         @relation(fields: [actor_user_id], references: [id], onDelete: NoAction, map: "fk_act_actor")
+  organization  Organization @relation(fields: [org_id], references: [id], onDelete: NoAction, map: "fk_act_org")
+  project       Project?     @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: NoAction, map: "fk_act_proj")
+
+  @@index([actor_user_id], map: "fk_act_actor")
+  @@index([org_id, activity_date, actor_user_id], map: "idx_act_org_date_actor")
+  @@index([org_id, occurred_at], map: "idx_act_org_occurred")
+  @@index([org_id, project_id, activity_date], map: "idx_act_org_project_date")
+  @@map("activity_events")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model AuditLog {
+  id                       String                @id @db.Char(36)
+  occurred_at              DateTime              @default(now()) @db.DateTime(0)
+  org_id                   String?               @db.Char(36)
+  actor_user_id            String?               @db.Char(36)
+  impersonation_session_id String?               @db.Char(36)
+  action                   String                @db.VarChar(100)
+  entity_type              String                @db.VarChar(100)
+  entity_id                String?               @db.Char(36)
+  before_data              Json?
+  after_data               Json?
+  ip_address               String?               @db.VarChar(64)
+  user_agent               String?               @db.Text
+  request_id               String?               @db.VarChar(100)
+  organization             Organization?         @relation(fields: [org_id], references: [id], onDelete: NoAction, map: "fk_aud_org")
+  impersonation_session    ImpersonationSession? @relation(fields: [impersonation_session_id], references: [id], onDelete: NoAction, map: "fk_aud_sess")
+  actor                    User?                 @relation(fields: [actor_user_id], references: [id], onDelete: NoAction, map: "fk_aud_user")
+
+  @@index([org_id], map: "fk_aud_org")
+  @@index([impersonation_session_id], map: "fk_aud_sess")
+  @@index([actor_user_id], map: "fk_aud_user")
+  @@map("audit_logs")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model CustomFieldDefinition {
+  id                  String             @id @db.Char(36)
+  org_id              String             @db.Char(36)
+  project_id          String             @db.Char(36)
+  entity_type         String             @db.VarChar(20)
+  field_name          String             @db.VarChar(100)
+  field_type          String             @db.VarChar(20)
+  select_options      Json?
+  is_required         Boolean            @default(false)
+  created_at          DateTime           @default(now()) @db.DateTime(0)
+  created_by          String?            @db.Char(36)
+  organization        Organization       @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_cfd_org")
+  project             Project            @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: Cascade, map: "fk_cfd_proj")
+  custom_field_values CustomFieldValue[]
+
+  @@unique([org_id, project_id, entity_type, field_name], map: "uq_cfd_name")
+  @@map("custom_field_definitions")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model CustomFieldValue {
+  org_id                  String                @db.Char(36)
+  field_id                String                @db.Char(36)
+  entity_id               String                @db.Char(36)
+  field_value             String?               @db.Text
+  custom_field_definition CustomFieldDefinition @relation(fields: [field_id], references: [id], onDelete: Cascade, map: "fk_cfv_def")
+
+  @@id([org_id, field_id, entity_id])
+  @@index([field_id], map: "fk_cfv_def")
+  @@map("custom_field_values")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Document {
+  id                  String              @id @db.Char(36)
+  org_id              String              @db.Char(36)
+  title               String              @db.VarChar(255)
+  doc_type            String              @default("TEMPLATE") @db.VarChar(30)
+  storage_provider    String?             @db.VarChar(30)
+  storage_key         String?             @db.VarChar(1024)
+  mime_type           String?             @db.VarChar(100)
+  file_size_bytes     BigInt?
+  url                 String?             @db.Text
+  created_at          DateTime            @default(now()) @db.DateTime(0)
+  created_by          String              @db.Char(36)
+  deleted_at          DateTime?           @db.DateTime(0)
+  organization        Organization        @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_doc_org")
+  creator             User                @relation(fields: [created_by], references: [id], onDelete: NoAction, map: "fk_doc_user")
+  project_resources   ProjectResource[]
+  subtask_attachments SubtaskAttachment[]
+  task_attachments    TaskAttachment[]
+  user_contracts      UserContract[]
+
+  @@unique([org_id, id], map: "uq_doc_tenant_composite")
+  @@index([created_by], map: "fk_doc_user")
+  @@map("documents")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model EmployeeCompensation {
+  id               String       @id @db.Char(36)
+  org_id           String       @db.Char(36)
+  user_id          String       @db.Char(36)
+  level_id         String?      @db.Char(36)
+  currency         String       @default("VND") @db.Char(3)
+  monthly_salary   Decimal?     @db.Decimal(18, 2)
+  hourly_cost_rate Decimal?     @db.Decimal(18, 2)
+  effective_from   DateTime     @db.Date
+  effective_to     DateTime?    @db.Date
+  created_at       DateTime     @default(now()) @db.DateTime(0)
+  created_by       String?      @db.Char(36)
+  creator          User?        @relation("CompCreator", fields: [created_by], references: [id], onDelete: NoAction, map: "fk_comp_created_by")
+  job_level        JobLevel?    @relation(fields: [level_id], references: [id], map: "fk_comp_lvl")
+  organization     Organization @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_comp_org")
+  user             User         @relation("CompUser", fields: [user_id], references: [id], onDelete: Cascade, map: "fk_comp_user")
+
+  @@index([created_by], map: "fk_comp_created_by")
+  @@index([level_id], map: "fk_comp_lvl")
+  @@index([org_id], map: "fk_comp_org")
+  @@index([user_id], map: "fk_comp_user")
+  @@map("employee_compensations")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ImpersonationSession {
+  id              String        @id @db.Char(36)
+  org_id          String?       @db.Char(36)
+  actor_user_id   String        @db.Char(36)
+  subject_user_id String        @db.Char(36)
+  reason          String        @db.Text
+  started_at      DateTime      @default(now()) @db.DateTime(0)
+  ended_at        DateTime?     @db.DateTime(0)
+  ended_reason    String?       @db.Text
+  request_id      String?       @db.VarChar(100)
+  audit_logs      AuditLog[]
+  actor           User          @relation("ImpActor", fields: [actor_user_id], references: [id], onDelete: NoAction, map: "fk_imp_actor")
+  organization    Organization? @relation(fields: [org_id], references: [id], onDelete: NoAction, map: "fk_imp_org")
+  subject         User          @relation("ImpSubject", fields: [subject_user_id], references: [id], onDelete: NoAction, map: "fk_imp_subject")
+
+  @@index([actor_user_id], map: "fk_imp_actor")
+  @@index([org_id], map: "fk_imp_org")
+  @@index([subject_user_id], map: "fk_imp_subject")
+  @@map("impersonation_sessions")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model JobLevel {
+  id                     String                 @id @db.Char(36)
+  org_id                 String                 @db.Char(36)
+  code                   String                 @db.VarChar(50)
+  name                   String                 @db.VarChar(100)
+  sort_order             Int                    @default(0)
+  created_at             DateTime               @default(now()) @db.DateTime(0)
+  employee_compensations EmployeeCompensation[]
+  organization           Organization           @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_lvl_org")
+
+  @@unique([org_id, code], map: "uq_level_code")
+  @@map("job_levels")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model NotificationRecipient {
+  notification_id String       @db.Char(36)
+  user_id         String       @db.Char(36)
+  is_read         Boolean      @default(false)
+  read_at         DateTime?    @db.DateTime(0)
+  notification    Notification @relation(fields: [notification_id], references: [id], onDelete: Cascade, map: "fk_nr_notif")
+  user            User         @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_nr_user")
+
+  @@id([notification_id, user_id])
+  @@index([user_id, is_read, notification_id], map: "idx_nr_user_read")
+  @@map("notification_recipients")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Notification {
+  id                      String                  @id @db.Char(36)
+  org_id                  String                  @db.Char(36)
+  project_id              String?                 @db.Char(36)
+  created_at              DateTime                @default(now()) @db.DateTime(0)
+  notification_type       String                  @db.VarChar(50)
+  title                   String                  @db.VarChar(255)
+  body                    String                  @db.Text
+  entity_type             String?                 @db.VarChar(50)
+  entity_id               String?                 @db.Char(36)
+  actor_user_id           String?                 @db.Char(36)
+  metadata                Json?
+  notification_recipients NotificationRecipient[]
+  actor                   User?                   @relation(fields: [actor_user_id], references: [id], onDelete: NoAction, map: "fk_notif_actor")
+  organization            Organization            @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_notif_org")
+  project                 Project?                @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: Cascade, map: "fk_notif_proj")
+
+  @@index([actor_user_id], map: "fk_notif_actor")
+  @@index([org_id, created_at], map: "idx_notif_org_created")
+  @@index([org_id, project_id, created_at], map: "idx_notif_org_project_created")
+  @@map("notifications")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model OrgInvite {
+  id           String       @id @db.Char(36)
+  org_id       String       @db.Char(36)
+  invite_code  String       @unique(map: "invite_code") @db.VarChar(128)
+  email_hint   String?
+  expires_at   DateTime     @db.DateTime(0)
+  revoked_at   DateTime?    @db.DateTime(0)
+  revoked_by   String?      @db.Char(36)
+  created_at   DateTime     @default(now()) @db.DateTime(0)
+  created_by   String       @db.Char(36)
+  organization Organization @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_inv_org")
+  creator      User         @relation(fields: [created_by], references: [id], onDelete: NoAction, map: "fk_inv_user")
+
+  @@index([org_id], map: "fk_inv_org")
+  @@index([created_by], map: "fk_inv_user")
+  @@map("org_invites")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model OrgMembership {
+  org_id         String       @db.Char(36)
+  user_id        String       @db.Char(36)
+  member_status  String       @default("ACTIVE") @db.VarChar(30)
+  join_method    String       @default("MANUAL") @db.VarChar(30)
+  invited_by     String?      @db.Char(36)
+  invited_at     DateTime?    @db.DateTime(0)
+  activated_at   DateTime?    @db.DateTime(0)
+  deactivated_at DateTime?    @db.DateTime(0)
+  deactivated_by String?      @db.Char(36)
+  created_at     DateTime     @default(now()) @db.DateTime(0)
+  updated_at     DateTime     @default(now()) @db.DateTime(0)
+  organization   Organization @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_mem_org")
+  user           User         @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_mem_user")
+
+  @@id([org_id, user_id])
+  @@index([user_id], map: "fk_mem_user")
+  @@map("org_memberships")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model OrgQuota {
+  org_id         String       @id @db.Char(36)
+  max_users      Int          @default(50)
+  max_storage_mb Int          @default(1024)
+  max_projects   Int          @default(50)
+  effective_from DateTime     @db.Date
+  effective_to   DateTime?    @db.Date
+  created_at     DateTime     @default(now()) @db.DateTime(0)
+  created_by     String?      @db.Char(36)
+  creator        User?        @relation(fields: [created_by], references: [id], onDelete: NoAction, map: "fk_quota_created_by")
+  organization   Organization @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_quota_org")
+
+  @@index([created_by], map: "fk_quota_created_by")
+  @@map("org_quotas")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Organization {
+  id                       String                  @id @db.Char(36)
+  code                     String                  @unique(map: "code") @db.VarChar(50)
+  name                     String                  @db.VarChar(255)
+  status                   String                  @default("ACTIVE") @db.VarChar(30)
+  timezone                 String                  @default("Asia/Ho_Chi_Minh") @db.VarChar(64)
+  created_at               DateTime                @default(now()) @db.DateTime(0)
+  created_by               String?                 @db.Char(36)
+  updated_at               DateTime                @default(now()) @db.DateTime(0)
+  updated_by               String?                 @db.Char(36)
+  deleted_at               DateTime?               @db.DateTime(0)
+  deleted_by               String?                 @db.Char(36)
+  activity_events          ActivityEvent[]
+  audit_logs               AuditLog[]
+  custom_field_definitions CustomFieldDefinition[]
+  documents                Document[]
+  employee_compensations   EmployeeCompensation[]
+  impersonation_sessions   ImpersonationSession[]
+  job_levels               JobLevel[]
+  notifications            Notification[]
+  org_invites              OrgInvite[]
+  org_memberships          OrgMembership[]
+  org_quotas               OrgQuota?
+  creator                  User?                   @relation("OrgCreator", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_org_created_by")
+  deleter                  User?                   @relation("OrgDeleter", fields: [deleted_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_org_deleted_by")
+  updater                  User?                   @relation("OrgUpdater", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_org_updated_by")
+  personal_tasks           PersonalTask[]
+  projects                 Project[]
+  recycle_bin_items        RecycleBinItem[]
+  reports                  Report[]
+  roles                    Role[]
+  tags                     Tag[]
+  user_contracts           UserContract[]
+  user_roles               UserRole[]
+
+  @@index([created_by], map: "fk_org_created_by")
+  @@index([deleted_by], map: "fk_org_deleted_by")
+  @@index([updated_by], map: "fk_org_updated_by")
+  @@map("organizations")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Permission {
+  id               String           @id @db.Char(36)
+  code             String           @unique(map: "code") @db.VarChar(100)
+  description      String           @db.VarChar(500)
+  created_at       DateTime         @default(now()) @db.DateTime(0)
+  role_permissions RolePermission[]
+
+  @@map("permissions")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model PersonalTask {
+  id            String       @id @db.Char(36)
+  user_id       String       @db.Char(36)
+  org_id        String       @db.Char(36)
+  title         String       @db.VarChar(500)
+  description   String?      @db.Text
+  status_code   String       @default("TODO") @db.VarChar(30)
+  priority_code String       @default("MEDIUM") @db.VarChar(30)
+  due_date      DateTime?    @db.Date
+  sort_order    Int          @default(0)
+  created_at    DateTime     @default(now()) @db.DateTime(0)
+  updated_at    DateTime     @default(now()) @db.DateTime(0)
+  organization  Organization @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_pt_org")
+  priority      TaskPriority @relation(fields: [priority_code], references: [code], onDelete: NoAction, map: "fk_pt_priority")
+  status        TaskStatus   @relation(fields: [status_code], references: [code], onDelete: NoAction, map: "fk_pt_status")
+  user          User         @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_pt_user")
+
+  @@index([org_id], map: "fk_pt_org")
+  @@index([priority_code], map: "fk_pt_priority")
+  @@index([status_code], map: "fk_pt_status")
+  @@index([user_id, status_code, sort_order], map: "idx_pt_user_kanban")
+  @@map("personal_tasks")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ProjectFieldUserPermission {
+  org_id      String   @db.Char(36)
+  project_id  String   @db.Char(36)
+  user_id     String   @db.Char(36)
+  entity_type String   @db.VarChar(20)
+  field_name  String   @db.VarChar(100)
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  created_by  String?  @db.Char(36)
+  creator     User?    @relation("FieldPermCreator", fields: [created_by], references: [id], onDelete: NoAction, map: "fk_pfup_creator")
+  project     Project  @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: Cascade, map: "fk_pfup_proj")
+  user        User     @relation("FieldPermUser", fields: [user_id], references: [id], onDelete: Cascade, map: "fk_pfup_user")
+
+  @@id([org_id, project_id, user_id, entity_type, field_name])
+  @@index([created_by], map: "fk_pfup_creator")
+  @@index([user_id], map: "fk_pfup_user")
+  @@map("project_field_user_permissions")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model WorkPeriodLock {
+  id           String    @id @db.Char(36)
+  org_id       String    @db.Char(36)
+  project_id   String    @db.Char(36)
+  period_type  String    @db.VarChar(20)
+  period_start DateTime  @db.Date
+  period_end   DateTime  @db.Date
+  is_locked    Boolean   @default(false)
+  locked_at    DateTime? @db.DateTime(0)
+  locked_by    String?   @db.Char(36)
+  unlocked_at  DateTime? @db.DateTime(0)
+  unlocked_by  String?   @db.Char(36)
+  lock_reason  String?   @db.Text
+  created_at   DateTime  @default(now()) @db.DateTime(0)
+  project      Project   @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: Cascade, map: "fk_wpl_proj")
+
+  @@unique([org_id, project_id, period_type, period_start, period_end], map: "uq_wpl_period")
+  @@map("work_period_locks")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ProjectMember {
+  org_id      String    @db.Char(36)
+  project_id  String    @db.Char(36)
+  user_id     String    @db.Char(36)
+  member_role String    @default("MEMBER") @db.VarChar(30)
+  joined_at   DateTime  @default(now()) @db.DateTime(0)
+  left_at     DateTime? @db.DateTime(0)
+  project     Project   @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: Cascade, map: "fk_pm_proj")
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_pm_user")
+
+  @@id([org_id, project_id, user_id])
+  @@index([user_id], map: "fk_pm_user")
+  @@map("project_members")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ProjectNotificationSetting {
+  org_id            String   @db.Char(36)
+  project_id        String   @db.Char(36)
+  notification_type String   @db.VarChar(50)
+  is_enabled        Boolean  @default(true)
+  updated_at        DateTime @default(now()) @db.DateTime(0)
+  updated_by        String?  @db.Char(36)
+  project           Project  @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: Cascade, map: "fk_pns_proj")
+  updater           User?    @relation(fields: [updated_by], references: [id], onDelete: NoAction, map: "fk_pns_user")
+
+  @@id([org_id, project_id, notification_type])
+  @@index([updated_by], map: "fk_pns_user")
+  @@index([org_id, project_id, is_enabled], map: "idx_pns_enabled")
+  @@map("project_notification_settings")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ProjectResource {
+  id            String    @id @db.Char(36)
+  org_id        String    @db.Char(36)
+  project_id    String    @db.Char(36)
+  resource_type String    @db.VarChar(30)
+  name          String    @db.VarChar(255)
+  url           String?   @db.Text
+  document_id   String?   @db.Char(36)
+  notes         String?   @db.Text
+  created_at    DateTime  @default(now()) @db.DateTime(0)
+  created_by    String    @db.Char(36)
+  document      Document? @relation(fields: [document_id], references: [id], map: "fk_res_doc")
+  project       Project   @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: Cascade, map: "fk_res_proj")
+
+  @@index([document_id], map: "fk_res_doc")
+  @@index([org_id, project_id], map: "fk_res_proj")
+  @@map("project_resources")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Project {
+  id                             String                       @id @db.Char(36)
+  org_id                         String                       @db.Char(36)
+  code                           String                       @db.VarChar(50)
+  name                           String                       @db.VarChar(255)
+  description                    String?                      @db.Text
+  status                         String                       @default("ACTIVE") @db.VarChar(30)
+  start_date                     DateTime?                    @db.Date
+  end_date                       DateTime?                    @db.Date
+  created_at                     DateTime                     @default(now()) @db.DateTime(0)
+  created_by                     String                       @db.Char(36)
+  updated_at                     DateTime                     @default(now()) @db.DateTime(0)
+  updated_by                     String?                      @db.Char(36)
+  deleted_at                     DateTime?                    @db.DateTime(0)
+  activity_events                ActivityEvent[]
+  custom_field_definitions       CustomFieldDefinition[]
+  notifications                  Notification[]
+  project_field_user_permissions ProjectFieldUserPermission[]
+  project_members                ProjectMember[]
+  project_notification_settings  ProjectNotificationSetting[]
+  project_resources              ProjectResource[]
+  creator                        User                         @relation("ProjectCreator", fields: [created_by], references: [id], onDelete: NoAction, map: "fk_proj_creator")
+  organization                   Organization                 @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_proj_org")
+  updater                        User?                        @relation("ProjectUpdater", fields: [updated_by], references: [id], onDelete: NoAction, map: "fk_proj_updater")
+  recycle_bin_items              RecycleBinItem[]
+  tasks                          Task[]
+  time_logs                      TimeLog[]
+  user_roles                     UserRole[]
+  work_period_locks              WorkPeriodLock[]
+
+  @@unique([org_id, id], map: "uq_project_tenant_composite")
+  @@unique([org_id, code], map: "uq_project_org_code")
+  @@index([created_by], map: "fk_proj_created_by")
+  @@index([updated_by], map: "fk_proj_updated_by")
+  @@map("projects")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model RecycleBinItem {
+  id            String       @id @db.Char(36)
+  org_id        String       @db.Char(36)
+  project_id    String?      @db.Char(36)
+  entity_type   String       @db.VarChar(50)
+  entity_id     String       @db.Char(36)
+  entity_title  String       @db.VarChar(500)
+  deleted_at    DateTime     @default(now()) @db.DateTime(0)
+  deleted_by    String       @db.Char(36)
+  original_data Json?
+  organization  Organization @relation(fields: [org_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rb_org")
+  project       Project?     @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rb_proj")
+  deleter       User         @relation("RecycleDeleter", fields: [deleted_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_rb_user")
+
+  @@index([deleted_by], map: "fk_rb_user")
+  @@index([org_id, deleted_at(sort: Desc)], map: "idx_rb_org_date")
+  @@index([org_id, project_id, deleted_at(sort: Desc)], map: "idx_rb_project_date")
+  @@map("recycle_bin_items")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ReportComment {
+  id             String    @id @db.Char(36)
+  org_id         String    @db.Char(36)
+  report_id      String    @db.Char(36)
+  author_user_id String    @db.Char(36)
+  comment_text   String    @db.Text
+  created_at     DateTime  @default(now()) @db.DateTime(0)
+  deleted_at     DateTime? @db.DateTime(0)
+  report         Report    @relation(fields: [org_id, report_id], references: [org_id, id], onDelete: Cascade, map: "fk_rc_rep")
+  author         User      @relation(fields: [author_user_id], references: [id], onDelete: NoAction, map: "fk_rc_user")
+
+  @@index([org_id, report_id], map: "fk_rc_rep")
+  @@index([author_user_id], map: "fk_rc_user")
+  @@map("report_comments")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ReportReaction {
+  org_id        String   @db.Char(36)
+  report_id     String   @db.Char(36)
+  user_id       String   @db.Char(36)
+  reaction_code String   @db.VarChar(30)
+  created_at    DateTime @default(now()) @db.DateTime(0)
+  report        Report   @relation(fields: [org_id, report_id], references: [org_id, id], onDelete: Cascade, map: "fk_rr_rep")
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_rr_user")
+
+  @@id([org_id, report_id, user_id, reaction_code])
+  @@index([user_id], map: "fk_rr_user")
+  @@map("report_reactions")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Report {
+  id               String           @id @db.Char(36)
+  org_id           String           @db.Char(36)
+  submitted_by     String           @db.Char(36)
+  period_type      String           @db.VarChar(20)
+  period_start     DateTime         @db.Date
+  period_end       DateTime         @db.Date
+  title            String           @db.VarChar(255)
+  content          String           @db.Text
+  status           String           @default("SUBMITTED") @db.VarChar(30)
+  created_at       DateTime         @default(now()) @db.DateTime(0)
+  updated_at       DateTime         @default(now()) @db.DateTime(0)
+  deleted_at       DateTime?        @db.DateTime(0)
+  report_comments  ReportComment[]
+  report_reactions ReportReaction[]
+  organization     Organization     @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_rep_org")
+  submitter        User             @relation(fields: [submitted_by], references: [id], onDelete: Cascade, map: "fk_rep_user")
+
+  @@unique([org_id, id], map: "uq_report_tenant_composite")
+  @@index([submitted_by], map: "fk_rep_user")
+  @@map("reports")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model RolePermission {
+  role_id       String     @db.Char(36)
+  permission_id String     @db.Char(36)
+  granted_at    DateTime   @default(now()) @db.DateTime(0)
+  granted_by    String?    @db.Char(36)
+  granter       User?      @relation("PermissionGranter", fields: [granted_by], references: [id], onDelete: NoAction, map: "fk_rp_granted_by")
+  permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade, map: "fk_rp_perm")
+  role          Role       @relation(fields: [role_id], references: [id], onDelete: Cascade, map: "fk_rp_role")
+
+  @@id([role_id, permission_id])
+  @@index([granted_by], map: "fk_rp_granted_by")
+  @@index([permission_id], map: "fk_rp_perm")
+  @@map("role_permissions")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Role {
+  id               String           @id @db.Char(36)
+  scope_type       String           @db.VarChar(20)
+  org_id           String?          @db.Char(36)
+  code             String           @db.VarChar(50)
+  name             String           @db.VarChar(100)
+  is_system        Boolean          @default(false)
+  created_at       DateTime         @default(now()) @db.DateTime(0)
+  created_by       String?          @db.Char(36)
+  role_permissions RolePermission[]
+  creator          User?            @relation("RoleCreator", fields: [created_by], references: [id], onDelete: NoAction, map: "fk_role_created_by")
+  organization     Organization?    @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_role_org")
+  user_roles       UserRole[]
+
+  @@unique([scope_type, org_id, code], map: "uq_role_code")
+  @@index([created_by], map: "fk_role_created_by")
+  @@index([org_id], map: "fk_role_org")
+  @@map("roles")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model SubtaskAttachment {
+  org_id      String   @db.Char(36)
+  subtask_id  String   @db.Char(36)
+  document_id String   @db.Char(36)
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  created_by  String   @db.Char(36)
+  document    Document @relation(fields: [org_id, document_id], references: [org_id, id], onDelete: Cascade, map: "fk_satt_doc")
+  subtask     Subtask  @relation(fields: [subtask_id], references: [id], onDelete: Cascade, map: "fk_satt_subtask")
+
+  @@id([org_id, subtask_id, document_id])
+  @@index([org_id, document_id], map: "fk_satt_doc")
+  @@index([subtask_id], map: "fk_satt_subtask")
+  @@map("subtask_attachments")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model SubtaskCommentMention {
+  id                String         @id @db.Char(36)
+  org_id            String         @db.Char(36)
+  subtask_id        String         @db.Char(36)
+  comment_id        String         @db.Char(36)
+  mentioned_user_id String         @db.Char(36)
+  created_at        DateTime       @default(now()) @db.DateTime(0)
+  subtask_comment   SubtaskComment @relation(fields: [comment_id], references: [id], onDelete: Cascade, map: "fk_scm_comment")
+  subtask           Subtask        @relation(fields: [subtask_id], references: [id], onDelete: Cascade, map: "fk_scm_subtask")
+  user              User           @relation(fields: [mentioned_user_id], references: [id], onDelete: Cascade, map: "fk_scm_user")
+
+  @@index([comment_id], map: "fk_scm_comment")
+  @@index([subtask_id], map: "fk_scm_subtask")
+  @@index([mentioned_user_id], map: "idx_scm_mentioned")
+  @@map("subtask_comment_mentions")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model SubtaskComment {
+  id                       String                  @id @db.Char(36)
+  org_id                   String                  @db.Char(36)
+  subtask_id               String                  @db.Char(36)
+  author_user_id           String                  @db.Char(36)
+  parent_comment_id        String?                 @db.Char(36)
+  content                  String                  @db.Text
+  created_at               DateTime                @default(now()) @db.DateTime(0)
+  updated_at               DateTime                @default(now()) @db.DateTime(0)
+  updated_by               String?                 @db.Char(36)
+  deleted_at               DateTime?               @db.DateTime(0)
+  deleted_by               String?                 @db.Char(36)
+  subtask_comment_mentions SubtaskCommentMention[]
+  deleter                  User?                   @relation("SubtaskCommentDeleter", fields: [deleted_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_stc_deleted_by")
+  parent                   SubtaskComment?         @relation("SubtaskCommentReplies", fields: [parent_comment_id], references: [id], onDelete: Cascade, map: "fk_stc_parent")
+  replies                  SubtaskComment[]        @relation("SubtaskCommentReplies")
+  subtask                  Subtask                 @relation(fields: [subtask_id], references: [id], onDelete: Cascade, map: "fk_stc_subtask")
+  updater                  User?                   @relation("SubtaskCommentUpdater", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_stc_updated_by")
+  author                   User                    @relation("SubtaskCommentAuthor", fields: [author_user_id], references: [id], onDelete: NoAction, map: "fk_stc_user")
+
+  @@index([deleted_by], map: "fk_stc_deleted_by")
+  @@index([subtask_id], map: "fk_stc_subtask")
+  @@index([updated_by], map: "fk_stc_updated_by")
+  @@index([author_user_id], map: "fk_stc_user")
+  @@index([org_id, subtask_id, deleted_at], map: "idx_stc_deleted")
+  @@index([parent_comment_id], map: "idx_stc_parent")
+  @@map("subtask_comments")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Subtask {
+  id                       String                  @id @db.Char(36)
+  org_id                   String                  @db.Char(36)
+  task_id                  String                  @db.Char(36)
+  title                    String                  @db.VarChar(500)
+  status_code              String                  @default("TODO") @db.VarChar(30)
+  start_date               DateTime?               @db.Date
+  end_date                 DateTime?               @db.Date
+  sort_order               Int                     @default(0)
+  created_at               DateTime                @default(now()) @db.DateTime(0)
+  created_by               String                  @db.Char(36)
+  updated_at               DateTime                @default(now()) @db.DateTime(0)
+  updated_by               String?                 @db.Char(36)
+  deleted_at               DateTime?               @db.DateTime(0)
+  subtask_attachments      SubtaskAttachment[]
+  subtask_comment_mentions SubtaskCommentMention[]
+  subtask_comments         SubtaskComment[]
+  creator                  User                    @relation("SubtaskCreator", fields: [created_by], references: [id], onDelete: NoAction, map: "fk_sub_created_by")
+  status                   TaskStatus              @relation(fields: [status_code], references: [code], onDelete: NoAction, map: "fk_sub_status")
+  task                     Task                    @relation(fields: [org_id, task_id], references: [org_id, id], onDelete: Cascade, map: "fk_sub_task")
+  updater                  User?                   @relation("SubtaskUpdater", fields: [updated_by], references: [id], onDelete: NoAction, map: "fk_sub_updated_by")
+  time_logs                TimeLog[]
+
+  @@unique([org_id, id], map: "uq_subtask_tenant_composite")
+  @@index([created_by], map: "fk_sub_created_by")
+  @@index([status_code], map: "fk_sub_status")
+  @@index([org_id, task_id], map: "fk_sub_task")
+  @@index([updated_by], map: "fk_sub_updated_by")
+  @@map("subtasks")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Tag {
+  id           String       @id @db.Char(36)
+  org_id       String       @db.Char(36)
+  name         String       @db.VarChar(100)
+  color_code   String?      @db.VarChar(7)
+  created_at   DateTime     @default(now()) @db.DateTime(0)
+  created_by   String?      @db.Char(36)
+  creator      User?        @relation(fields: [created_by], references: [id], onDelete: NoAction, map: "fk_tag_created_by")
+  organization Organization @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_tag_org")
+  task_tags    TaskTag[]
+
+  @@unique([org_id, name], map: "uq_tag_name")
+  @@unique([org_id, id], map: "uq_tag_tenant_composite")
+  @@index([created_by], map: "fk_tag_created_by")
+  @@map("tags")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model TaskAssignee {
+  org_id      String   @db.Char(36)
+  task_id     String   @db.Char(36)
+  user_id     String   @db.Char(36)
+  assigned_by String   @db.Char(36)
+  assigned_at DateTime @default(now()) @db.DateTime(0)
+  granter     User     @relation("TaskGrantor", fields: [assigned_by], references: [id], onDelete: NoAction, map: "fk_ta_assigned_by")
+  task        Task     @relation(fields: [org_id, task_id], references: [org_id, id], onDelete: Cascade, map: "fk_ta_task")
+  user        User     @relation("TaskGrantee", fields: [user_id], references: [id], onDelete: Cascade, map: "fk_ta_user")
+
+  @@id([org_id, task_id, user_id])
+  @@index([assigned_by], map: "fk_ta_assigned_by")
+  @@index([user_id], map: "fk_ta_user")
+  @@map("task_assignees")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model TaskAttachment {
+  org_id      String   @db.Char(36)
+  task_id     String   @db.Char(36)
+  document_id String   @db.Char(36)
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  created_by  String   @db.Char(36)
+  document    Document @relation(fields: [org_id, document_id], references: [org_id, id], onDelete: Cascade, map: "fk_tatt_doc")
+  task        Task     @relation(fields: [org_id, task_id], references: [org_id, id], onDelete: Cascade, map: "fk_tatt_task")
+
+  @@id([org_id, task_id, document_id])
+  @@index([org_id, document_id], map: "fk_tatt_doc")
+  @@map("task_attachments")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model TaskCommentMention {
+  id                String      @id @db.Char(36)
+  org_id            String      @db.Char(36)
+  task_id           String      @db.Char(36)
+  comment_id        String      @db.Char(36)
+  mentioned_user_id String      @db.Char(36)
+  created_at        DateTime    @default(now()) @db.DateTime(0)
+  task_comment      TaskComment @relation(fields: [comment_id], references: [id], onDelete: Cascade, map: "fk_tcm_comment")
+  task              Task        @relation(fields: [org_id, task_id], references: [org_id, id], onDelete: Cascade, map: "fk_tcm_task")
+  user              User        @relation(fields: [mentioned_user_id], references: [id], onDelete: Cascade, map: "fk_tcm_user")
+
+  @@index([comment_id], map: "fk_tcm_comment")
+  @@index([org_id, task_id], map: "fk_tcm_task")
+  @@index([mentioned_user_id], map: "idx_tcm_mentioned")
+  @@map("task_comment_mentions")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model TaskComment {
+  id                    String               @id @db.Char(36)
+  org_id                String               @db.Char(36)
+  task_id               String               @db.Char(36)
+  author_user_id        String               @db.Char(36)
+  parent_comment_id     String?              @db.Char(36)
+  content               String               @db.Text
+  created_at            DateTime             @default(now()) @db.DateTime(0)
+  updated_at            DateTime             @default(now()) @db.DateTime(0)
+  updated_by            String?              @db.Char(36)
+  deleted_at            DateTime?            @db.DateTime(0)
+  deleted_by            String?              @db.Char(36)
+  task_comment_mentions TaskCommentMention[]
+  deleter               User?                @relation("TaskCommentDeleter", fields: [deleted_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tc_deleted_by")
+  parent                TaskComment?         @relation("TaskCommentReplies", fields: [parent_comment_id], references: [id], onDelete: Cascade, map: "fk_tc_parent")
+  replies               TaskComment[]        @relation("TaskCommentReplies")
+  task                  Task                 @relation(fields: [org_id, task_id], references: [org_id, id], onDelete: Cascade, map: "fk_tc_task")
+  updater               User?                @relation("TaskCommentUpdater", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tc_updated_by")
+  author                User                 @relation("TaskCommentAuthor", fields: [author_user_id], references: [id], onDelete: NoAction, map: "fk_tc_user")
+
+  @@index([deleted_by], map: "fk_tc_deleted_by")
+  @@index([updated_by], map: "fk_tc_updated_by")
+  @@index([author_user_id], map: "fk_tc_user")
+  @@index([org_id, task_id, deleted_at], map: "idx_tc_deleted")
+  @@index([parent_comment_id], map: "idx_tc_parent")
+  @@map("task_comments")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model TaskPriority {
+  code           String         @id @db.VarChar(30)
+  name           String         @db.VarChar(100)
+  sort_order     Int            @default(0)
+  personal_tasks PersonalTask[]
+  tasks          Task[]
+
+  @@map("task_priorities")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model TaskStatus {
+  code           String         @id @db.VarChar(30)
+  name           String         @db.VarChar(100)
+  sort_order     Int            @default(0)
+  is_terminal    Boolean        @default(false)
+  personal_tasks PersonalTask[]
+  subtasks       Subtask[]
+  tasks          Task[]
+
+  @@map("task_statuses")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model TaskTag {
+  org_id  String @db.Char(36)
+  task_id String @db.Char(36)
+  tag_id  String @db.Char(36)
+  tag     Tag    @relation(fields: [org_id, tag_id], references: [org_id, id], onDelete: Cascade, map: "fk_tt_tag")
+  task    Task   @relation(fields: [org_id, task_id], references: [org_id, id], onDelete: Cascade, map: "fk_tt_task")
+
+  @@id([org_id, task_id, tag_id])
+  @@index([org_id, tag_id], map: "fk_tt_tag")
+  @@map("task_tags")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model TaskType {
+  code  String @id @db.VarChar(30)
+  name  String @db.VarChar(100)
+  tasks Task[]
+
+  @@map("task_types")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model Task {
+  id                    String               @id @db.Char(36)
+  org_id                String               @db.Char(36)
+  project_id            String               @db.Char(36)
+  title                 String               @db.VarChar(500)
+  description           String?              @db.Text
+  status_code           String               @default("TODO") @db.VarChar(30)
+  priority_code         String               @default("MEDIUM") @db.VarChar(30)
+  type_code             String               @default("TASK") @db.VarChar(30)
+  start_date            DateTime?            @db.Date
+  due_date              DateTime?            @db.Date
+  started_at            DateTime?            @db.DateTime(0)
+  completed_at          DateTime?            @db.DateTime(0)
+  sort_order            Int                  @default(0)
+  created_at            DateTime             @default(now()) @db.DateTime(0)
+  created_by            String               @db.Char(36)
+  updated_at            DateTime             @default(now()) @db.DateTime(0)
+  updated_by            String?              @db.Char(36)
+  row_version           BigInt               @default(1)
+  deleted_at            DateTime?            @db.DateTime(0)
+  deleted_by            String?              @db.Char(36)
+  subtasks              Subtask[]
+  task_assignees        TaskAssignee[]
+  task_attachments      TaskAttachment[]
+  task_comment_mentions TaskCommentMention[]
+  task_comments         TaskComment[]
+  task_tags             TaskTag[]
+  creator               User                 @relation("TaskCreator", fields: [created_by], references: [id], onDelete: NoAction, map: "fk_task_created_by")
+  deleter               User?                @relation("TaskDeleter", fields: [deleted_by], references: [id], onDelete: NoAction, map: "fk_task_deleted_by")
+  priority              TaskPriority         @relation(fields: [priority_code], references: [code], onDelete: NoAction, map: "fk_task_priority")
+  project               Project              @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: Cascade, map: "fk_task_proj")
+  status                TaskStatus           @relation(fields: [status_code], references: [code], onDelete: NoAction, map: "fk_task_status")
+  type                  TaskType             @relation(fields: [type_code], references: [code], onDelete: NoAction, map: "fk_task_type")
+  updater               User?                @relation("TaskUpdater", fields: [updated_by], references: [id], onDelete: NoAction, map: "fk_task_updated_by")
+  time_logs             TimeLog[]
+
+  @@unique([org_id, id], map: "uq_task_tenant_composite")
+  @@index([created_by], map: "fk_task_created_by")
+  @@index([deleted_by], map: "fk_task_deleted_by")
+  @@index([priority_code], map: "fk_task_priority")
+  @@index([org_id, project_id], map: "fk_task_proj")
+  @@index([status_code], map: "fk_task_status")
+  @@index([type_code], map: "fk_task_type")
+  @@index([updated_by], map: "fk_task_updated_by")
+  @@map("tasks")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model UserContract {
+  id              String       @id @db.Char(36)
+  org_id          String       @db.Char(36)
+  user_id         String       @db.Char(36)
+  contract_number String       @db.VarChar(100)
+  contract_type   String       @db.VarChar(50)
+  signed_date     DateTime     @db.Date
+  effective_date  DateTime     @db.Date
+  expiry_date     DateTime?    @db.Date
+  status          String?      @default("ACTIVE") @db.VarChar(30)
+  document_id     String?      @db.Char(36)
+  created_at      DateTime     @default(now()) @db.DateTime(0)
+  created_by      String?      @db.Char(36)
+  creator         User?        @relation("ContractCreator", fields: [created_by], references: [id], onDelete: NoAction, map: "fk_contract_created_by")
+  document        Document?    @relation(fields: [document_id], references: [id], map: "fk_contract_doc")
+  organization    Organization @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_contract_org")
+  user            User         @relation("ContractUser", fields: [user_id], references: [id], onDelete: Cascade, map: "fk_contract_user")
+
+  @@unique([org_id, contract_number], map: "uq_contract_number")
+  @@index([created_by], map: "fk_contract_created_by")
+  @@index([document_id], map: "fk_contract_doc")
+  @@index([user_id], map: "fk_contract_user")
+  @@map("user_contracts")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model UserProfile {
+  user_id             String    @id @db.Char(36)
+  birth_date          DateTime? @db.Date
+  gender              String?   @db.VarChar(10)
+  address             String?   @db.Text
+  id_number           String?   @db.VarChar(50)
+  id_issued_date      DateTime? @db.Date
+  id_issued_place     String?   @db.VarChar(255)
+  academic_level      String?   @db.VarChar(100)
+  tax_code            String?   @db.VarChar(50)
+  bank_account_number String?   @db.VarChar(50)
+  bank_name           String?   @db.VarChar(255)
+  bio                 String?   @db.Text
+  avatar_url          String?   @db.Text
+  metadata            Json?
+  updated_at          DateTime  @default(now()) @db.DateTime(0)
+  user                User      @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_profile_user")
+
+  @@map("user_profiles")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model UserRole {
+  id           String        @id @db.Char(36)
+  org_id       String?       @db.Char(36)
+  project_id   String?       @db.Char(36)
+  user_id      String        @db.Char(36)
+  role_id      String        @db.Char(36)
+  granted_at   DateTime      @default(now()) @db.DateTime(0)
+  granted_by   String?       @db.Char(36)
+  revoked_at   DateTime?     @db.DateTime(0)
+  revoked_by   String?       @db.Char(36)
+  granter      User?         @relation("UserRoleGranter", fields: [granted_by], references: [id], onDelete: NoAction, map: "fk_ur_granted_by")
+  organization Organization? @relation(fields: [org_id], references: [id], onDelete: Cascade, map: "fk_ur_org")
+  project      Project?      @relation(fields: [org_id, project_id], references: [org_id, id], onDelete: Cascade, map: "fk_ur_proj")
+  revoker      User?         @relation("UserRoleRevoker", fields: [revoked_by], references: [id], onDelete: NoAction, map: "fk_ur_revoked_by")
+  role         Role          @relation(fields: [role_id], references: [id], onDelete: Cascade, map: "fk_ur_role")
+  user         User          @relation("UserRoleGrantee", fields: [user_id], references: [id], onDelete: Cascade, map: "fk_ur_user")
+
+  @@index([granted_by], map: "fk_ur_granted_by")
+  @@index([org_id, project_id], map: "fk_ur_proj")
+  @@index([revoked_by], map: "fk_ur_revoked_by")
+  @@index([role_id], map: "fk_ur_role")
+  @@index([user_id], map: "fk_ur_user")
+  @@map("user_roles")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model User {
+  id                                       String                       @id @db.Char(36)
+  email                                    String                       @unique(map: "email") @db.VarChar(320)
+  password_hash                            String                       @db.VarChar(255)
+  full_name                                String                       @db.VarChar(255)
+  phone                                    String?                      @db.VarChar(30)
+  status                                   String                       @default("ACTIVE") @db.VarChar(30)
+  reset_token                              String?                      @db.VarChar(255)
+  reset_token_expires_at                   DateTime?                    @db.DateTime(0)
+  last_login_at                            DateTime?                    @db.DateTime(0)
+  created_at                               DateTime                     @default(now()) @db.DateTime(0)
+  updated_at                               DateTime                     @default(now()) @db.DateTime(0)
+  deleted_at                               DateTime?                    @db.DateTime(0)
+  activity_events                          ActivityEvent[]
+  audit_logs                               AuditLog[]
+  documents                                Document[]
+  created_compensations                    EmployeeCompensation[]       @relation("CompCreator")
+  compensations                            EmployeeCompensation[]       @relation("CompUser")
+  impersonation_sessions_actor             ImpersonationSession[]       @relation("ImpActor")
+  impersonation_sessions_subject           ImpersonationSession[]       @relation("ImpSubject")
+  notification_recipients                  NotificationRecipient[]
+  notifications                            Notification[]
+  org_invites                              OrgInvite[]
+  org_memberships                          OrgMembership[]
+  org_quotas                               OrgQuota[]
+  created_organizations                    Organization[]               @relation("OrgCreator")
+  deleted_organizations                    Organization[]               @relation("OrgDeleter")
+  updated_organizations                    Organization[]               @relation("OrgUpdater")
+  personal_tasks                           PersonalTask[]
+  created_field_permissions                ProjectFieldUserPermission[] @relation("FieldPermCreator")
+  field_permissions                        ProjectFieldUserPermission[] @relation("FieldPermUser")
+  project_members                          ProjectMember[]
+  project_notification_settings            ProjectNotificationSetting[]
+  created_projects                         Project[]                    @relation("ProjectCreator")
+  updated_projects                         Project[]                    @relation("ProjectUpdater")
+  recycle_bin_items                        RecycleBinItem[]             @relation("RecycleDeleter")
+  report_comments                          ReportComment[]
+  report_reactions                         ReportReaction[]
+  reports                                  Report[]
+  role_permissions                         RolePermission[]             @relation("PermissionGranter")
+  created_roles                            Role[]                       @relation("RoleCreator")
+  subtask_comment_mentions                 SubtaskCommentMention[]
+  deleted_subtask_comments                 SubtaskComment[]             @relation("SubtaskCommentDeleter")
+  updated_subtask_comments                 SubtaskComment[]             @relation("SubtaskCommentUpdater")
+  subtask_comments                         SubtaskComment[]             @relation("SubtaskCommentAuthor")
+  created_subtasks                         Subtask[]                    @relation("SubtaskCreator")
+  updated_subtasks                         Subtask[]                    @relation("SubtaskUpdater")
+  tags                                     Tag[]
+  task_assignees_as_granter                TaskAssignee[]               @relation("TaskGrantor")
+  task_assignees                           TaskAssignee[]               @relation("TaskGrantee")
+  task_comment_mentions                    TaskCommentMention[]
+  deleted_task_comments                    TaskComment[]                @relation("TaskCommentDeleter")
+  updated_task_comments                    TaskComment[]                @relation("TaskCommentUpdater")
+  task_comments                            TaskComment[]                @relation("TaskCommentAuthor")
+  created_tasks                            Task[]                       @relation("TaskCreator")
+  deleted_tasks                            Task[]                       @relation("TaskDeleter")
+  updated_tasks                            Task[]                       @relation("TaskUpdater")
+  created_time_logs                        TimeLog[]                    @relation("TimeLogCreator")
+  time_logs                                 TimeLog[]                    @relation("TimeLogOwner")
+  updated_time_logs                        TimeLog[]                    @relation("TimeLogUpdater")
+  created_user_contracts                   UserContract[]               @relation("ContractCreator")
+  user_contracts                           UserContract[]               @relation("ContractUser")
+  user_profile                             UserProfile?
+  user_roles_as_granter                    UserRole[]                   @relation("UserRoleGranter")
+  user_roles_as_revoker                    UserRole[]                   @relation("UserRoleRevoker")
+  user_roles                               UserRole[]                   @relation("UserRoleGrantee")
+
+  @@map("users")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model TimeLog {
+  id               String    @id @db.Char(36)
+  org_id           String    @db.Char(36)
+  project_id       String    @db.Char(36)
+  task_id          String    @db.Char(36)
+  subtask_id       String?   @db.Char(36)
+  owner_user_id    String    @db.Char(36)
+  work_date        DateTime  @db.Date
+  minutes          Int       @default(0)
+  note             String?   @db.Text
+  created_at       DateTime  @default(now()) @db.DateTime(0)
+  created_by       String    @db.Char(36)
+  updated_at       DateTime  @default(now()) @db.DateTime(0)
+  updated_by       String?   @db.Char(36)
+  deleted_at       DateTime? @db.DateTime(0)
+  row_version      BigInt    @default(1)
+  creator          User      @relation("TimeLogCreator", fields: [created_by], references: [id], onDelete: NoAction, map: "fk_tl_created_by")
+  owner            User      @relation("TimeLogOwner", fields: [owner_user_id], references: [id], onDelete: NoAction, map: "fk_tl_owner")
+  project          Project   @relation(fields: [org_id, project_id], references: [org_id, id], map: "fk_tl_proj")
+  subtask          Subtask?  @relation(fields: [subtask_id], references: [id], onDelete: Restrict, map: "fk_tl_subtask")
+  task             Task      @relation(fields: [org_id, task_id], references: [org_id, id], map: "fk_tl_task")
+  updater          User?     @relation("TimeLogUpdater", fields: [updated_by], references: [id], onDelete: NoAction, map: "fk_tl_updated_by")
+
+  @@unique([org_id, owner_user_id, task_id, subtask_id, work_date, created_at], map: "uq_timelog_composite")
+  @@index([created_by], map: "fk_tl_created_by")
+  @@index([owner_user_id], map: "fk_tl_owner")
+  @@index([org_id, project_id], map: "fk_tl_proj")
+  @@index([subtask_id], map: "fk_tl_subtask")
+  @@index([org_id, task_id], map: "fk_tl_task")
+  @@index([updated_by], map: "fk_tl_updated_by")
+  @@map("time_logs")
+}

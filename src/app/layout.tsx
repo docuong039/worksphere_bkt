@@ -1,3 +1,7 @@
+import './globals.css';
+
+import { MSWProvider } from '@/components/providers/MSWProvider';
+
 export default function RootLayout({
   children,
 }: {
@@ -5,7 +9,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body>{children}</body>
+      <body>
+        <MSWProvider>
+          {children}
+        </MSWProvider>
+      </body>
     </html>
   );
 }
