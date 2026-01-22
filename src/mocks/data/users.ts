@@ -26,10 +26,18 @@ export const mockUsers = [
     {
         id: 'user-pm',
         email: 'pm@worksphere.com',
-        full_name: 'Lê Văn PM',
+        full_name: 'Lê Văn PM (Project Alpha)',
         status: 'ACTIVE',
         created_at: '2025-01-02T10:00:00Z',
         updated_at: '2025-01-02T10:00:00Z',
+    },
+    {
+        id: 'user-pm-2',
+        email: 'kevin.pm@worksphere.com',
+        full_name: 'Kevin Project (Project Beta)',
+        status: 'ACTIVE',
+        created_at: '2025-01-15T09:00:00Z',
+        updated_at: '2025-01-15T09:00:00Z',
     },
     {
         id: 'user-emp',
@@ -38,6 +46,38 @@ export const mockUsers = [
         status: 'ACTIVE',
         created_at: '2025-01-03T11:00:00Z',
         updated_at: '2025-01-03T11:00:00Z',
+    },
+    {
+        id: 'user-emp-dev1',
+        email: 'alice.dev@worksphere.com',
+        full_name: 'Alice Frontend',
+        status: 'ACTIVE',
+        created_at: '2025-01-20T08:00:00Z',
+        updated_at: '2025-01-20T08:00:00Z',
+    },
+    {
+        id: 'user-emp-dev2',
+        email: 'bob.backend@worksphere.com',
+        full_name: 'Bob Backend',
+        status: 'ACTIVE',
+        created_at: '2025-01-21T08:00:00Z',
+        updated_at: '2025-01-21T08:00:00Z',
+    },
+    {
+        id: 'user-emp-qa',
+        email: 'charlie.qa@worksphere.com',
+        full_name: 'Charlie QA',
+        status: 'ACTIVE',
+        created_at: '2025-01-22T08:00:00Z',
+        updated_at: '2025-01-22T08:00:00Z',
+    },
+    {
+        id: 'user-emp-designer',
+        email: 'diana.design@worksphere.com',
+        full_name: 'Diana Designer',
+        status: 'ACTIVE',
+        created_at: '2025-01-22T09:00:00Z',
+        updated_at: '2025-01-22T09:00:00Z',
     }
 ];
 
@@ -65,10 +105,45 @@ export const mockOrgMemberships = [
     },
     {
         org_id: 'org-1',
+        user_id: 'user-pm-2',
+        member_status: 'ACTIVE',
+        join_method: 'INVITE',
+        activated_at: '2025-01-15T09:00:00Z',
+    },
+    {
+        org_id: 'org-1',
         user_id: 'user-emp',
         member_status: 'ACTIVE',
         join_method: 'INVITE',
         activated_at: '2025-01-03T11:00:00Z',
+    },
+    {
+        org_id: 'org-1',
+        user_id: 'user-emp-dev1',
+        member_status: 'ACTIVE',
+        join_method: 'INVITE',
+        activated_at: '2025-01-20T08:00:00Z',
+    },
+    {
+        org_id: 'org-1',
+        user_id: 'user-emp-dev2',
+        member_status: 'ACTIVE',
+        join_method: 'INVITE',
+        activated_at: '2025-01-21T08:00:00Z',
+    },
+    {
+        org_id: 'org-1',
+        user_id: 'user-emp-qa',
+        member_status: 'ACTIVE',
+        join_method: 'INVITE',
+        activated_at: '2025-01-22T08:00:00Z',
+    },
+    {
+        org_id: 'org-1',
+        user_id: 'user-emp-designer',
+        member_status: 'ACTIVE',
+        join_method: 'INVITE',
+        activated_at: '2025-01-22T09:00:00Z',
     }
 ];
 
@@ -76,6 +151,13 @@ export const mockUserRoles = [
     { user_id: 'user-sysadmin', role_code: 'SYS_ADMIN', org_id: null },
     { user_id: 'user-orgadmin', role_code: 'ORG_ADMIN', org_id: 'org-1' },
     { user_id: 'user-ceo', role_code: 'CEO', org_id: 'org-1' },
+    // PMs
     { user_id: 'user-pm', role_code: 'PROJECT_MANAGER', org_id: 'org-1' },
+    { user_id: 'user-pm-2', role_code: 'PROJECT_MANAGER', org_id: 'org-1' },
+    // Employees
     { user_id: 'user-emp', role_code: 'EMPLOYEE', org_id: 'org-1' },
+    { user_id: 'user-emp-dev1', role_code: 'EMPLOYEE', org_id: 'org-1' },
+    { user_id: 'user-emp-dev2', role_code: 'EMPLOYEE', org_id: 'org-1' },
+    { user_id: 'user-emp-qa', role_code: 'EMPLOYEE', org_id: 'org-1' },
+    { user_id: 'user-emp-designer', role_code: 'EMPLOYEE', org_id: 'org-1' },
 ];

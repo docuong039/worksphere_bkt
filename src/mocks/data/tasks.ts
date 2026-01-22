@@ -14,6 +14,7 @@ export const mockTasks = [
         created_by: 'user-pm',
         updated_at: '2025-01-20T10:00:00Z',
         assignees: [
+            { id: 'user-emp-dev1', full_name: 'Alice Frontend' },
             { id: 'user-emp', full_name: 'Phạm Văn Nhân Viên' }
         ]
     },
@@ -32,8 +33,7 @@ export const mockTasks = [
         created_by: 'user-pm',
         updated_at: '2025-01-19T14:00:00Z',
         assignees: [
-            { id: 'user-emp', full_name: 'Phạm Văn Nhân Viên' },
-            { id: 'user-pm', full_name: 'Lê Văn PM' }
+            { id: 'user-emp-qa', full_name: 'Charlie QA' }
         ]
     },
     {
@@ -52,7 +52,44 @@ export const mockTasks = [
         completed_at: '2025-01-17T17:00:00Z',
         updated_at: '2025-01-17T17:00:00Z',
         assignees: [
-            { id: 'user-emp', full_name: 'Phạm Văn Nhân Viên' }
+            { id: 'user-emp-dev1', full_name: 'Alice Frontend' },
+            { id: 'user-emp-dev2', full_name: 'Bob Backend' }
+        ]
+    },
+    {
+        id: 'task-4',
+        org_id: 'org-1',
+        project_id: 'prj-2',
+        title: 'Thiết kế Banner Q1',
+        description: 'Thiết kế bộ banner cho chiến dịch Marketing Q1.',
+        status_code: 'IN_PROGRESS',
+        priority_code: 'HIGH',
+        type_code: 'TASK',
+        start_date: '2025-02-01',
+        due_date: '2025-02-05',
+        created_at: '2025-01-22T08:00:00Z',
+        created_by: 'user-pm',
+        updated_at: '2025-01-22T08:00:00Z',
+        assignees: [
+            { id: 'user-emp-designer', full_name: 'Diana Designer' }
+        ]
+    },
+    {
+        id: 'task-5',
+        org_id: 'org-1',
+        project_id: 'prj-4',
+        title: 'Setup Project Structure',
+        description: 'Khởi tạo repository và structure cho dự án Beta.',
+        status_code: 'TODO',
+        priority_code: 'CRITICAL',
+        type_code: 'TASK',
+        start_date: '2025-02-15',
+        due_date: '2025-02-16',
+        created_at: '2025-01-22T09:00:00Z',
+        created_by: 'user-pm-2',
+        updated_at: '2025-01-22T09:00:00Z',
+        assignees: [
+            { id: 'user-emp-dev1', full_name: 'Alice Frontend' }
         ]
     }
 ];
@@ -63,14 +100,14 @@ export const mockSubtasks = [
         task_id: 'task-1',
         title: 'Cài đặt MSW',
         status_code: 'DONE',
-        created_by: 'user-emp',
+        created_by: 'user-emp-dev1',
     },
     {
         id: 'sub-2',
         task_id: 'task-1',
         title: 'Định nghĩa Project Mock Data',
         status_code: 'IN_PROGRESS',
-        created_by: 'user-emp',
+        created_by: 'user-emp-dev1',
     },
     {
         id: 'sub-3',
@@ -78,5 +115,12 @@ export const mockSubtasks = [
         title: 'Viết Handlers',
         status_code: 'TODO',
         created_by: 'user-emp',
+    },
+    {
+        id: 'sub-4',
+        task_id: 'task-4',
+        title: 'Draft ý tưởng',
+        status_code: 'DONE',
+        created_by: 'user-emp-designer',
     }
 ];
