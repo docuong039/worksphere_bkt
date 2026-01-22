@@ -390,7 +390,7 @@ export default function SettingsProfilePage() {
                                         <Button
                                             variant="outline"
                                             onClick={fetchProfile}
-                                            data-testid="btn-cancel"
+                                            data-testid="settings-profile-btn-cancel"
                                         >
                                             Hủy thay đổi
                                         </Button>

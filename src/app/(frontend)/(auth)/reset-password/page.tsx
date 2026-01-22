@@ -188,7 +188,7 @@ function ResetPasswordContent() {
                         <Lock size={28} />
                     </div>
                 </div>
-                <h1 className="text-2xl font-bold text-slate-900 mb-2">Đặt lại mật khẩu</h1>
+                <h1 className="text-2xl font-bold text-slate-900 mb-2" data-testid="reset-password-title">Đặt lại mật khẩu</h1>
                 <p className="text-sm text-slate-500 leading-relaxed">
                     Đặt mật khẩu mới cho tài khoản <br />
                     <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded ml-1">{userData?.email}</span>
@@ -295,7 +295,7 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4" data-testid="reset-password-container">
             <Card className="w-full max-w-[440px] shadow-2xl border-0 bg-white/95 backdrop-blur-sm overflow-hidden" data-testid="reset-password-card">
                 <CardContent className="p-8 pt-10">
                     <Suspense fallback={

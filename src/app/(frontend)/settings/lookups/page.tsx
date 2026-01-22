@@ -193,7 +193,7 @@ export default function LookupManagementPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="settings-lookups-page-title">
                             <Settings className="inline-block mr-3 h-8 w-8 text-blue-600" />
                             Quản lý Danh mục
                         </h1>
@@ -244,7 +244,7 @@ export default function LookupManagementPage() {
 
                         <CardContent className="p-0">
                             {loading ? (
-                                <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                                <div className="p-6 space-y-4" data-testid="settings-lookups-loading-skeleton">
                                     {[1, 2, 3, 4].map(i => (
                                         <Skeleton key={i} className="h-14 w-full" />
                                     ))}
@@ -311,7 +311,7 @@ export default function LookupManagementPage() {
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="VD: Đang duyệt"
-                                    data-testid="input-name"
+                                    data-testid="settings-lookups-input-name"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -338,7 +338,7 @@ export default function LookupManagementPage() {
                             <Button
                                 variant="outline"
                                 onClick={() => setIsDialogOpen(false)}
-                                data-testid="btn-cancel"
+                                data-testid="settings-lookups-btn-cancel"
                             >
                                 Hủy
                             </Button>
@@ -346,7 +346,7 @@ export default function LookupManagementPage() {
                                 onClick={handleSubmit}
                                 disabled={isSubmitting || !formData.code || !formData.name}
                                 className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="btn-submit"
+                                data-testid="settings-lookups-btn-submit"
                             >
                                 {editingItem ? 'Cập nhật' : 'Thêm mới'}
                             </Button>
@@ -376,7 +376,7 @@ function LookupTable({
 }) {
     if (items.length === 0) {
         return (
-            <div className="p-12 text-center" data-testid="empty-state">
+            <div className="p-12 text-center" data-testid="settings-lookups-empty-state">
                 <ListChecks className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                 <p className="text-slate-500 font-medium">Chưa có mục nào</p>
             </div>

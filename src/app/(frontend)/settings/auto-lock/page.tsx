@@ -214,7 +214,7 @@ export default function AutoLockSchedulePage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="settings-autolock-page-title">
                             <Lock className="inline-block mr-3 h-8 w-8 text-blue-600" />
                             Lịch khóa tự động
                         </h1>
@@ -255,7 +255,7 @@ export default function AutoLockSchedulePage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                            <div className="p-6 space-y-4" data-testid="settings-autolock-loading-skeleton">
                                 {[1, 2, 3].map(i => (
                                     <Skeleton key={i} className="h-14 w-full" />
                                 ))}
@@ -347,7 +347,7 @@ export default function AutoLockSchedulePage() {
                                 </TableBody>
                             </Table>
                         ) : (
-                            <div className="p-12 text-center" data-testid="empty-state">
+                            <div className="p-12 text-center" data-testid="settings-autolock-empty-state">
                                 <Lock className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                                 <p className="text-slate-500 font-medium">Chưa có lịch khóa nào</p>
                                 <p className="text-slate-400 text-sm mt-1">Thêm lịch để tự động khóa time periods</p>
@@ -374,7 +374,7 @@ export default function AutoLockSchedulePage() {
                                     placeholder="vd: Khóa kỳ lương hàng tháng"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    data-testid="input-name"
+                                    data-testid="settings-autolock-input-name"
                                 />
                             </div>
 
@@ -455,14 +455,14 @@ export default function AutoLockSchedulePage() {
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="btn-cancel">
+                            <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="settings-autolock-btn-cancel">
                                 Hủy
                             </Button>
                             <Button
                                 onClick={handleSubmit}
                                 disabled={isSubmitting || !formData.name.trim()}
                                 className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="btn-submit"
+                                data-testid="settings-autolock-btn-submit"
                             >
                                 {isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                                 {editingSchedule ? 'Cập nhật' : 'Thêm mới'}

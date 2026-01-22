@@ -755,4 +755,192 @@ export const handlers = [
     http.put('/api/notifications/mark-all-read', () => {
         return HttpResponse.json({ success: true });
     }),
+
+    // === MISSING HANDLERS (Fix JSON parse errors) ===
+
+    // Time Logs - Delete
+    http.delete('/api/time-logs/:id', () => {
+        return HttpResponse.json({ success: true });
+    }),
+
+    // Reports - Get Detail
+    http.get('/api/reports/:id', ({ params }) => {
+        const report = mockReports.find(r => r.id === params.id);
+        if (!report) {
+            return HttpResponse.json({ success: false, error: 'Report not found' }, { status: 404 });
+        }
+        const user = mockUsers.find(u => u.id === report.submitted_by);
+        const comments = mockReportComments.filter(c => c.report_id === report.id);
+        return HttpResponse.json({
+            success: true,
+            data: {
+                ...report,
+                submitted_by: user ? { id: user.id, full_name: user.full_name } : null,
+                reactions: [
+                    { code: 'LIKE', count: 2 },
+                    { code: 'CLAP', count: 1 }
+                ],
+                comments: comments.map(c => ({
+                    ...c,
+                    author: mockUsers.find(u => u.id === c.author_user_id)
+                }))
+            }
+        });
+    }),
+
+    // Reports - Add Reaction
+    http.post('/api/reports/:id/react', async ({ request }) => {
+        const body = await request.json() as any;
+        return HttpResponse.json({ success: true, reaction: body.reaction_code });
+    }),
+
+    // Reports - Add Comment
+    http.post('/api/reports/:id/comments', async ({ params, request }) => {
+        const body = await request.json() as any;
+        return HttpResponse.json({
+            success: true,
+            data: {
+                id: Math.random().toString(36).substr(2, 9),
+                report_id: params.id,
+                ...body,
+                created_at: new Date().toISOString()
+            }
+        });
+    }),
+
+    // Projects - Get Members
+    http.get('/api/projects/:id/members', () => {
+        return HttpResponse.json({
+            success: true,
+            data: [
+                { user_id: 'u1', full_name: 'John Doe', email: 'john@example.com', role: 'PROJECT_MANAGER' },
+                { user_id: 'u2', full_name: 'Alice Smith', email: 'alice@example.com', role: 'EMPLOYEE' },
+                { user_id: 'u3', full_name: 'Bob Johnson', email: 'bob@example.com', role: 'EMPLOYEE' }
+            ]
+        });
+    }),
+
+    // Projects - Get Custom Fields
+    http.get('/api/projects/:id/custom-fields', () => {
+        return HttpResponse.json({
+            success: true,
+            data: [
+                { id: 'cf1', field_name: 'Sprint', field_type: 'TEXT', is_required: false, field_options: null },
+                { id: 'cf2', field_name: 'Story Points', field_type: 'NUMBER', is_required: false, field_options: null },
+                { id: 'cf3', field_name: 'Environment', field_type: 'SELECT', is_required: false, field_options: ['DEV', 'STAGING', 'PRODUCTION'] }
+            ]
+        });
+    }),
+
+    // Projects - Get Gantt Data  
+    http.get('/api/projects/:id/gantt', ({ params }) => {
+        const projectTasks = mockTasks.filter(t => t.project_id === params.id || true); // for mock, return all
+        return HttpResponse.json({
+            success: true,
+            projectName: 'Worksphere Platform',
+            data: projectTasks.slice(0, 10).map((t, index) => ({
+                id: t.id,
+                title: t.title,
+                type: 'TASK',
+                start_date: t.start_date || '2026-01-01',
+                due_date: t.due_date || '2026-01-15',
+                status_code: t.status_code,
+                progress: t.status_code === 'DONE' ? 100 : (t.status_code === 'IN_PROGRESS' ? 50 : 0),
+                assignees: t.assignees,
+                sort_order: index,
+                subtasks: mockSubtasks
+                    .filter(s => s.task_id === t.id)
+                    .slice(0, 3)
+                    .map((s: any) => ({
+                        id: s.id,
+                        title: s.title,
+                        type: 'SUBTASK',
+                        start_date: s.start_date || '2026-01-02',
+                        end_date: s.end_date || '2026-01-10',
+                        status_code: s.status_code,
+                        progress: s.status_code === 'DONE' ? 100 : 0
+                    }))
+            }))
+        });
+    }),
+
+    // Tasks - Add Comment
+    http.post('/api/tasks/:id/comments', async ({ params, request }) => {
+        const body = await request.json() as any;
+        return HttpResponse.json({
+            success: true,
+            data: {
+                id: Math.random().toString(36).substr(2, 9),
+                task_id: params.id,
+                content: body.content,
+                author_name: 'Current User',
+                created_at: new Date().toISOString()
+            }
+        });
+    }),
+
+    // Auth - Verify Reset Token
+    http.get('/api/auth/verify-reset-token', ({ request }) => {
+        const url = new URL(request.url);
+        const token = url.searchParams.get('token');
+
+        if (!token || token === 'invalid') {
+            return HttpResponse.json({ valid: false, error: 'Token không hợp lệ hoặc đã hết hạn' }, { status: 400 });
+        }
+
+        return HttpResponse.json({ valid: true, email: 'user@example.com' });
+    }),
+
+    // Auth - Reset Password
+    http.post('/api/auth/reset-password', async ({ request }) => {
+        const body = await request.json() as any;
+        if (!body.token || !body.password) {
+            return HttpResponse.json({ success: false, error: 'Missing fields' }, { status: 400 });
+        }
+        return HttpResponse.json({ success: true, message: 'Mật khẩu đã được cập nhật thành công' });
+    }),
+
+    // Workspace Settings - Get
+    http.get('/api/admin/workspace/settings', () => {
+        return HttpResponse.json({
+            success: true,
+            data: {
+                name: 'Worksphere Company',
+                code: 'WSP',
+                timezone: 'Asia/Ho_Chi_Minh',
+                logo_url: null,
+                settings: {
+                    auto_lock_day: 0, // Sunday
+                    auto_lock_time: '23:59'
+                }
+            }
+        });
+    }),
+
+    // Tags - Get all
+    http.get('/api/tags', () => {
+        return HttpResponse.json({
+            success: true,
+            data: [
+                { id: 'tag-1', name: 'Bug', color_code: '#ef4444' },
+                { id: 'tag-2', name: 'Feature', color_code: '#22c55e' },
+                { id: 'tag-3', name: 'Urgent', color_code: '#f97316' },
+                { id: 'tag-4', name: 'Documentation', color_code: '#3b82f6' }
+            ]
+        });
+    }),
+
+    // Create Task
+    http.post('/api/tasks', async ({ request }) => {
+        const body = await request.json() as any;
+        return HttpResponse.json({
+            success: true,
+            data: {
+                id: Math.random().toString(36).substr(2, 9),
+                ...body,
+                status_code: 'TODO',
+                created_at: new Date().toISOString()
+            }
+        });
+    }),
 ];

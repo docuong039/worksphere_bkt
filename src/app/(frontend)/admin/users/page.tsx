@@ -429,7 +429,7 @@ export default function AdminUsersPage() {
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             className="pl-9"
-                                            data-testid="input-search"
+                                            data-testid="admin-users-input-search"
                                         />
                                     </div>
                                 </div>
@@ -448,7 +448,7 @@ export default function AdminUsersPage() {
                                     </SelectContent>
                                 </Select>
 
-                                <Button variant="outline" onClick={fetchMembers} data-testid="btn-search">
+                                <Button variant="outline" onClick={fetchMembers} data-testid="admin-users-btn-search">
                                     Tìm kiếm
                                 </Button>
                             </div>

@@ -351,7 +351,7 @@ export default function RecycleBinPage() {
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
                                 <Select value={filterType} onValueChange={setFilterType}>
-                                    <SelectTrigger className="w-[160px]" data-testid="filter-type">
+                                    <SelectTrigger className="w-[160px]" data-testid="recycle-bin-filter-type">
                                         <SelectValue placeholder="Loại" />
                                     </SelectTrigger>
                                     <SelectContent>

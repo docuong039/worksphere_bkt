@@ -245,7 +245,7 @@ export default function OrgMembersPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-members-page-title">
                             <Users className="inline-block mr-3 h-8 w-8 text-blue-600" />
                             Quản lý Thành viên
                         </h1>
@@ -264,7 +264,7 @@ export default function OrgMembersPage() {
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card className="border-none shadow-sm" data-testid="stat-total">
+                    <Card className="border-none shadow-sm" data-testid="admin-members-stat-total">
                         <CardContent className="p-4">
                             <div className="flex items-center gap-3">
                                 <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center">
@@ -277,7 +277,7 @@ export default function OrgMembersPage() {
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="border-none shadow-sm" data-testid="stat-active">
+                    <Card className="border-none shadow-sm" data-testid="admin-members-stat-active">
                         <CardContent className="p-4">
                             <div className="flex items-center gap-3">
                                 <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
@@ -319,7 +319,7 @@ export default function OrgMembersPage() {
                 </div>
 
                 {/* Filters */}
-                <Card className="border-none shadow-sm" data-testid="filters-card">
+                <Card className="border-none shadow-sm" data-testid="admin-members-filters-card">
                     <CardContent className="p-4">
                         <div className="flex flex-wrap items-center gap-4">
                             <div className="flex-1 min-w-[200px]">
@@ -330,12 +330,12 @@ export default function OrgMembersPage() {
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-9"
-                                        data-testid="input-search"
+                                        data-testid="admin-members-input-search"
                                     />
                                 </div>
                             </div>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[160px]" data-testid="filter-status">
+                                <SelectTrigger className="w-[160px]" data-testid="admin-members-filter-status">
                                     <SelectValue placeholder="Trạng thái" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -365,7 +365,7 @@ export default function OrgMembersPage() {
                 <Card className="border-none shadow-sm" data-testid="members-table-card">
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                            <div className="p-6 space-y-4" data-testid="admin-members-loading-skeleton">
                                 {[1, 2, 3, 4].map(i => (
                                     <Skeleton key={i} className="h-16 w-full" />
                                 ))}
@@ -461,7 +461,7 @@ export default function OrgMembersPage() {
                                 </TableBody>
                             </Table>
                         ) : (
-                            <div className="p-12 text-center" data-testid="empty-state">
+                            <div className="p-12 text-center" data-testid="admin-members-empty-state">
                                 <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                                 <p className="text-slate-500 font-medium">Không tìm thấy thành viên</p>
                             </div>

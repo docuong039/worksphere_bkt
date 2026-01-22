@@ -51,6 +51,12 @@ export default function WorkspaceSettingsPage() {
     const [projectTypes, setProjectTypes] = useState(['Software', 'Marketing', 'Legal']);
     const [skillGroups, setSkillGroups] = useState(['Frontend', 'Backend', 'DevOps', 'Design']);
 
+    // Schedule State (US-ORG-03-02)
+    const [workDays, setWorkDays] = useState(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']);
+    const [startTime, setStartTime] = useState('08:00');
+    const [endTime, setEndTime] = useState('17:30');
+    const [dailyHours, setDailyHours] = useState(8);
+
     // Upload State
     const [logo, setLogo] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -79,7 +85,12 @@ export default function WorkspaceSettingsPage() {
                     lockDay,
                     projectTypes,
                     skillGroups,
-                    logo
+                    logo,
+                    // Schedule
+                    workDays,
+                    startTime,
+                    endTime,
+                    dailyHours
                 })
             });
             if (res.ok) {
@@ -120,6 +131,14 @@ export default function WorkspaceSettingsPage() {
         else setSkillGroups(skillGroups.filter((_, i) => i !== index));
     };
 
+    const toggleWorkDay = (day: string) => {
+        if (workDays.includes(day)) {
+            setWorkDays(workDays.filter(d => d !== day));
+        } else {
+            setWorkDays([...workDays, day]);
+        }
+    };
+
     if (!isOrgAdmin) {
         return (
             <AppLayout>
@@ -157,6 +176,7 @@ export default function WorkspaceSettingsPage() {
                 <Tabs defaultValue="general" className="space-y-8">
                     <TabsList className="bg-slate-100/50 p-1 h-12 rounded-xl border border-slate-100 w-full md:w-auto" data-testid="settings-tabs">
                         <TabsTrigger value="general" className="rounded-lg font-bold text-sm h-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Chung</TabsTrigger>
+                        <TabsTrigger value="schedule" className="rounded-lg font-bold text-sm h-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Lịch làm việc</TabsTrigger>
                         <TabsTrigger value="automation" className="rounded-lg font-bold text-sm h-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Tự động hóa</TabsTrigger>
                         <TabsTrigger value="customization" className="rounded-lg font-bold text-sm h-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm">Tùy chỉnh</TabsTrigger>
                     </TabsList>
@@ -222,6 +242,93 @@ export default function WorkspaceSettingsPage() {
                                                 </SelectContent>
                                             </Select>
                                         </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="schedule" className="space-y-8 animate-in fade-in duration-500">
+                        <Card className="border-none shadow-sm bg-white overflow-hidden" data-testid="card-working-schedule">
+                            <CardHeader className="pb-2 border-b border-slate-50">
+                                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                    <Calendar size={18} className="text-blue-600" /> Cấu hình ngày & giờ làm việc (US-ORG-03-02)
+                                </CardTitle>
+                                <CardDescription className="text-slate-500">
+                                    Thiết lập này ảnh hưởng đến việc tính công, KPI năng suất và cảnh báo trễ hạn.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-8 space-y-8">
+                                {/* Working Days */}
+                                <div className="space-y-4">
+                                    <label className="text-xs font-bold text-slate-700 uppercase">Ngày làm việc trong tuần</label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {[
+                                            { key: 'MONDAY', label: 'T2' },
+                                            { key: 'TUESDAY', label: 'T3' },
+                                            { key: 'WEDNESDAY', label: 'T4' },
+                                            { key: 'THURSDAY', label: 'T5' },
+                                            { key: 'FRIDAY', label: 'T6' },
+                                            { key: 'SATURDAY', label: 'T7' },
+                                            { key: 'SUNDAY', label: 'CN' },
+                                        ].map((day) => {
+                                            const isActive = workDays.includes(day.key);
+                                            return (
+                                                <div
+                                                    key={day.key}
+                                                    onClick={() => toggleWorkDay(day.key)}
+                                                    className={cn(
+                                                        "w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm cursor-pointer transition-all border-2",
+                                                        isActive
+                                                            ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200"
+                                                            : "bg-slate-50 border-slate-100 text-slate-400 hover:border-blue-200"
+                                                    )}
+                                                    data-testid={`day-${day.key}`}
+                                                >
+                                                    {day.label}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-medium italic">
+                                        Các ngày không được chọn sẽ được tính là ngày nghỉ (không tính vào công chuẩn).
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-slate-50 pt-8">
+                                    {/* Daily Hours */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-700 uppercase flex items-center gap-2">
+                                            <Clock size={14} className="text-slate-400" /> Giờ công chuẩn / ngày
+                                        </label>
+                                        <Input
+                                            type="number"
+                                            value={dailyHours}
+                                            onChange={(e) => setDailyHours(Number(e.target.value))}
+                                            className="h-11 font-bold border-slate-200 rounded-xl"
+                                        />
+                                    </div>
+
+                                    {/* Start Time */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-700 uppercase">Giờ bắt đầu</label>
+                                        <Input
+                                            type="time"
+                                            value={startTime}
+                                            onChange={(e) => setStartTime(e.target.value)}
+                                            className="h-11 font-bold border-slate-200 rounded-xl"
+                                        />
+                                    </div>
+
+                                    {/* End Time */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-700 uppercase">Giờ kết thúc</label>
+                                        <Input
+                                            type="time"
+                                            value={endTime}
+                                            onChange={(e) => setEndTime(e.target.value)}
+                                            className="h-11 font-bold border-slate-200 rounded-xl"
+                                        />
                                     </div>
                                 </div>
                             </CardContent>

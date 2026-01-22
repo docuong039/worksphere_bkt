@@ -182,7 +182,7 @@ export default function DeletedOrgsPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-deleted-orgs-page-title">
                             <Trash2 className="inline-block mr-3 h-8 w-8 text-red-500" />
                             Organizations đã xóa
                         </h1>
@@ -190,14 +190,14 @@ export default function DeletedOrgsPage() {
                             Khôi phục hoặc xóa vĩnh viễn Org (US-SYS-03-01/02/03)
                         </p>
                     </div>
-                    <Button variant="outline" onClick={fetchDeletedOrgs} data-testid="btn-refresh">
+                    <Button variant="outline" onClick={fetchDeletedOrgs} data-testid="admin-deleted-orgs-btn-refresh">
                         <RefreshCw className="mr-2 h-4 w-4" /> Làm mới
                     </Button>
                 </div>
 
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="border-none shadow-sm" data-testid="stat-total">
+                    <Card className="border-none shadow-sm" data-testid="admin-deleted-orgs-stat-total">
                         <CardContent className="p-6">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center">
@@ -210,7 +210,7 @@ export default function DeletedOrgsPage() {
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="border-none shadow-sm" data-testid="stat-users">
+                    <Card className="border-none shadow-sm" data-testid="admin-deleted-orgs-stat-users">
                         <CardContent className="p-6">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
@@ -225,7 +225,7 @@ export default function DeletedOrgsPage() {
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="border-none shadow-sm" data-testid="stat-projects">
+                    <Card className="border-none shadow-sm" data-testid="admin-deleted-orgs-stat-projects">
                         <CardContent className="p-6">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-xl bg-amber-100 flex items-center justify-center">
@@ -243,7 +243,7 @@ export default function DeletedOrgsPage() {
                 </div>
 
                 {/* Search */}
-                <Card className="border-none shadow-sm" data-testid="search-card">
+                <Card className="border-none shadow-sm" data-testid="admin-deleted-orgs-search-card">
                     <CardContent className="p-4">
                         <div className="relative max-w-md">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -252,7 +252,7 @@ export default function DeletedOrgsPage() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-9"
-                                data-testid="input-search"
+                                data-testid="admin-deleted-orgs-input-search"
                             />
                         </div>
                     </CardContent>
@@ -268,7 +268,7 @@ export default function DeletedOrgsPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                            <div className="p-6 space-y-4" data-testid="admin-deleted-orgs-loading-skeleton">
                                 {[1, 2, 3].map(i => (
                                     <Skeleton key={i} className="h-16 w-full" />
                                 ))}
@@ -342,7 +342,7 @@ export default function DeletedOrgsPage() {
                                 </TableBody>
                             </Table>
                         ) : (
-                            <div className="p-12 text-center" data-testid="empty-state">
+                            <div className="p-12 text-center" data-testid="admin-deleted-orgs-empty-state">
                                 <CheckCircle2 className="h-12 w-12 text-emerald-300 mx-auto mb-4" />
                                 <p className="text-slate-500 font-medium">Không có Org nào đã xóa</p>
                             </div>

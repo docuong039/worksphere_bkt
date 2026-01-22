@@ -349,14 +349,14 @@ export default function ReportsPage() {
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             className="pl-9"
-                                            data-testid="input-search"
+                                            data-testid="reports-input-search"
                                         />
                                     </div>
                                 </div>
                             )}
 
                             <Select value={filter} onValueChange={setFilter}>
-                                <SelectTrigger className="w-[160px]" data-testid="filter-status">
+                                <SelectTrigger className="w-[160px]" data-testid="reports-filter-status">
                                     <SelectValue placeholder="Trạng thái" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -368,7 +368,7 @@ export default function ReportsPage() {
                             </Select>
 
                             <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                <SelectTrigger className="w-[160px]" data-testid="filter-type">
+                                <SelectTrigger className="w-[160px]" data-testid="reports-filter-type">
                                     <SelectValue placeholder="Loại báo cáo" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -383,7 +383,7 @@ export default function ReportsPage() {
                                 <Button
                                     variant="outline"
                                     onClick={() => fetchReports()}
-                                    data-testid="btn-search"
+                                    data-testid="reports-btn-search"
                                 >
                                     Tìm kiếm
                                 </Button>
@@ -518,7 +518,7 @@ export default function ReportsPage() {
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     className={formErrors.title ? 'border-red-300' : ''}
-                                    data-testid="input-title"
+                                    data-testid="reports-input-title"
                                 />
                             </div>
 
@@ -540,7 +540,7 @@ export default function ReportsPage() {
 
                         <DialogFooter className="gap-2">
                             <DialogClose asChild>
-                                <Button variant="outline" data-testid="btn-cancel">
+                                <Button variant="outline" data-testid="reports-btn-cancel">
                                     Hủy
                                 </Button>
                             </DialogClose>
@@ -557,7 +557,7 @@ export default function ReportsPage() {
                                 onClick={() => handleSubmit(false)}
                                 disabled={isSubmitting}
                                 className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="btn-submit"
+                                data-testid="reports-btn-submit"
                             >
                                 {isSubmitting ? (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -177,13 +177,13 @@ function JoinPageContent() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
-            <Card className="w-full max-w-lg border-none shadow-xl" data-testid="join-page">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4" data-testid="join-container">
+            <Card className="w-full max-w-lg border-none shadow-xl" data-testid="join-card">
                 <CardHeader className="text-center pb-0">
                     <div className="h-16 w-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-blue-200">
                         <Building2 className="h-8 w-8 text-white" />
                     </div>
-                    <CardTitle className="text-2xl font-bold">Gia nhập tổ chức</CardTitle>
+                    <CardTitle className="text-2xl font-bold" data-testid="join-page-title">Gia nhập tổ chức</CardTitle>
                     <CardDescription className="text-base">
                         Bạn được mời tham gia <strong className="text-blue-600">{inviteInfo?.org_name}</strong>
                     </CardDescription>

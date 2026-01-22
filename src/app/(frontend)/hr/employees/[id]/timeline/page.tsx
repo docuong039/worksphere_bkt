@@ -181,12 +181,12 @@ export default function EmployeeTimelinePage({ params }: { params: Promise<{ id:
                 {/* Header */}
                 <div>
                     <Button variant="ghost" asChild className="-ml-4 mb-4 text-slate-500">
-                        <Link href="/hr-management">
+                        <Link href="/hr/employees">
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Quay lại Quản lý nhân sự
                         </Link>
                     </Button>
-                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="hr-employee-page-title">
                         <User className="inline-block mr-3 h-8 w-8 text-blue-600" />
                         Lịch sử làm việc
                     </h1>
@@ -196,7 +196,7 @@ export default function EmployeeTimelinePage({ params }: { params: Promise<{ id:
                 </div>
 
                 {loading ? (
-                    <div className="space-y-4" data-testid="loading-skeleton">
+                    <div className="space-y-4" data-testid="hr-employee-loading-skeleton">
                         <Skeleton className="h-40 w-full" />
                         <Skeleton className="h-96 w-full" />
                     </div>

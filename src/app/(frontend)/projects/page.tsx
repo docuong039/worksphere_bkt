@@ -206,7 +206,7 @@ export default function ProjectsPage() {
                         <div className="flex items-center gap-2 w-full sm:w-auto">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="h-11 px-4 gap-2 text-slate-600 font-semibold border-slate-200" data-testid="filter-status">
+                                    <Button variant="outline" className="h-11 px-4 gap-2 text-slate-600 font-semibold border-slate-200" data-testid="projects-filter-status">
                                         <Filter size={18} />
                                         Trạng thái: {statusFilter === 'ALL' ? 'Tất cả' : (statusFilter === 'ACTIVE' ? 'Hoạt động' : 'Lưu trữ')}
                                     </Button>

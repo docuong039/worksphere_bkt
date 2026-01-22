@@ -184,7 +184,7 @@ export default function OrgRecycleBinPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="settings-recycle-page-title">
                             <Trash2 className="inline-block mr-3 h-8 w-8 text-slate-600" />
                             Thùng rác Tổ chức
                         </h1>
@@ -203,7 +203,7 @@ export default function OrgRecycleBinPage() {
                                 Khôi phục ({selectedItems.size})
                             </Button>
                         )}
-                        <Button variant="outline" onClick={fetchItems} data-testid="btn-refresh">
+                        <Button variant="outline" onClick={fetchItems} data-testid="settings-recycle-btn-refresh">
                             <RefreshCw className="h-4 w-4" />
                         </Button>
                     </div>
@@ -214,7 +214,7 @@ export default function OrgRecycleBinPage() {
                     <Card
                         className={`border-none shadow-sm cursor-pointer transition-all ${typeFilter === 'USER' ? 'ring-2 ring-blue-500' : ''}`}
                         onClick={() => setTypeFilter(typeFilter === 'USER' ? 'ALL' : 'USER')}
-                        data-testid="stat-users"
+                        data-testid="settings-recycle-stat-users"
                     >
                         <CardContent className="p-4 flex items-center gap-3">
                             <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -229,7 +229,7 @@ export default function OrgRecycleBinPage() {
                     <Card
                         className={`border-none shadow-sm cursor-pointer transition-all ${typeFilter === 'PROJECT' ? 'ring-2 ring-purple-500' : ''}`}
                         onClick={() => setTypeFilter(typeFilter === 'PROJECT' ? 'ALL' : 'PROJECT')}
-                        data-testid="stat-projects"
+                        data-testid="settings-recycle-stat-projects"
                     >
                         <CardContent className="p-4 flex items-center gap-3">
                             <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
@@ -274,7 +274,7 @@ export default function OrgRecycleBinPage() {
                 </div>
 
                 {/* Search */}
-                <Card className="border-none shadow-sm" data-testid="search-card">
+                <Card className="border-none shadow-sm" data-testid="settings-recycle-search-card">
                     <CardContent className="p-4">
                         <div className="flex items-center gap-4">
                             <div className="flex-1 relative">
@@ -284,7 +284,7 @@ export default function OrgRecycleBinPage() {
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-9"
-                                    data-testid="input-search"
+                                    data-testid="settings-recycle-input-search"
                                 />
                             </div>
                             <Button
@@ -314,7 +314,7 @@ export default function OrgRecycleBinPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                            <div className="p-6 space-y-4" data-testid="settings-recycle-loading-skeleton">
                                 {[1, 2, 3, 4].map(i => (
                                     <Skeleton key={i} className="h-14 w-full" />
                                 ))}
@@ -386,7 +386,7 @@ export default function OrgRecycleBinPage() {
                                 </TableBody>
                             </Table>
                         ) : (
-                            <div className="p-12 text-center" data-testid="empty-state">
+                            <div className="p-12 text-center" data-testid="settings-recycle-empty-state">
                                 <CheckCircle2 className="h-12 w-12 text-emerald-300 mx-auto mb-4" />
                                 <p className="text-slate-500 font-medium">Thùng rác trống</p>
                             </div>
@@ -414,7 +414,7 @@ export default function OrgRecycleBinPage() {
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)} data-testid="btn-cancel">
+                            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)} data-testid="settings-recycle-btn-cancel">
                                 Hủy
                             </Button>
                             <Button

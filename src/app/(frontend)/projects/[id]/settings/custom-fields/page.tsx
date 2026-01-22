@@ -51,6 +51,7 @@ import {
     List,
     CheckSquare,
     GripVertical,
+    AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
@@ -72,6 +73,8 @@ export default function CustomFieldsPage({ params }: { params: Promise<{ id: str
     const [fields, setFields] = useState<CustomField[]>([]);
     const [loading, setLoading] = useState(true);
     const [projectName, setProjectName] = useState('');
+
+    const isAuthorized = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN' || user?.role === 'CEO';
 
     // Dialog states
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -214,6 +217,21 @@ export default function CustomFieldsPage({ params }: { params: Promise<{ id: str
         }
     };
 
+    if (!isAuthorized) {
+        return (
+            <AppLayout>
+                <div className="flex flex-col items-center justify-center py-32 text-center h-[70vh]">
+                    <AlertTriangle size={48} className="text-amber-500 mb-6" />
+                    <h2 className="text-2xl font-black text-slate-900">Truy cập bị từ chối</h2>
+                    <p className="text-slate-500 mt-2 max-w-xs font-medium">Chỉ Quản lý dự án mới có quyền cấu hình trường tùy chỉnh.</p>
+                    <Button className="mt-6 bg-blue-600" asChild>
+                        <Link href={`/projects/${projectId}/overview`}>Quay lại Dự án</Link>
+                    </Button>
+                </div>
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout>
             <div className="space-y-6 animate-in fade-in duration-700" data-testid="custom-fields-page">
@@ -227,7 +245,7 @@ export default function CustomFieldsPage({ params }: { params: Promise<{ id: str
                     </Button>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="project-custom-fields-page-title">
                                 <Sliders className="inline-block mr-3 h-8 w-8 text-blue-600" />
                                 Trường tùy chỉnh
                             </h1>
@@ -253,7 +271,7 @@ export default function CustomFieldsPage({ params }: { params: Promise<{ id: str
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                            <div className="p-6 space-y-4" data-testid="project-custom-fields-loading-skeleton">
                                 {[1, 2, 3, 4].map(i => (
                                     <Skeleton key={i} className="h-14 w-full" />
                                 ))}
@@ -332,7 +350,7 @@ export default function CustomFieldsPage({ params }: { params: Promise<{ id: str
                                 </TableBody>
                             </Table>
                         ) : (
-                            <div className="p-12 text-center" data-testid="empty-state">
+                            <div className="p-12 text-center" data-testid="project-custom-fields-empty-state">
                                 <Sliders className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                                 <p className="text-slate-500 font-medium">Chưa có trường tùy chỉnh</p>
                                 <p className="text-slate-400 text-sm mt-1">Thêm trường để thu thập thông tin riêng cho dự án</p>
@@ -420,14 +438,14 @@ export default function CustomFieldsPage({ params }: { params: Promise<{ id: str
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="btn-cancel">
+                            <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="project-custom-fields-btn-cancel">
                                 Hủy
                             </Button>
                             <Button
                                 onClick={handleSubmit}
                                 disabled={isSubmitting || !formData.field_name.trim()}
                                 className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="btn-submit"
+                                data-testid="project-custom-fields-btn-submit"
                             >
                                 {isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                                 {editingField ? 'Cập nhật' : 'Thêm mới'}

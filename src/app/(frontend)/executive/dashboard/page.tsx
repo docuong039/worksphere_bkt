@@ -153,7 +153,7 @@ export default function ExecutiveDashboardPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="dashboard-page-title">
                             <Crown className="inline-block mr-3 h-8 w-8 text-amber-500" />
                             Executive Dashboard
                         </h1>
@@ -163,7 +163,7 @@ export default function ExecutiveDashboardPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <Select value={timeRange} onValueChange={setTimeRange}>
-                            <SelectTrigger className="w-[140px]" data-testid="select-time-range">
+                            <SelectTrigger className="w-[140px]" data-testid="dashboard-select-time-range">
                                 <SelectValue placeholder="Thời gian" />
                             </SelectTrigger>
                             <SelectContent>
@@ -173,14 +173,14 @@ export default function ExecutiveDashboardPage() {
                                 <SelectItem value="year">Năm nay</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Button variant="outline" onClick={fetchDashboardData} data-testid="btn-refresh">
+                        <Button variant="outline" onClick={fetchDashboardData} data-testid="dashboard-btn-refresh">
                             <RefreshCw className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
 
                 {loading ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="loading-skeleton">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="dashboard-loading-skeleton">
                         {[1, 2, 3, 4].map(i => (
                             <Skeleton key={i} className="h-36 w-full" />
                         ))}
@@ -207,7 +207,7 @@ export default function ExecutiveDashboardPage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-none shadow-sm bg-gradient-to-br from-purple-50 to-pink-50" data-testid="stat-projects">
+                            <Card className="border-none shadow-sm bg-gradient-to-br from-purple-50 to-pink-50" data-testid="dashboard-stat-projects">
                                 <CardContent className="p-6">
                                     <div className="flex items-center justify-between">
                                         <div className="h-12 w-12 rounded-xl bg-purple-100 flex items-center justify-center">

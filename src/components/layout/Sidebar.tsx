@@ -20,7 +20,10 @@ import {
     History,
     Activity,
     Building2,
-    Lock
+    Lock,
+    Users,
+    DollarSign,
+    FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
@@ -41,6 +44,12 @@ const MENU_ITEMS: MenuItem[] = [
     { label: 'Bảng cá nhân', href: '/personal-board', icon: Pin, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
     { label: 'Hoạt động', href: '/activity', icon: Newspaper, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
     { label: 'Thùng rác', href: '/recycle-bin', icon: Trash2, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN', 'SYS_ADMIN'] },
+];
+
+const HR_ITEMS: MenuItem[] = [
+    { label: 'Danh sách nhân viên', href: '/hr/employees', icon: Users, roles: ['PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
+    { label: 'Lương & Cấp bậc', href: '/hr/salary', icon: DollarSign, roles: ['PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
+    { label: 'Hợp đồng', href: '/hr/contracts', icon: FileText, roles: ['CEO', 'ORG_ADMIN'] },
 ];
 
 const ADMIN_ITEMS: MenuItem[] = [
@@ -69,6 +78,7 @@ export default function Sidebar() {
     };
 
     const mainItems = filterMenuItems(MENU_ITEMS);
+    const hrItems = filterMenuItems(HR_ITEMS);
     const adminItems = filterMenuItems(ADMIN_ITEMS);
     const settingsItems = filterMenuItems(SETTINGS_ITEMS);
 
@@ -105,6 +115,29 @@ export default function Sidebar() {
                         ))}
                     </ul>
                 </div>
+
+                {hrItems.length > 0 && (
+                    <div>
+                        <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Nhân sự</p>
+                        <ul className="space-y-1">
+                            {hrItems.map((item) => (
+                                <li key={item.href}>
+                                    <Link
+                                        href={item.href}
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 hover:text-white",
+                                            pathname.startsWith(item.href) ? "bg-blue-600/10 text-blue-500" : "text-slate-400"
+                                        )}
+                                        data-testid={`sidebar-link-hr-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                                    >
+                                        <item.icon size={18} />
+                                        {item.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
 
                 {adminItems.length > 0 && (
                     <div>

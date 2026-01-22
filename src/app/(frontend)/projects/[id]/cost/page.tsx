@@ -121,7 +121,7 @@ export default function ProjectCostPage({ params }: { params: Promise<{ id: stri
                     </Button>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="project-cost-page-title">
                                 <DollarSign className="inline-block mr-3 h-8 w-8 text-emerald-600" />
                                 Chi phí Dự án
                             </h1>
@@ -131,7 +131,7 @@ export default function ProjectCostPage({ params }: { params: Promise<{ id: stri
                         </div>
                         <div className="flex items-center gap-3">
                             <Select value={timeRange} onValueChange={setTimeRange}>
-                                <SelectTrigger className="w-[140px]" data-testid="select-time-range">
+                                <SelectTrigger className="w-[140px]" data-testid="project-cost-select-time-range">
                                     <SelectValue placeholder="Thời gian" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -142,7 +142,7 @@ export default function ProjectCostPage({ params }: { params: Promise<{ id: stri
                                     <SelectItem value="all">Toàn bộ</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Button variant="outline" onClick={fetchData} data-testid="btn-refresh">
+                            <Button variant="outline" onClick={fetchData} data-testid="project-cost-btn-refresh">
                                 <RefreshCw className="h-4 w-4" />
                             </Button>
                         </div>
@@ -150,7 +150,7 @@ export default function ProjectCostPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {loading ? (
-                    <div className="space-y-4" data-testid="loading-skeleton">
+                    <div className="space-y-4" data-testid="project-cost-loading-skeleton">
                         <Skeleton className="h-32 w-full" />
                         <div className="grid grid-cols-3 gap-4">
                             <Skeleton className="h-24 w-full" />

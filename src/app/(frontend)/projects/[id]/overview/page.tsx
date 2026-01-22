@@ -313,9 +313,6 @@ export default function ProjectOverviewPage({ params }: { params: Promise<{ id: 
                         <TabsTrigger value="gantt" className="rounded-lg font-bold text-sm h-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm" asChild>
                             <Link href={`/projects/${id}/gantt`}>Biểu đồ Gantt</Link>
                         </TabsTrigger>
-                        <TabsTrigger value="quality" className="rounded-lg font-bold text-sm h-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm" asChild>
-                            <Link href={`/projects/${id}/quality`}>Chất lượng</Link>
-                        </TabsTrigger>
                         {isPM && (
                             <TabsTrigger value="time-locks" className="rounded-lg font-bold text-sm h-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm" asChild>
                                 <Link href={`/projects/${id}/time-locks`}>Khóa kỳ công</Link>

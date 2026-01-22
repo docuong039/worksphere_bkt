@@ -210,7 +210,7 @@ export default function OrgApprovalsPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-approvals-page-title">
                             <Building2 className="inline-block mr-3 h-8 w-8 text-blue-600" />
                             Duyệt đăng ký Org
                         </h1>
@@ -218,7 +218,7 @@ export default function OrgApprovalsPage() {
                             Xét duyệt yêu cầu tạo Organization mới (US-SYS-01-01/02)
                         </p>
                     </div>
-                    <Button variant="outline" onClick={fetchApplications} data-testid="btn-refresh">
+                    <Button variant="outline" onClick={fetchApplications} data-testid="admin-approvals-btn-refresh">
                         <RefreshCw className="mr-2 h-4 w-4" /> Làm mới
                     </Button>
                 </div>
@@ -261,7 +261,7 @@ export default function OrgApprovalsPage() {
                 </div>
 
                 {/* Filters */}
-                <Card className="border-none shadow-sm" data-testid="filters-card">
+                <Card className="border-none shadow-sm" data-testid="admin-approvals-filters-card">
                     <CardContent className="p-4">
                         <div className="flex flex-wrap items-center gap-4">
                             <div className="flex-1 min-w-[200px]">
@@ -272,12 +272,12 @@ export default function OrgApprovalsPage() {
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="pl-9"
-                                        data-testid="input-search"
+                                        data-testid="admin-approvals-input-search"
                                     />
                                 </div>
                             </div>
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[160px]" data-testid="filter-status">
+                                <SelectTrigger className="w-[160px]" data-testid="admin-approvals-filter-status">
                                     <SelectValue placeholder="Trạng thái" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -299,7 +299,7 @@ export default function OrgApprovalsPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                            <div className="p-6 space-y-4" data-testid="admin-approvals-loading-skeleton">
                                 {[1, 2, 3].map(i => (
                                     <Skeleton key={i} className="h-16 w-full" />
                                 ))}
@@ -366,7 +366,7 @@ export default function OrgApprovalsPage() {
                                 </TableBody>
                             </Table>
                         ) : (
-                            <div className="p-12 text-center" data-testid="empty-state">
+                            <div className="p-12 text-center" data-testid="admin-approvals-empty-state">
                                 <CheckCircle2 className="h-12 w-12 text-emerald-300 mx-auto mb-4" />
                                 <p className="text-slate-500 font-medium">Không có yêu cầu nào</p>
                             </div>

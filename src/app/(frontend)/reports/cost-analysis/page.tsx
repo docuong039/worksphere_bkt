@@ -140,7 +140,7 @@ export default function OrgCostAnalysisPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="reports-cost-page-title">
                             <DollarSign className="inline-block mr-3 h-8 w-8 text-emerald-600" />
                             Chi phí Nhân sự
                         </h1>
@@ -150,7 +150,7 @@ export default function OrgCostAnalysisPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <Select value={timeRange} onValueChange={setTimeRange}>
-                            <SelectTrigger className="w-[140px]" data-testid="select-time-range">
+                            <SelectTrigger className="w-[140px]" data-testid="reports-cost-select-time-range">
                                 <SelectValue placeholder="Thời gian" />
                             </SelectTrigger>
                             <SelectContent>
@@ -167,7 +167,7 @@ export default function OrgCostAnalysisPage() {
                 </div>
 
                 {loading ? (
-                    <div className="space-y-4" data-testid="loading-skeleton">
+                    <div className="space-y-4" data-testid="reports-cost-loading-skeleton">
                         <Skeleton className="h-32 w-full" />
                     </div>
                 ) : summary && (
@@ -276,7 +276,7 @@ export default function OrgCostAnalysisPage() {
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                                 className="pl-9 w-[200px]"
-                                                data-testid="input-search"
+                                                data-testid="reports-cost-input-search"
                                             />
                                         </div>
                                         <Select value={departmentFilter} onValueChange={setDepartmentFilter}>

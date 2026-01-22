@@ -327,7 +327,7 @@ export default function CreateTaskPage() {
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                                 className={formErrors.title ? 'border-red-300' : ''}
-                                data-testid="input-title"
+                                data-testid="task-new-input-title"
                             />
                             {formErrors.title && (
                                 <p className="text-sm text-red-600">{formErrors.title}</p>
@@ -344,7 +344,7 @@ export default function CreateTaskPage() {
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 rows={4}
-                                data-testid="input-description"
+                                data-testid="task-new-input-description"
                             />
                         </div>
 
@@ -503,7 +503,7 @@ export default function CreateTaskPage() {
                             <Button
                                 variant="outline"
                                 onClick={() => router.push('/tasks')}
-                                data-testid="btn-cancel"
+                                data-testid="task-new-btn-cancel"
                             >
                                 Hủy
                             </Button>
@@ -511,7 +511,7 @@ export default function CreateTaskPage() {
                                 onClick={handleSubmit}
                                 disabled={isSubmitting}
                                 className="bg-blue-600 hover:bg-blue-700 min-w-[120px]"
-                                data-testid="btn-submit"
+                                data-testid="task-new-btn-submit"
                             >
                                 {isSubmitting ? (
                                     <>

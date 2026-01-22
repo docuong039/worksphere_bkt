@@ -369,7 +369,7 @@ export default function ActivityPage() {
 
                             {/* Activity Type Filter */}
                             <Select value={selectedType} onValueChange={setSelectedType}>
-                                <SelectTrigger className="w-[180px]" data-testid="filter-type">
+                                <SelectTrigger className="w-[180px]" data-testid="activity-filter-type">
                                     <SelectValue placeholder="Tất cả loại" />
                                 </SelectTrigger>
                                 <SelectContent>

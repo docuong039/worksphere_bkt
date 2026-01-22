@@ -225,7 +225,7 @@ export default function RoleCustomizationPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-roles-customize-page-title">
                             <Shield className="inline-block mr-3 h-8 w-8 text-blue-600" />
                             Tùy chỉnh Vai trò
                         </h1>
@@ -243,7 +243,7 @@ export default function RoleCustomizationPage() {
                 </div>
 
                 {/* Search */}
-                <Card className="border-none shadow-sm" data-testid="search-card">
+                <Card className="border-none shadow-sm" data-testid="admin-roles-customize-search-card">
                     <CardContent className="p-4">
                         <div className="relative max-w-md">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -252,7 +252,7 @@ export default function RoleCustomizationPage() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-9"
-                                data-testid="input-search"
+                                data-testid="admin-roles-customize-input-search"
                             />
                         </div>
                     </CardContent>
@@ -266,7 +266,7 @@ export default function RoleCustomizationPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                            <div className="p-6 space-y-4" data-testid="admin-roles-customize-loading-skeleton">
                                 {[1, 2, 3].map(i => (
                                     <Skeleton key={i} className="h-20 w-full" />
                                 ))}
@@ -373,7 +373,7 @@ export default function RoleCustomizationPage() {
                                         placeholder="vd: Senior Developer"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        data-testid="input-name"
+                                        data-testid="admin-roles-customize-input-name"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -382,7 +382,7 @@ export default function RoleCustomizationPage() {
                                         placeholder="Mô tả ngắn về vai trò"
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        data-testid="input-description"
+                                        data-testid="admin-roles-customize-input-description"
                                     />
                                 </div>
                             </div>
@@ -419,14 +419,14 @@ export default function RoleCustomizationPage() {
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setDialogOpen(false)} data-testid="btn-cancel">
+                            <Button variant="outline" onClick={() => setDialogOpen(false)} data-testid="admin-roles-customize-btn-cancel">
                                 Hủy
                             </Button>
                             <Button
                                 onClick={handleSubmit}
                                 disabled={isSubmitting || !formData.name.trim()}
                                 className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="btn-submit"
+                                data-testid="admin-roles-customize-btn-submit"
                             >
                                 {isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                                 <Save className="mr-2 h-4 w-4" />

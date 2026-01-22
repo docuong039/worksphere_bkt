@@ -639,7 +639,7 @@ export default function TimeLogsPage() {
 
                         <DialogFooter>
                             <DialogClose asChild>
-                                <Button variant="outline" data-testid="btn-cancel">
+                                <Button variant="outline" data-testid="timelogs-btn-cancel">
                                     Hủy
                                 </Button>
                             </DialogClose>
@@ -647,7 +647,7 @@ export default function TimeLogsPage() {
                                 onClick={handleSubmit}
                                 disabled={isSubmitting}
                                 className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="btn-submit"
+                                data-testid="timelogs-btn-submit"
                             >
                                 {isSubmitting ? (
                                     <>

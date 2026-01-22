@@ -176,7 +176,7 @@ export default function InviteManagementPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-invites-page-title">
                             <Link2 className="inline-block mr-3 h-8 w-8 text-blue-600" />
                             Quản lý Mã mời
                         </h1>
@@ -195,7 +195,7 @@ export default function InviteManagementPage() {
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="border-none shadow-sm" data-testid="stat-total">
+                    <Card className="border-none shadow-sm" data-testid="admin-invites-stat-total">
                         <CardContent className="p-6">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
@@ -208,7 +208,7 @@ export default function InviteManagementPage() {
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="border-none shadow-sm" data-testid="stat-active">
+                    <Card className="border-none shadow-sm" data-testid="admin-invites-stat-active">
                         <CardContent className="p-6">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-xl bg-emerald-100 flex items-center justify-center">
@@ -243,7 +243,7 @@ export default function InviteManagementPage() {
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                            <div className="p-6 space-y-4" data-testid="admin-invites-loading-skeleton">
                                 {[1, 2, 3].map(i => (
                                     <Skeleton key={i} className="h-16 w-full" />
                                 ))}
@@ -323,7 +323,7 @@ export default function InviteManagementPage() {
                                 </TableBody>
                             </Table>
                         ) : (
-                            <div className="p-12 text-center" data-testid="empty-state">
+                            <div className="p-12 text-center" data-testid="admin-invites-empty-state">
                                 <Link2 className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                                 <p className="text-slate-500 font-medium">Chưa có mã mời nào</p>
                                 <p className="text-slate-400 text-sm mt-1">Tạo mã mời để nhân sự gia nhập tổ chức</p>

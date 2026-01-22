@@ -128,7 +128,7 @@ export default function PerformancePage({ params }: { params: Promise<{ id: stri
                     </Button>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="project-performance-page-title">
                                 <BarChart3 className="inline-block mr-3 h-8 w-8 text-blue-600" />
                                 Hiệu suất Team
                             </h1>
@@ -138,7 +138,7 @@ export default function PerformancePage({ params }: { params: Promise<{ id: stri
                         </div>
                         <div className="flex items-center gap-3">
                             <Select value={timeRange} onValueChange={setTimeRange}>
-                                <SelectTrigger className="w-[140px]" data-testid="select-time-range">
+                                <SelectTrigger className="w-[140px]" data-testid="project-performance-select-time-range">
                                     <SelectValue placeholder="Thời gian" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -147,7 +147,7 @@ export default function PerformancePage({ params }: { params: Promise<{ id: stri
                                     <SelectItem value="quarter">Quý này</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Button variant="outline" onClick={fetchData} data-testid="btn-refresh">
+                            <Button variant="outline" onClick={fetchData} data-testid="project-performance-btn-refresh">
                                 <RefreshCw className="h-4 w-4" />
                             </Button>
                         </div>
@@ -155,7 +155,7 @@ export default function PerformancePage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {loading ? (
-                    <div className="space-y-4" data-testid="loading-skeleton">
+                    <div className="space-y-4" data-testid="project-performance-loading-skeleton">
                         <Skeleton className="h-32 w-full" />
                         <Skeleton className="h-96 w-full" />
                     </div>

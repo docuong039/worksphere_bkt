@@ -241,7 +241,7 @@ export default function NewProjectPage() {
                                     className="min-h-[120px] text-sm font-medium rounded-xl bg-slate-50/50 border-slate-100 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all p-4"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    data-testid="input-description"
+                                    data-testid="project-new-input-description"
                                 />
                             </div>
                         </CardContent>

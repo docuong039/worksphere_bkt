@@ -52,6 +52,7 @@ import {
     RefreshCw,
     Link as LinkIcon,
     Copy,
+    AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
@@ -75,6 +76,34 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
     const [resources, setResources] = useState<ProjectResource[]>([]);
     const [projectName, setProjectName] = useState('');
     const [typeFilter, setTypeFilter] = useState<ResourceType | 'ALL'>('ALL');
+
+    // Permission check
+    // Permission check: STRICT 100% DOCS (Resource is MNG only)
+    const canManage = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
+
+    // Authorization: Only Managers/Admins can access. EMP/CEO denied.
+    const isAuthorized = canManage;
+
+    if (!user) return null;
+
+    if (!isAuthorized) {
+        return (
+            <AppLayout>
+                <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4 animate-in fade-in zoom-in duration-300">
+                    <div className="p-4 bg-rose-100 text-rose-600 rounded-full shadow-sm">
+                        <AlertTriangle size={48} />
+                    </div>
+                    <h2 className="text-2xl font-black text-slate-900">Truy cập bị từ chối</h2>
+                    <p className="text-slate-500 max-w-md font-medium">
+                        Theo quy định phân quyền, chỉ Quản lý dự án mới được truy cập Tài nguyên kỹ thuật (MNG-05).
+                    </p>
+                    <Button variant="outline" onClick={() => window.history.back()} className="font-bold">
+                        Quay lại trang trước
+                    </Button>
+                </div>
+            </AppLayout>
+        );
+    }
 
     // Dialog
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -210,7 +239,7 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
                     </Button>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="project-resources-page-title">
                                 <FolderGit2 className="inline-block mr-3 h-8 w-8 text-blue-600" />
                                 Tài nguyên Dự án
                             </h1>
@@ -218,13 +247,15 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
                                 Quản lý Git, Deploy, Documents (US-MNG-05-01/02/03/04)
                             </p>
                         </div>
-                        <Button
-                            className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
-                            onClick={openCreateDialog}
-                            data-testid="btn-add-resource"
-                        >
-                            <Plus className="mr-2 h-4 w-4" /> Thêm Resource
-                        </Button>
+                        {canManage && (
+                            <Button
+                                className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
+                                onClick={openCreateDialog}
+                                data-testid="btn-add-resource"
+                            >
+                                <Plus className="mr-2 h-4 w-4" /> Thêm Resource
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -306,7 +337,7 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                            <div className="p-6 space-y-4" data-testid="project-resources-loading-skeleton">
                                 {[1, 2, 3, 4].map(i => (
                                     <Skeleton key={i} className="h-14 w-full" />
                                 ))}
@@ -318,7 +349,7 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
                                         <TableHead className="font-bold">Tên</TableHead>
                                         <TableHead className="font-bold">Loại</TableHead>
                                         <TableHead className="font-bold">URL</TableHead>
-                                        <TableHead className="text-right font-bold">Thao tác</TableHead>
+                                        {canManage && <TableHead className="text-right font-bold">Thao tác</TableHead>}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -354,39 +385,43 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
                                                     </Button>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" data-testid={`resource-actions-${resource.id}`}>
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem asChild>
-                                                            <a href={resource.url} target="_blank" rel="noopener noreferrer" data-testid={`btn-open-${resource.id}`}>
-                                                                <ExternalLink className="mr-2 h-4 w-4" /> Mở
-                                                            </a>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => openEditDialog(resource)} data-testid={`btn-edit-${resource.id}`}>
-                                                            <Edit2 className="mr-2 h-4 w-4" /> Sửa
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleDelete(resource.id)} className="text-red-600" data-testid={`btn-delete-${resource.id}`}>
-                                                            <Trash2 className="mr-2 h-4 w-4" /> Xóa
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
+                                            {canManage && (
+                                                <TableCell className="text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" data-testid={`resource-actions-${resource.id}`}>
+                                                                <MoreVertical className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem asChild>
+                                                                <a href={resource.url} target="_blank" rel="noopener noreferrer" data-testid={`btn-open-${resource.id}`}>
+                                                                    <ExternalLink className="mr-2 h-4 w-4" /> Mở
+                                                                </a>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => openEditDialog(resource)} data-testid={`btn-edit-${resource.id}`}>
+                                                                <Edit2 className="mr-2 h-4 w-4" /> Sửa
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleDelete(resource.id)} className="text-red-600" data-testid={`btn-delete-${resource.id}`}>
+                                                                <Trash2 className="mr-2 h-4 w-4" /> Xóa
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            )}
                                         </TableRow>
                                     ))}
                                 </TableBody>
                             </Table>
                         ) : (
-                            <div className="p-12 text-center" data-testid="empty-state">
+                            <div className="p-12 text-center" data-testid="project-resources-empty-state">
                                 <FolderGit2 className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                                 <p className="text-slate-500 font-medium">Chưa có resource nào</p>
-                                <Button className="mt-4" onClick={openCreateDialog} data-testid="btn-add-first">
-                                    <Plus className="mr-2 h-4 w-4" /> Thêm Resource đầu tiên
-                                </Button>
+                                {canManage && (
+                                    <Button className="mt-4" onClick={openCreateDialog} data-testid="btn-add-first">
+                                        <Plus className="mr-2 h-4 w-4" /> Thêm Resource đầu tiên
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </CardContent>
@@ -425,7 +460,7 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
                                     placeholder="vd: Frontend Repository"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    data-testid="input-name"
+                                    data-testid="project-resources-input-name"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -444,19 +479,19 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
                                     value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     rows={2}
-                                    data-testid="input-description"
+                                    data-testid="project-resources-input-description"
                                 />
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setDialogOpen(false)} data-testid="btn-cancel">
+                            <Button variant="outline" onClick={() => setDialogOpen(false)} data-testid="project-resources-btn-cancel">
                                 Hủy
                             </Button>
                             <Button
                                 onClick={handleSubmit}
                                 disabled={isSubmitting || !formData.name.trim() || !formData.url.trim()}
                                 className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="btn-submit"
+                                data-testid="project-resources-btn-submit"
                             >
                                 {isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                                 {editingResource ? 'Cập nhật' : 'Thêm mới'}
@@ -465,6 +500,6 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
                     </DialogContent>
                 </Dialog>
             </div>
-        </AppLayout>
+        </AppLayout >
     );
 }

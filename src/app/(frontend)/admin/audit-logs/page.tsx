@@ -369,7 +369,7 @@ export default function AdminAuditLogsPage() {
                                 data-testid="filter-actor"
                             />
 
-                            <Button onClick={handleSearch} data-testid="btn-search">
+                            <Button onClick={handleSearch} data-testid="admin-audit-btn-search">
                                 <Search className="mr-2 h-4 w-4" />
                                 Tìm kiếm
                             </Button>

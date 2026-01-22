@@ -161,7 +161,7 @@ export default function TagManagementPage({ params }: { params: Promise<{ id: st
                     </Button>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="project-tags-page-title">
                                 <Tags className="inline-block mr-3 h-8 w-8 text-blue-600" />
                                 Quản lý Tags
                             </h1>
@@ -180,7 +180,7 @@ export default function TagManagementPage({ params }: { params: Promise<{ id: st
                 </div>
 
                 {/* Search */}
-                <Card className="border-none shadow-sm" data-testid="search-card">
+                <Card className="border-none shadow-sm" data-testid="project-tags-search-card">
                     <CardContent className="p-4">
                         <div className="relative max-w-md">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -189,7 +189,7 @@ export default function TagManagementPage({ params }: { params: Promise<{ id: st
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-9"
-                                data-testid="input-search"
+                                data-testid="project-tags-input-search"
                             />
                         </div>
                     </CardContent>
@@ -203,7 +203,7 @@ export default function TagManagementPage({ params }: { params: Promise<{ id: st
                     </CardHeader>
                     <CardContent className="p-6">
                         {loading ? (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="loading-skeleton">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="project-tags-loading-skeleton">
                                 {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                                     <Skeleton key={i} className="h-24 w-full" />
                                 ))}
@@ -267,7 +267,7 @@ export default function TagManagementPage({ params }: { params: Promise<{ id: st
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-12" data-testid="empty-state">
+                            <div className="text-center py-12" data-testid="project-tags-empty-state">
                                 <Tags className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                                 <p className="text-slate-500 font-medium">Chưa có tag nào</p>
                                 <p className="text-slate-400 text-sm mt-1">Tạo tag để phân loại tasks</p>
@@ -345,14 +345,14 @@ export default function TagManagementPage({ params }: { params: Promise<{ id: st
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="btn-cancel">
+                            <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="project-tags-btn-cancel">
                                 Hủy
                             </Button>
                             <Button
                                 onClick={handleSubmit}
                                 disabled={isSubmitting || !formData.name.trim()}
                                 className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="btn-submit"
+                                data-testid="project-tags-btn-submit"
                             >
                                 {isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                                 {editingTag ? 'Cập nhật' : 'Tạo mới'}

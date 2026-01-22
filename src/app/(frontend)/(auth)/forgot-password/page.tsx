@@ -104,7 +104,7 @@ export default function ForgotPasswordPage() {
     return (
         <div
             className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4"
-            data-testid="forgot-password-page"
+            data-testid="forgot-password-container"
         >
             <Card className="w-full max-w-md shadow-2xl border-0 bg-white/90 backdrop-blur-sm" data-testid="forgot-password-card">
                 <CardHeader className="space-y-4 text-center pb-8">
@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
                             <Mail className="w-8 h-8 text-white" />
                         )}
                     </div>
-                    <CardTitle className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                    <CardTitle className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent" data-testid="forgot-password-title">
                         {isSuccess ? 'Kiểm tra email' : 'Quên mật khẩu?'}
                     </CardTitle>
                     <CardDescription className="text-base">

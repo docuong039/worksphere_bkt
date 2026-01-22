@@ -150,7 +150,7 @@ export default function PlatformDashboardPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-platform-page-title">
                             <LayoutDashboard className="inline-block mr-3 h-8 w-8 text-blue-600" />
                             Platform Dashboard
                         </h1>
@@ -160,7 +160,7 @@ export default function PlatformDashboardPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <Select value={timeRange} onValueChange={setTimeRange}>
-                            <SelectTrigger className="w-[140px]" data-testid="select-time-range">
+                            <SelectTrigger className="w-[140px]" data-testid="admin-platform-select-time-range">
                                 <SelectValue placeholder="Thời gian" />
                             </SelectTrigger>
                             <SelectContent>
@@ -169,14 +169,14 @@ export default function PlatformDashboardPage() {
                                 <SelectItem value="30d">30 ngày qua</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Button variant="outline" onClick={fetchDashboardData} data-testid="btn-refresh">
+                        <Button variant="outline" onClick={fetchDashboardData} data-testid="admin-platform-btn-refresh">
                             <RefreshCw className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
 
                 {loading ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="loading-skeleton">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="admin-platform-loading-skeleton">
                         {[1, 2, 3, 4].map(i => (
                             <Skeleton key={i} className="h-32 w-full" />
                         ))}
@@ -205,7 +205,7 @@ export default function PlatformDashboardPage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-none shadow-sm bg-gradient-to-br from-purple-50 to-pink-50" data-testid="stat-users">
+                            <Card className="border-none shadow-sm bg-gradient-to-br from-purple-50 to-pink-50" data-testid="admin-platform-stat-users">
                                 <CardContent className="p-6">
                                     <div className="flex items-center justify-between">
                                         <div className="h-12 w-12 rounded-xl bg-purple-100 flex items-center justify-center">
@@ -248,7 +248,7 @@ export default function PlatformDashboardPage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-none shadow-sm bg-gradient-to-br from-emerald-50 to-teal-50" data-testid="stat-projects">
+                            <Card className="border-none shadow-sm bg-gradient-to-br from-emerald-50 to-teal-50" data-testid="admin-platform-stat-projects">
                                 <CardContent className="p-6">
                                     <div className="flex items-center justify-between">
                                         <div className="h-12 w-12 rounded-xl bg-emerald-100 flex items-center justify-center">

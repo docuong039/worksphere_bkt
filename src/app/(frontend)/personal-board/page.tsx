@@ -514,7 +514,7 @@ export default function PersonalBoardPage() {
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     className={formErrors.title ? 'border-red-300' : ''}
-                                    data-testid="input-title"
+                                    data-testid="personal-board-input-title"
                                 />
                                 {formErrors.title && (
                                     <p className="text-sm text-red-600">{formErrors.title}</p>
@@ -531,7 +531,7 @@ export default function PersonalBoardPage() {
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     rows={3}
-                                    data-testid="input-description"
+                                    data-testid="personal-board-input-description"
                                 />
                             </div>
 
@@ -570,7 +570,7 @@ export default function PersonalBoardPage() {
 
                         <DialogFooter>
                             <DialogClose asChild>
-                                <Button variant="outline" data-testid="btn-cancel">
+                                <Button variant="outline" data-testid="personal-board-btn-cancel">
                                     Hủy
                                 </Button>
                             </DialogClose>
@@ -578,7 +578,7 @@ export default function PersonalBoardPage() {
                                 onClick={handleSubmit}
                                 disabled={isSubmitting}
                                 className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="btn-submit"
+                                data-testid="personal-board-btn-submit"
                             >
                                 {isSubmitting ? (
                                     <>

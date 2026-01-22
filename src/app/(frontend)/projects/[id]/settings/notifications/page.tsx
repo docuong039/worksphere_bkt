@@ -171,7 +171,7 @@ export default function NotificationSettingsPage({ params }: { params: Promise<{
                                 Quay lại {projectName}
                             </Link>
                         </Button>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="page-title">
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="project-notifications-page-title">
                             <Bell className="inline-block mr-3 h-8 w-8 text-blue-600" />
                             Cấu hình Thông báo
                         </h1>
@@ -221,7 +221,7 @@ export default function NotificationSettingsPage({ params }: { params: Promise<{
                     </CardHeader>
                     <CardContent className="p-0">
                         {loading ? (
-                            <div className="p-6 space-y-4" data-testid="loading-skeleton">
+                            <div className="p-6 space-y-4" data-testid="project-notifications-loading-skeleton">
                                 {[1, 2, 3, 4].map(i => (
                                     <Skeleton key={i} className="h-16 w-full" />
                                 ))}
