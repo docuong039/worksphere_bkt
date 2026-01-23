@@ -83,7 +83,7 @@ const PriorityBadge = ({ priority }: { priority: string }) => {
     );
 };
 
-const StatusBadge = ({ status }: { status: string }) => {
+const StatusBadge = ({ status, onStatusChange, readonly = false }: { status: string, onStatusChange?: (s: string) => void, readonly?: boolean }) => {
     const config: any = {
         TODO: { color: 'bg-slate-100 text-slate-500', label: 'CHỜ XỬ LÝ' },
         IN_PROGRESS: { color: 'bg-blue-600 text-white', label: 'ĐANG LÀM' },
@@ -92,45 +92,78 @@ const StatusBadge = ({ status }: { status: string }) => {
     };
     const { color, label } = config[status] || config.TODO;
 
+    if (readonly || !onStatusChange) {
+        return (
+            <Badge className={cn("border-none px-2 py-0.5 font-bold text-[10px]", color)}>
+                {label}
+            </Badge>
+        );
+    }
+
     return (
-        <Badge className={cn("border-none px-2 py-0.5 font-bold text-[10px]", color)}>
-            {label}
-        </Badge>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Badge className={cn("border-none px-2 py-0.5 font-bold text-[10px] cursor-pointer hover:opacity-80 transition-opacity", color)}>
+                    {label}
+                </Badge>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[120px]">
+                {Object.entries(config).map(([key, cfg]: [string, any]) => (
+                    <DropdownMenuItem
+                        key={key}
+                        className="text-[10px] font-bold"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onStatusChange(key);
+                        }}
+                    >
+                        <div className={cn("w-2 h-2 rounded-full mr-2", cfg.color.split(' ')[0])}></div>
+                        {cfg.label}
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 };
 
-const TaskCard = ({ task }: { task: Task }) => {
+const TaskCard = ({ task, onStatusUpdate }: { task: Task, onStatusUpdate: (id: string, s: string) => void }) => {
     const progress = task.subtasks_count > 0
         ? Math.round((task.subtasks_done / task.subtasks_count) * 100)
         : (task.status === 'DONE' ? 100 : 0);
 
     return (
         <Card
-            className="group hover:shadow-md transition-all duration-300 border border-slate-100 shadow-sm bg-white overflow-hidden"
+            className="group hover:shadow-md transition-all duration-300 border border-slate-100 shadow-sm bg-white overflow-hidden relative"
             data-testid={`task-card-${task.id}`}
         >
             <CardContent className="p-0">
-                <Link href={`/tasks/${task.id}`} className="block p-5">
+                <div className="p-5">
                     <div className="flex justify-between items-start mb-3">
                         <div className="flex gap-2">
-                            <StatusBadge status={task.status} />
+                            <StatusBadge
+                                status={task.status}
+                                onStatusChange={(s) => onStatusUpdate(task.id, s)}
+                            />
                             <PriorityBadge priority={task.priority} />
                         </div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{task.project.code}</span>
                     </div>
 
-                    <h3 className={cn(
-                        "text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight mb-4",
-                        task.status === 'DONE' && "text-slate-400 line-through"
-                    )}>
-                        {task.title}
-                    </h3>
+                    <Link href={`/tasks/${task.id}`}>
+                        <h3 className={cn(
+                            "text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight mb-4 h-10",
+                            task.status === 'DONE' && "text-slate-400 line-through"
+                        )}>
+                            {task.title}
+                        </h3>
+                    </Link>
 
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                                 <Calendar size={14} className="text-slate-400" />
-                                {task.due_date ? new Date(task.due_date).toLocaleDateString('vi-VN') : 'No date'}
+                                {task.due_date ? new Date(task.due_date).toLocaleDateString('vi-VN') : 'Không có ngày'}
                             </div>
                             {task.subtasks_count > 0 && (
                                 <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
@@ -142,7 +175,7 @@ const TaskCard = ({ task }: { task: Task }) => {
 
                         <div className="flex -space-x-2">
                             {task.assignees.map((a, i) => (
-                                <div key={i} className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 ring-1 ring-slate-100">
+                                <div key={i} title={a.full_name} className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 ring-1 ring-slate-100">
                                     {a.full_name.charAt(0)}
                                 </div>
                             ))}
@@ -151,7 +184,7 @@ const TaskCard = ({ task }: { task: Task }) => {
 
                     <div className="space-y-1.5">
                         <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase">
-                            <span>Progress</span>
+                            <span>Tiến độ</span>
                             <span className="text-slate-700">{progress}%</span>
                         </div>
                         <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -165,7 +198,7 @@ const TaskCard = ({ task }: { task: Task }) => {
                             ></div>
                         </div>
                     </div>
-                </Link>
+                </div>
             </CardContent>
         </Card>
     );
@@ -200,6 +233,28 @@ export default function TasksPage() {
             console.error(error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleStatusUpdate = async (taskId: string, newStatus: string) => {
+        // Optimistic update
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+
+        try {
+            const res = await fetch(`/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-id': user?.id || '',
+                    'x-user-role': user?.role || ''
+                },
+                body: JSON.stringify({ status_code: newStatus })
+            });
+            if (!res.ok) throw new Error('Cập nhật thất bại');
+        } catch (error) {
+            console.error(error);
+            // Revert on error
+            fetchTasks();
         }
     };
 
@@ -361,7 +416,7 @@ export default function TasksPage() {
                     viewMode === 'grid' ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" data-testid="tasks-grid">
                             {filteredTasks.map((task) => (
-                                <TaskCard key={task.id} task={task} />
+                                <TaskCard key={task.id} task={task} onStatusUpdate={handleStatusUpdate} />
                             ))}
                         </div>
                     ) : (
@@ -369,39 +424,73 @@ export default function TasksPage() {
                             <CardContent className="p-0">
                                 <div className="divide-y divide-slate-100" data-testid="tasks-list">
                                     {filteredTasks.map((task) => (
-                                        <Link
+                                        <div
                                             key={task.id}
-                                            href={`/tasks/${task.id}`}
-                                            className="p-4 hover:bg-slate-50 flex items-center gap-6 transition-colors group"
+                                            className="p-4 hover:bg-slate-50 flex items-center gap-6 transition-colors group border-b border-slate-100 last:border-0"
                                         >
-                                            <div className="w-5 h-5 rounded border border-slate-300 flex items-center justify-center text-transparent group-hover:border-blue-500">
+                                            <div
+                                                className={cn(
+                                                    "w-5 h-5 rounded border flex items-center justify-center cursor-pointer transition-colors",
+                                                    task.status === 'DONE'
+                                                        ? "bg-emerald-500 border-emerald-500 text-white"
+                                                        : "border-slate-300 text-transparent group-hover:border-blue-500"
+                                                )}
+                                                onClick={() => handleStatusUpdate(task.id, task.status === 'DONE' ? 'TODO' : 'DONE')}
+                                            >
                                                 <CheckSquare size={12} />
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-bold text-slate-900 truncate">{task.title}</h4>
+                                            <Link href={`/tasks/${task.id}`} className="flex-1 min-w-0">
+                                                <h4 className={cn(
+                                                    "font-bold text-slate-900 truncate",
+                                                    task.status === 'DONE' && "text-slate-400 line-through"
+                                                )}>{task.title}</h4>
                                                 <div className="flex items-center gap-3 mt-1.5">
                                                     <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{task.project.code}</span>
                                                     <PriorityBadge priority={task.priority} />
                                                 </div>
-                                            </div>
+                                            </Link>
                                             <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-500">
                                                 <div className="flex items-center gap-1.5 w-32">
                                                     <Calendar size={14} className="text-slate-400" />
-                                                    {task.due_date ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                                                    {task.due_date ? new Date(task.due_date).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }) : 'N/A'}
                                                 </div>
                                                 <div className="w-24">
-                                                    <StatusBadge status={task.status} />
+                                                    <StatusBadge
+                                                        status={task.status}
+                                                        onStatusChange={(s) => handleStatusUpdate(task.id, s)}
+                                                    />
                                                 </div>
                                                 <div className="flex -space-x-2 w-16">
                                                     {task.assignees.map((a, i) => (
-                                                        <div key={i} className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 ring-1 ring-slate-100">
+                                                        <div key={i} title={a.full_name} className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 ring-1 ring-slate-100">
                                                             {a.full_name.charAt(0)}
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
-                                            <MoreHorizontal size={20} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
-                                        </Link>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <MoreHorizontal size={20} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/tasks/${task.id}`}>Xem chi tiết</Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className="text-rose-600"
+                                                        onClick={() => {
+                                                            if (confirm('Bạn có chắc muốn xóa công việc này?')) {
+                                                                // delete logic...
+                                                            }
+                                                        }}
+                                                    >
+                                                        Xóa
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     ))}
                                 </div>
                             </CardContent>

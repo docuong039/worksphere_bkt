@@ -58,7 +58,7 @@ export default function Navbar() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                 <Input
                     type="text"
-                    placeholder="Search tasks, projects..."
+                    placeholder="Tìm kiếm công việc, dự án..."
                     className="pl-10 bg-slate-50 border-transparent focus:bg-white focus:ring-1 focus:ring-blue-500 transition-all"
                     data-testid="navbar-search-input"
                 />
@@ -151,20 +151,25 @@ export default function Navbar() {
                                 </AvatarFallback>
                             </Avatar>
                             <div className="hidden md:flex flex-col items-start text-left">
-                                <span className="text-sm font-semibold text-slate-900 leading-tight">{user?.full_name || 'User'}</span>
-                                <span className="text-xs text-slate-500 leading-tight">{user?.role || 'Member'}</span>
+                                <span className="text-sm font-semibold text-slate-900 leading-tight">{user?.full_name || 'Người dùng'}</span>
+                                <span className="text-xs text-slate-500 leading-tight">
+                                    {user?.role === 'SYS_ADMIN' ? 'Quản trị hệ thống' :
+                                        user?.role === 'ORG_ADMIN' ? 'Quản trị tổ chức' :
+                                            user?.role === 'CEO' ? 'CEO' :
+                                                user?.role === 'PROJECT_MANAGER' ? 'Quản lý dự án' : 'Nhân viên'}
+                                </span>
                             </div>
                             <ChevronDown size={14} className="text-slate-400 ml-1" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56" data-testid="navbar-user-menu-content">
-                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                        <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="cursor-pointer" data-testid="navbar-profile-item">
-                            <UserIcon className="mr-2 h-4 w-4" /> Profile
+                            <UserIcon className="mr-2 h-4 w-4" /> Hồ sơ cá nhân
                         </DropdownMenuItem>
                         <DropdownMenuItem className="cursor-pointer" data-testid="navbar-settings-item">
-                            <Globe className="mr-2 h-4 w-4" /> Workspace Settings
+                            <Globe className="mr-2 h-4 w-4" /> Cài đặt không gian
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -172,7 +177,7 @@ export default function Navbar() {
                             onClick={() => logout()}
                             data-testid="navbar-logout-item"
                         >
-                            Log out
+                            Đăng xuất
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

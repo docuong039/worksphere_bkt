@@ -382,6 +382,15 @@ export default function ProjectOverviewPage({
             )}
             {isPM && (
               <TabsTrigger
+                value="time-logs"
+                className="rounded-lg font-bold text-sm h-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                asChild
+              >
+                <Link href={`/projects/${id}/time-logs`}>Nhật ký thời gian</Link>
+              </TabsTrigger>
+            )}
+            {isPM && (
+              <TabsTrigger
                 value="quality"
                 className="rounded-lg font-bold text-sm h-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 asChild
@@ -692,14 +701,14 @@ export default function ProjectOverviewPage({
                           <Calendar size={14} className="text-slate-400" />
                           {project.start_date
                             ? new Date(project.start_date).toLocaleDateString(
-                                "vi-VN",
-                              )
+                              "vi-VN",
+                            )
                             : "N/A"}{" "}
                           -
                           {project.end_date
                             ? new Date(project.end_date).toLocaleDateString(
-                                "vi-VN",
-                              )
+                              "vi-VN",
+                            )
                             : "N/A"}
                         </div>
                       </div>

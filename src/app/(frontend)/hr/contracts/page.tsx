@@ -89,35 +89,35 @@ export default function ContractsPage() {
                     id: 'ct-1', employee_id: 'u1', employee_name: 'Nguyễn Văn A',
                     employee_email: 'nguyen.a@company.com', contract_type: 'FULL_TIME',
                     status: 'ACTIVE', start_date: '2024-01-15', end_date: null,
-                    department: 'Engineering', position: 'Senior Developer',
+                    department: 'Kỹ thuật', position: 'Lập trình viên Cao cấp',
                     salary_gross: 35000000, signed_at: '2024-01-10', created_at: '2024-01-08T00:00:00Z'
                 },
                 {
                     id: 'ct-2', employee_id: 'u2', employee_name: 'Trần Thị B',
                     employee_email: 'tran.b@company.com', contract_type: 'FULL_TIME',
                     status: 'ACTIVE', start_date: '2023-06-01', end_date: null,
-                    department: 'Design', position: 'Lead Designer',
+                    department: 'Thiết kế', position: 'Trưởng nhóm Thiết kế',
                     salary_gross: 30000000, signed_at: '2023-05-25', created_at: '2023-05-20T00:00:00Z'
                 },
                 {
                     id: 'ct-3', employee_id: 'u3', employee_name: 'Lê Văn C',
                     employee_email: 'le.c@company.com', contract_type: 'PROBATION',
                     status: 'PENDING', start_date: '2025-02-01', end_date: '2025-04-01',
-                    department: 'Engineering', position: 'Junior Developer',
+                    department: 'Kỹ thuật', position: 'Lập trình viên Sơ cấp',
                     salary_gross: 15000000, created_at: '2025-01-18T00:00:00Z'
                 },
                 {
                     id: 'ct-4', employee_id: 'u4', employee_name: 'Phạm Thị D',
                     employee_email: 'pham.d@company.com', contract_type: 'CONTRACTOR',
                     status: 'EXPIRED', start_date: '2024-01-01', end_date: '2024-12-31',
-                    department: 'Marketing', position: 'SEO Specialist',
+                    department: 'Tiếp thị', position: 'Chuyên viên SEO',
                     salary_gross: 20000000, signed_at: '2023-12-28', created_at: '2023-12-20T00:00:00Z'
                 },
                 {
                     id: 'ct-5', employee_id: 'u5', employee_name: 'Hoàng Văn E',
                     employee_email: 'hoang.e@company.com', contract_type: 'PART_TIME',
                     status: 'ACTIVE', start_date: '2024-09-01', end_date: '2025-03-01',
-                    department: 'Customer Support', position: 'Support Agent',
+                    department: 'Hỗ trợ khách hàng', position: 'Nhân viên Hỗ trợ',
                     salary_gross: 10000000, signed_at: '2024-08-28', created_at: '2024-08-25T00:00:00Z'
                 },
             ];

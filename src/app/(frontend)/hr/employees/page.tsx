@@ -111,14 +111,14 @@ export default function EmployeesListPage() {
         try {
             // Mock data - US-ORG-01-01
             const mockEmployees: Employee[] = [
-                { id: 'e1', full_name: 'Nguyễn Văn A', email: 'nguyen.a@company.com', phone: '0987654321', avatar_url: null, role: 'PROJECT_MANAGER', member_status: 'ACTIVE', department: 'Engineering', position: 'Engineering Manager', join_method: 'MANUAL', joined_at: '2023-01-15', created_at: '2023-01-10' },
-                { id: 'e2', full_name: 'Trần Thị B', email: 'tran.b@company.com', phone: '0912345678', avatar_url: null, role: 'EMPLOYEE', member_status: 'ACTIVE', department: 'Design', position: 'Lead Designer', join_method: 'INVITE', joined_at: '2023-06-01', created_at: '2023-05-20' },
-                { id: 'e3', full_name: 'Lê Văn C', email: 'le.c@company.com', phone: '0901234567', avatar_url: null, role: 'EMPLOYEE', member_status: 'INVITED', department: 'Engineering', position: 'Junior Developer', join_method: 'INVITE', joined_at: null, created_at: '2025-01-18' },
-                { id: 'e4', full_name: 'Phạm Thị D', email: 'pham.d@company.com', phone: '0976543210', avatar_url: null, role: 'EMPLOYEE', member_status: 'DEACTIVATED', department: 'Marketing', position: 'Marketing Specialist', join_method: 'MANUAL', joined_at: '2024-01-01', created_at: '2023-12-20' },
-                { id: 'e5', full_name: 'Hoàng Văn E', email: 'hoang.e@company.com', phone: '0965432109', avatar_url: null, role: 'EMPLOYEE', member_status: 'ACTIVE', department: 'Customer Support', position: 'Support Agent', join_method: 'INVITE', joined_at: '2024-09-01', created_at: '2024-08-25' },
-                { id: 'e6', full_name: 'Đỗ Minh F', email: 'do.f@company.com', phone: '0954321098', avatar_url: null, role: 'CEO', member_status: 'ACTIVE', department: 'Executive', position: 'Chief Executive Officer', join_method: 'MANUAL', joined_at: '2022-01-01', created_at: '2022-01-01' },
-                { id: 'e7', full_name: 'Vũ Thị G', email: 'vu.g@company.com', phone: '0943210987', avatar_url: null, role: 'PROJECT_MANAGER', member_status: 'ACTIVE', department: 'Engineering', position: 'Tech Lead', join_method: 'MANUAL', joined_at: '2023-03-15', created_at: '2023-03-10' },
-                { id: 'e8', full_name: 'Ngô Văn H', email: 'ngo.h@company.com', phone: '0932109876', avatar_url: null, role: 'EMPLOYEE', member_status: 'ACTIVE', department: 'Engineering', position: 'Senior Developer', join_method: 'INVITE', joined_at: '2024-02-01', created_at: '2024-01-20' },
+                { id: 'e1', full_name: 'Nguyễn Văn A', email: 'nguyen.a@company.com', phone: '0987654321', avatar_url: null, role: 'PROJECT_MANAGER', member_status: 'ACTIVE', department: 'Kỹ thuật', position: 'Quản lý Kỹ thuật', join_method: 'MANUAL', joined_at: '2023-01-15', created_at: '2023-01-10' },
+                { id: 'e2', full_name: 'Trần Thị B', email: 'tran.b@company.com', phone: '0912345678', avatar_url: null, role: 'EMPLOYEE', member_status: 'ACTIVE', department: 'Thiết kế', position: 'Trưởng nhóm Thiết kế', join_method: 'INVITE', joined_at: '2023-06-01', created_at: '2023-05-20' },
+                { id: 'e3', full_name: 'Lê Văn C', email: 'le.c@company.com', phone: '0901234567', avatar_url: null, role: 'EMPLOYEE', member_status: 'INVITED', department: 'Kỹ thuật', position: 'Lập trình viên Sơ cấp', join_method: 'INVITE', joined_at: null, created_at: '2025-01-18' },
+                { id: 'e4', full_name: 'Phạm Thị D', email: 'pham.d@company.com', phone: '0976543210', avatar_url: null, role: 'EMPLOYEE', member_status: 'DEACTIVATED', department: 'Tiếp thị', position: 'Chuyên viên Marketing', join_method: 'MANUAL', joined_at: '2024-01-01', created_at: '2023-12-20' },
+                { id: 'e5', full_name: 'Hoàng Văn E', email: 'hoang.e@company.com', phone: '0965432109', avatar_url: null, role: 'EMPLOYEE', member_status: 'ACTIVE', department: 'Hỗ trợ khách hàng', position: 'Nhân viên Hỗ trợ', join_method: 'INVITE', joined_at: '2024-09-01', created_at: '2024-08-25' },
+                { id: 'e6', full_name: 'Đỗ Minh F', email: 'do.f@company.com', phone: '0954321098', avatar_url: null, role: 'CEO', member_status: 'ACTIVE', department: 'Ban điều hành', position: 'Giám đốc điều hành (CEO)', join_method: 'MANUAL', joined_at: '2022-01-01', created_at: '2022-01-01' },
+                { id: 'e7', full_name: 'Vũ Thị G', email: 'vu.g@company.com', phone: '0943210987', avatar_url: null, role: 'PROJECT_MANAGER', member_status: 'ACTIVE', department: 'Kỹ thuật', position: 'Nhóm trưởng kỹ thuật (Tech Lead)', join_method: 'MANUAL', joined_at: '2023-03-15', created_at: '2023-03-10' },
+                { id: 'e8', full_name: 'Ngô Văn H', email: 'ngo.h@company.com', phone: '0932109876', avatar_url: null, role: 'EMPLOYEE', member_status: 'ACTIVE', department: 'Kỹ thuật', position: 'Lập trình viên Cao cấp', join_method: 'INVITE', joined_at: '2024-02-01', created_at: '2024-01-20' },
             ];
             setEmployees(mockEmployees);
         } catch (error) {
@@ -146,7 +146,7 @@ export default function EmployeesListPage() {
             case 'CEO':
                 return <Badge className="bg-purple-100 text-purple-700 border-purple-200">CEO</Badge>;
             case 'ORG_ADMIN':
-                return <Badge className="bg-red-100 text-red-700 border-red-200">Org Admin</Badge>;
+                return <Badge className="bg-red-100 text-red-700 border-red-200">Quản trị viên</Badge>;
             case 'PROJECT_MANAGER':
                 return <Badge className="bg-blue-100 text-blue-700 border-blue-200">Quản lý</Badge>;
             case 'EMPLOYEE':
@@ -175,17 +175,45 @@ export default function EmployeesListPage() {
         deactivated: employees.filter(e => e.member_status === 'DEACTIVATED').length,
     };
 
-    const handleSendInvite = () => {
-        console.log('Send invite to:', inviteEmail);
-        setInviteDialogOpen(false);
-        setInviteEmail('');
+    const handleResetPassword = (emp: Employee) => {
+        if (!confirm(`Gửi yêu cầu đặt lại mật khẩu cho ${emp.full_name}?`)) return;
+        alert(`Đã gửi email khôi phục mật khẩu đến ${emp.email}`);
+    };
+
+    const handleDeactivate = (emp: Employee) => {
+        if (!confirm(`Bạn có chắc muốn vô hiệu hóa tài khoản ${emp.full_name}?`)) return;
+        setEmployees(prev => prev.map(e =>
+            e.id === emp.id ? { ...e, member_status: 'DEACTIVATED' } : e
+        ));
+    };
+
+    const handleReactivate = (emp: Employee) => {
+        if (!confirm(`Kích hoạt lại tài khoản cho ${emp.full_name}?`)) return;
+        setEmployees(prev => prev.map(e =>
+            e.id === emp.id ? { ...e, member_status: 'ACTIVE' } : e
+        ));
     };
 
     const handleCreateEmployee = () => {
-        console.log('Create employee:', newEmployeeForm);
+        const newEmp: Employee = {
+            id: `e${Date.now()}`,
+            ...newEmployeeForm,
+            avatar_url: null,
+            member_status: 'ACTIVE',
+            join_method: 'MANUAL',
+            joined_at: new Date().toISOString().split('T')[0],
+            created_at: new Date().toISOString(),
+            role: newEmployeeForm.role as any
+        };
+        setEmployees([newEmp, ...employees]);
         setCreateDialogOpen(false);
         setNewEmployeeForm({ full_name: '', email: '', phone: '', role: 'EMPLOYEE', department: '', position: '' });
-        fetchEmployees();
+    };
+
+    const handleSendInvite = () => {
+        alert(`Đã gửi lời mời tham gia đến ${inviteEmail}`);
+        setInviteDialogOpen(false);
+        setInviteEmail('');
     };
 
     const canManage = user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
@@ -413,16 +441,22 @@ export default function EmployeesListPage() {
                                                                 <DropdownMenuItem>
                                                                     <Edit2 className="mr-2 h-4 w-4" /> Chỉnh sửa
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleResetPassword(emp)}>
                                                                     <KeyRound className="mr-2 h-4 w-4" /> Reset mật khẩu
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
                                                                 {emp.member_status === 'ACTIVE' ? (
-                                                                    <DropdownMenuItem className="text-red-600">
+                                                                    <DropdownMenuItem
+                                                                        className="text-red-600"
+                                                                        onClick={() => handleDeactivate(emp)}
+                                                                    >
                                                                         <UserX className="mr-2 h-4 w-4" /> Vô hiệu hóa
                                                                     </DropdownMenuItem>
                                                                 ) : emp.member_status === 'DEACTIVATED' && (
-                                                                    <DropdownMenuItem className="text-emerald-600">
+                                                                    <DropdownMenuItem
+                                                                        className="text-emerald-600"
+                                                                        onClick={() => handleReactivate(emp)}
+                                                                    >
                                                                         <UserCheck className="mr-2 h-4 w-4" /> Kích hoạt lại
                                                                     </DropdownMenuItem>
                                                                 )}

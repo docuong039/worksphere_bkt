@@ -51,7 +51,7 @@ export default function GanttPage({ params }: { params: Promise<{ id: string }> 
     const { user } = useAuthStore();
     const [tasks, setTasks] = useState<GanttTask[]>([]);
     const [loading, setLoading] = useState(true);
-    const [zoom, setZoom] = useState<'DAYS' | 'WEEKS' | 'MONTHS'>('DAYS');
+    const [zoom, setZoom] = useState<'DAYS' | 'WEEKS' | 'MONTHS' | 'QUARTERS'>('DAYS');
     const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
     const isPM = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
@@ -174,6 +174,15 @@ export default function GanttPage({ params }: { params: Promise<{ id: string }> 
                                 data-testid="zoom-months"
                             >
                                 Tháng
+                            </Button>
+                            <Button
+                                variant={zoom === 'QUARTERS' ? 'secondary' : 'ghost'}
+                                size="sm"
+                                className="h-8 px-4 font-bold rounded-lg"
+                                onClick={() => setZoom('QUARTERS')}
+                                data-testid="zoom-quarters"
+                            >
+                                Quý
                             </Button>
                         </Card>
                         <Separator orientation="vertical" className="h-8 mx-2" />
@@ -346,7 +355,7 @@ export default function GanttPage({ params }: { params: Promise<{ id: string }> 
                         </div>
                     </div>
                 </Card>
-            </div>
-        </AppLayout>
+            </div >
+        </AppLayout >
     );
 }

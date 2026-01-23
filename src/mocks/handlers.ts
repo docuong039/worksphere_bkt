@@ -51,11 +51,11 @@ export const handlers = [
                 avatar_url: null,
                 roles: [userRole?.role_code || 'EMPLOYEE'],
                 profile: {
-                    phone: '0901234567',
-                    address: '123 Fake St, City',
-                    birth_date: '1990-01-01',
-                    department: 'Engineering',
-                    job_title: 'Software Engineer',
+                    phone: '0987654321',
+                    address: 'Tầng 12, Tòa nhà Keangnam, Mễ Trì, Hà Nội',
+                    birth_date: '1995-05-15',
+                    department: 'Phát triển Sản phẩm',
+                    job_title: 'Chuyên viên cao cấp',
                     joined_at: user.created_at
                 }
             }
@@ -157,7 +157,7 @@ export const handlers = [
                 ...t,
                 status: t.status_code,
                 priority: t.priority_code,
-                project: { id: t.project_id, name: 'Project Name', code: 'PRJ' },
+                project: { id: t.project_id, name: 'Hệ thống Quản trị WorkSphere 2.0', code: 'WS001' },
                 subtasks_count: mockSubtasks.filter(s => s.task_id === t.id).length,
                 subtasks_done: mockSubtasks.filter(s => s.task_id === t.id && s.status_code === 'DONE').length
             }))
@@ -188,12 +188,12 @@ export const handlers = [
                     ]
                 },
                 members: [
-                    { user_id: 'u1', full_name: 'John Doe', role: 'PROJECT_MANAGER' },
-                    { user_id: 'u2', full_name: 'Alice Smith', role: 'EMPLOYEE' }
+                    { user_id: 'user-pm', full_name: 'Hoàng Ngọc Sơn', role: 'PROJECT_MANAGER' },
+                    { user_id: 'user-emp', full_name: 'Nguyễn Thị Lan Anh', role: 'EMPLOYEE' }
                 ],
                 resources: [
-                    { id: 'r1', name: 'Design Docs', type: 'GFX', url: '#' },
-                    { id: 'r2', name: 'API Spec', type: 'DOC', url: '#' }
+                    { id: 'r1', name: 'Tài liệu thiết kế', type: 'GFX', url: '#' },
+                    { id: 'r2', name: 'Đặc tả API', type: 'DOC', url: '#' }
                 ],
                 custom_fields: []
             }
@@ -232,7 +232,7 @@ export const handlers = [
     http.get('/api/projects/:id/locks', ({ params }) => {
         return HttpResponse.json({
             success: true,
-            projectName: 'Worksphere Platform',
+            projectName: 'Hệ thống Quản trị WorkSphere 2.0',
             locks: [
                 {
                     id: '1',
@@ -263,8 +263,8 @@ export const handlers = [
         return HttpResponse.json({
             success: true,
             members: [
-                { id: 'u1', full_name: 'John Doe', role: 'PROJECT_MANAGER' },
-                { id: 'u2', full_name: 'Alice Smith', role: 'EMPLOYEE' }
+                { id: 'user-pm', full_name: 'Hoàng Ngọc Sơn', role: 'PROJECT_MANAGER' },
+                { id: 'user-emp', full_name: 'Nguyễn Thị Lan Anh', role: 'EMPLOYEE' }
             ],
             fields: [
                 { id: 'title', field_name: 'Tiêu đề', is_custom: false },
@@ -307,9 +307,9 @@ export const handlers = [
             bugs: [
                 {
                     id: 'b1',
-                    title: 'Login fails with special characters',
+                    title: 'Lỗi đăng nhập với ký tự đặc biệt',
                     priority_code: 'URGENT',
-                    assignee: { id: 'u1', full_name: 'John Doe' },
+                    assignee: { id: 'user-pm', full_name: 'Hoàng Ngọc Sơn' },
                     created_at: '2026-01-15T10:00:00Z',
                     status_code: 'TODO'
                 },
@@ -334,7 +334,7 @@ export const handlers = [
                 ...u,
                 level: level?.name || 'N/A',
                 monthly_salary: comp?.monthly_salary || null,
-                department: 'Engineering'
+                department: 'Phòng Kỹ thuật'
             };
         });
         return HttpResponse.json({ success: true, data: employees });
@@ -374,10 +374,10 @@ export const handlers = [
             subtasks: subtasks.map(s => ({
                 ...s,
                 status: s.status_code,
-                creator_name: 'Phạm Văn Nhân Viên'
+                creator_name: 'Nguyễn Thị Lan Anh'
             })),
             comments: [
-                { id: 'c1', author_name: 'Lê Văn PM', content: 'Cần hoàn thành mốc này gấp nhé!', created_at: new Date().toISOString() }
+                { id: 'c1', author_name: 'Hoàng Ngọc Sơn', content: 'Cần hoàn thành mốc này gấp nhé!', created_at: new Date().toISOString() }
             ]
         });
     }),
@@ -422,11 +422,11 @@ export const handlers = [
             success: true,
             data: {
                 TODO: [
-                    { id: 'pt-1', title: 'Học Next.js 15', description: 'Xem tài liệu mới', status_code: 'TODO', priority_code: 'HIGH', due_date: '2026-02-01' }
+                    { id: 'pt-1', title: 'Học Next.js 15 & React Server Components', description: 'Xem tài liệu mới tại nextjs.org/docs', status_code: 'TODO', priority_code: 'HIGH', due_date: '2025-02-01' }
                 ],
                 IN_PROGRESS: [],
                 DONE: [
-                    { id: 'pt-2', title: 'Setup project', description: 'Hoàn thành base', status_code: 'DONE', priority_code: 'MEDIUM' }
+                    { id: 'pt-2', title: 'Thiết lập cấu trúc dự án', description: 'Đã hoàn thành base project với Shadcn UI', status_code: 'DONE', priority_code: 'MEDIUM' }
                 ]
             }
         });
@@ -474,9 +474,9 @@ export const handlers = [
         return HttpResponse.json({
             success: true,
             data: [
-                { id: 'h1', actor_name: 'Phạm Văn Nhân Viên', action: 'Đã tạo subtask', summary: 'Cài đặt MSW', created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-                { id: 'h2', actor_name: 'Lê Văn PM', action: 'Đã thay đổi hạn chót', summary: 'Hạn chót mới: 2025-01-30', created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-                { id: 'h3', actor_name: 'Phạm Văn Nhân Viên', action: 'Đã bình luận', summary: 'Em đang xử lý task này ạ.', created_at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
+                { id: 'h1', actor_name: 'Nguyễn Thị Lan Anh', action: 'Đã tạo subtask', summary: 'Cài đặt MSW', created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
+                { id: 'h2', actor_name: 'Hoàng Ngọc Sơn', action: 'Đã thay đổi hạn chót', summary: 'Hạn chót mới: 2025-01-30', created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
+                { id: 'h3', actor_name: 'Nguyễn Thị Lan Anh', action: 'Đã bình luận', summary: 'Em đang xử lý task này ạ.', created_at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
             ]
         });
     }),
@@ -597,11 +597,11 @@ export const handlers = [
     // Admin Roles & Permissions
     http.get('/api/admin/roles', () => {
         const roles = [
-            { id: '1', code: 'SYS_ADMIN', name: 'System Admin', description: 'Toàn quyền hệ thống', is_system: true, permissions: ['*'] },
-            { id: '2', code: 'ORG_ADMIN', name: 'Organization Admin', description: 'Quản trị tổ chức', is_system: true, permissions: ['org.*', 'user.*'] },
-            { id: '3', code: 'CEO', name: 'CEO', description: 'Giám đốc điều hành', is_system: true, permissions: ['report.view', 'project.view'] },
-            { id: '4', code: 'PROJECT_MANAGER', name: 'Project Manager', description: 'Quản lý dự án', is_system: true, permissions: ['project.edit', 'task.*'] },
-            { id: '5', code: 'EMPLOYEE', name: 'Employee', description: 'Nhân viên', is_system: true, permissions: ['task.view', 'time.log'] },
+            { id: '1', code: 'SYS_ADMIN', name: 'Quản trị hệ thống', description: 'Toàn quyền hệ thống', is_system: true, permissions: ['*'] },
+            { id: '2', code: 'ORG_ADMIN', name: 'Quản trị tổ chức', description: 'Quản trị tổ chức khách hàng', is_system: true, permissions: ['org.*', 'user.*'] },
+            { id: '3', code: 'CEO', name: 'Giám đốc (CEO)', description: 'Giám đốc điều hành', is_system: true, permissions: ['report.view', 'project.view'] },
+            { id: '4', code: 'PROJECT_MANAGER', name: 'Quản lý dự án', description: 'Quản lý dự án (PM)', is_system: true, permissions: ['project.edit', 'task.*'] },
+            { id: '5', code: 'EMPLOYEE', name: 'Nhân viên', description: 'Nhân viên phổ thông', is_system: true, permissions: ['task.view', 'time.log'] },
         ];
         return HttpResponse.json({ success: true, data: roles });
     }),
@@ -813,9 +813,9 @@ export const handlers = [
         return HttpResponse.json({
             success: true,
             data: [
-                { user_id: 'u1', full_name: 'John Doe', email: 'john@example.com', role: 'PROJECT_MANAGER' },
-                { user_id: 'u2', full_name: 'Alice Smith', email: 'alice@example.com', role: 'EMPLOYEE' },
-                { user_id: 'u3', full_name: 'Bob Johnson', email: 'bob@example.com', role: 'EMPLOYEE' }
+                { user_id: 'user-pm', full_name: 'Hoàng Ngọc Sơn', email: 'son.hoang@worksphere.com', role: 'PROJECT_MANAGER' },
+                { user_id: 'user-emp', full_name: 'Nguyễn Thị Lan Anh', email: 'anh.lan@worksphere.com', role: 'EMPLOYEE' },
+                { user_id: 'user-emp-dev1', full_name: 'Phạm Minh Thu', email: 'thu.pham@worksphere.com', role: 'EMPLOYEE' }
             ]
         });
     }),
@@ -837,7 +837,7 @@ export const handlers = [
         const projectTasks = mockTasks.filter(t => t.project_id === params.id || true); // for mock, return all
         return HttpResponse.json({
             success: true,
-            projectName: 'Worksphere Platform',
+            projectName: 'Hệ thống Quản trị WorkSphere 2.0',
             data: projectTasks.slice(0, 10).map((t, index) => ({
                 id: t.id,
                 title: t.title,
@@ -855,8 +855,8 @@ export const handlers = [
                         id: s.id,
                         title: s.title,
                         type: 'SUBTASK',
-                        start_date: s.start_date || '2026-01-02',
-                        end_date: s.end_date || '2026-01-10',
+                        start_date: s.start_date || '2025-01-02',
+                        end_date: s.end_date || '2025-01-10',
                         status_code: s.status_code,
                         progress: s.status_code === 'DONE' ? 100 : 0
                     }))
@@ -905,8 +905,8 @@ export const handlers = [
         return HttpResponse.json({
             success: true,
             data: {
-                name: 'Worksphere Company',
-                code: 'WSP',
+                name: 'Tập đoàn Công nghệ WorkSphere',
+                code: 'worksphere',
                 timezone: 'Asia/Ho_Chi_Minh',
                 logo_url: null,
                 settings: {

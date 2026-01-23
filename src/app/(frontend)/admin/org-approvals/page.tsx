@@ -183,10 +183,10 @@ export default function OrgApprovalsPage() {
 
     const getPlanBadge = (plan: string) => {
         switch (plan) {
-            case 'FREE': return <Badge variant="outline">Free</Badge>;
-            case 'BASIC': return <Badge className="bg-blue-100 text-blue-700">Basic</Badge>;
-            case 'PROFESSIONAL': return <Badge className="bg-purple-100 text-purple-700">Professional</Badge>;
-            case 'ENTERPRISE': return <Badge className="bg-slate-800 text-white">Enterprise</Badge>;
+            case 'FREE': return <Badge variant="outline">Miễn phí</Badge>;
+            case 'BASIC': return <Badge className="bg-blue-100 text-blue-700">Cơ bản</Badge>;
+            case 'PROFESSIONAL': return <Badge className="bg-purple-100 text-purple-700">Chuyên nghiệp</Badge>;
+            case 'ENTERPRISE': return <Badge className="bg-slate-800 text-white">Doanh nghiệp</Badge>;
             default: return <Badge variant="outline">{plan}</Badge>;
         }
     };
@@ -283,7 +283,7 @@ export default function OrgApprovalsPage() {
                                 <SelectContent>
                                     <SelectItem value="ALL">Tất cả</SelectItem>
                                     <SelectItem value="PENDING">Chờ duyệt</SelectItem>
-                                    <SelectItem value="APPROVED">Đã duyệT</SelectItem>
+                                    <SelectItem value="APPROVED">Đã duyệt</SelectItem>
                                     <SelectItem value="REJECTED">Từ chối</SelectItem>
                                 </SelectContent>
                             </Select>

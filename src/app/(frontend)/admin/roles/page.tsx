@@ -37,6 +37,13 @@ import {
     DialogFooter,
     DialogClose
 } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/components/ui/select';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
@@ -101,7 +108,7 @@ const RoleCard = ({
                         ))}
                         {role.permissions.length > 5 && (
                             <Badge variant="secondary" className="text-xs">
-                                +{role.permissions.length - 5}
+                                +{role.permissions.length - 5} quyền khác
                             </Badge>
                         )}
                     </div>
@@ -139,6 +146,8 @@ export default function AdminRolesPage() {
     const [loading, setLoading] = useState(true);
     const [roles, setRoles] = useState<Role[]>([]);
     const [permissions, setPermissions] = useState<Permission[]>([]);
+    const [filterOrg, setFilterOrg] = useState('MASTER');
+    const [orgs, setOrgs] = useState<{ id: string; name: string }[]>([]);
 
     // Detail dialog
     const [detailOpen, setDetailOpen] = useState(false);
@@ -158,7 +167,14 @@ export default function AdminRolesPage() {
         if (!user) return;
         setLoading(true);
         try {
-            const res = await fetch('/api/admin/roles', {
+            const params = new URLSearchParams();
+            if (user.role === 'SYS_ADMIN') {
+                if (filterOrg !== 'ALL') params.append('org_id', filterOrg === 'MASTER' ? 'NULL' : filterOrg);
+            } else {
+                params.append('org_id', user.org_id || '');
+            }
+
+            const res = await fetch(`/api/admin/roles?${params.toString()}`, {
                 headers: {
                     'x-user-id': user.id,
                     'x-user-role': user.role || ''
@@ -173,7 +189,21 @@ export default function AdminRolesPage() {
         }
     };
 
-    // Fetch permissions
+    const fetchOrgs = async () => {
+        try {
+            const res = await fetch('/api/admin/organizations', {
+                headers: {
+                    'x-user-id': user?.id || '',
+                    'x-user-role': user?.role || ''
+                }
+            });
+            const data = await res.json();
+            setOrgs(data.data || []);
+        } catch (error) {
+            console.error('Error fetching orgs:', error);
+        }
+    };
+
     const fetchPermissions = async () => {
         try {
             const res = await fetch('/api/admin/permissions', {
@@ -193,8 +223,9 @@ export default function AdminRolesPage() {
         if (user) {
             fetchRoles();
             fetchPermissions();
+            if (user.role === 'SYS_ADMIN') fetchOrgs();
         }
-    }, [user]);
+    }, [user, filterOrg]);
 
     // View role
     const handleView = (role: Role) => {
@@ -232,6 +263,65 @@ export default function AdminRolesPage() {
         );
     };
 
+    // Save Role
+    const handleSave = async () => {
+        if (!editName || !editCode) return;
+        setSaving(true);
+        try {
+            const method = editMode === 'create' ? 'POST' : 'PATCH';
+            const url = editMode === 'create'
+                ? '/api/admin/roles'
+                : `/api/admin/roles/${selectedRole?.id}`;
+
+            const payload = {
+                name: editName,
+                code: editCode,
+                description: editDescription,
+                permissions: editPermissions,
+                org_id: filterOrg === 'MASTER' ? null : filterOrg
+            };
+
+            const res = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-id': user?.id || '',
+                    'x-user-role': user?.role || ''
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                setEditOpen(false);
+                fetchRoles();
+            } else {
+                const data = await res.json();
+                console.error('Error saving role:', data.message);
+            }
+        } catch (error) {
+            console.error('Error saving role:', error);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Delete Role
+    const handleDelete = async (roleId: string) => {
+        if (!confirm('Bạn có chắc muốn xóa vai trò này?')) return;
+        try {
+            const res = await fetch(`/api/admin/roles/${roleId}`, {
+                method: 'DELETE',
+                headers: {
+                    'x-user-id': user?.id || '',
+                    'x-user-role': user?.role || ''
+                }
+            });
+            if (res.ok) fetchRoles();
+        } catch (error) {
+            console.error('Error deleting role:', error);
+        }
+    };
+
     // Group permissions by category
     const groupedPermissions = PERMISSION_CATEGORIES.map(cat => ({
         ...cat,
@@ -249,54 +339,72 @@ export default function AdminRolesPage() {
                             Quản lý Vai trò
                         </h1>
                         <p className="text-slate-500 mt-1 font-medium">
-                            Định nghĩa vai trò và phân quyền trong tổ chức.
+                            Định nghĩa vai trò và phân quyền (Permissions) trong hệ thống.
                         </p>
                     </div>
 
-                    <Button
-                        className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
-                        onClick={handleCreate}
-                        data-testid="btn-create-role"
-                    >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tạo Role mới
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        {user?.role === 'SYS_ADMIN' && (
+                            <Select value={filterOrg} onValueChange={setFilterOrg}>
+                                <SelectTrigger className="w-[200px]" data-testid="filter-org">
+                                    <SelectValue placeholder="Chọn phạm vi" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="MASTER">Vai trò Gốc (Mặc định)</SelectItem>
+                                    <SelectItem value="ALL">Tất cả Vai trò Tổ chức</SelectItem>
+                                    {orgs.map(o => (
+                                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                        <Button
+                            className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
+                            onClick={handleCreate}
+                            data-testid="btn-create-role"
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tạo Vai trò mới
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Roles List */}
-                {loading ? (
-                    <div className="grid gap-4" data-testid="roles-loading">
-                        {[1, 2, 3].map((i) => (
-                            <Skeleton key={i} className="h-28 w-full rounded-xl" />
-                        ))}
-                    </div>
-                ) : roles.length > 0 ? (
-                    <div className="grid gap-4" data-testid="roles-list">
-                        {roles.map((role) => (
-                            <RoleCard
-                                key={role.id}
-                                role={role}
-                                onView={() => handleView(role)}
-                                onEdit={() => handleEdit(role)}
-                                onDelete={() => { }}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <Card className="border-none shadow-sm" data-testid="roles-empty">
-                        <CardContent className="py-16 text-center">
-                            <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                                <Shield className="h-8 w-8 text-slate-300" />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">
-                                Chưa có vai trò nào
-                            </h3>
-                            <p className="text-slate-500">
-                                Tạo vai trò đầu tiên cho tổ chức.
-                            </p>
-                        </CardContent>
-                    </Card>
-                )}
+                {
+                    loading ? (
+                        <div className="grid gap-4" data-testid="roles-loading">
+                            {[1, 2, 3].map((i) => (
+                                <Skeleton key={i} className="h-28 w-full rounded-xl" />
+                            ))}
+                        </div>
+                    ) : roles.length > 0 ? (
+                        <div className="grid gap-4" data-testid="roles-list">
+                            {roles.map((role) => (
+                                <RoleCard
+                                    key={role.id}
+                                    role={role}
+                                    onView={() => handleView(role)}
+                                    onEdit={() => handleEdit(role)}
+                                    onDelete={() => handleDelete(role.id)}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <Card className="border-none shadow-sm" data-testid="roles-empty">
+                            <CardContent className="py-16 text-center">
+                                <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                                    <Shield className="h-8 w-8 text-slate-300" />
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2">
+                                    Chưa có vai trò nào
+                                </h3>
+                                <p className="text-slate-500">
+                                    Tạo vai trò đầu tiên cho tổ chức.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )
+                }
 
                 {/* Detail Dialog */}
                 <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
@@ -312,17 +420,17 @@ export default function AdminRolesPage() {
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
-                                        <span className="text-slate-500">Code:</span>
+                                        <span className="text-slate-500">Mã (Code):</span>
                                         <p className="font-mono font-medium">{selectedRole.code}</p>
                                     </div>
                                     <div>
                                         <span className="text-slate-500">Loại:</span>
-                                        <p>{selectedRole.is_system ? 'System Role' : 'Custom Role'}</p>
+                                        <p>{selectedRole.is_system ? 'Vai trò Hệ thống' : 'Vai trò Tùy chỉnh'}</p>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h4 className="font-bold text-slate-700 mb-2">Permissions ({selectedRole.permissions.length})</h4>
+                                    <h4 className="font-bold text-slate-700 mb-2">Quyền hạn ({selectedRole.permissions.length})</h4>
                                     <div className="flex flex-wrap gap-1 max-h-40 overflow-auto">
                                         {selectedRole.permissions.map(p => (
                                             <Badge key={p} variant="secondary" className="text-xs">
@@ -341,23 +449,23 @@ export default function AdminRolesPage() {
                     <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-auto" data-testid="dialog-role-edit">
                         <DialogHeader>
                             <DialogTitle>
-                                {editMode === 'create' ? 'Tạo Role mới' : 'Chỉnh sửa Role'}
+                                {editMode === 'create' ? 'Tạo vai trò mới' : 'Chỉnh sửa vai trò'}
                             </DialogTitle>
                         </DialogHeader>
 
                         <div className="space-y-4 py-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-semibold">Tên Role</label>
+                                    <label className="text-sm font-semibold">Tên Vai trò</label>
                                     <Input
                                         value={editName}
                                         onChange={(e) => setEditName(e.target.value)}
-                                        placeholder="Senior Developer"
+                                        placeholder="Lập trình viên Cao cấp"
                                         data-testid="input-role-name"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-semibold">Code</label>
+                                    <label className="text-sm font-semibold">Mã (Code)</label>
                                     <Input
                                         value={editCode}
                                         onChange={(e) => setEditCode(e.target.value.toUpperCase())}
@@ -379,7 +487,7 @@ export default function AdminRolesPage() {
                             </div>
 
                             <div className="space-y-4">
-                                <h4 className="font-bold text-slate-700">Permissions</h4>
+                                <h4 className="font-bold text-slate-700">Quyền hạn (Permissions)</h4>
                                 {groupedPermissions.map(cat => (
                                     <div key={cat.key} className="space-y-2">
                                         <p className="text-sm font-medium text-slate-500">{cat.label}</p>
@@ -409,6 +517,7 @@ export default function AdminRolesPage() {
                             <Button
                                 disabled={saving}
                                 className="bg-blue-600 hover:bg-blue-700"
+                                onClick={handleSave}
                                 data-testid="btn-save-role"
                             >
                                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
@@ -417,7 +526,7 @@ export default function AdminRolesPage() {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
-            </div>
-        </AppLayout>
+            </div >
+        </AppLayout >
     );
 }

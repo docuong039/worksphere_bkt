@@ -48,8 +48,8 @@ export default function WorkspaceSettingsPage() {
     const [lockDay, setLockDay] = useState('SUNDAY');
 
     // Dynamic Categories State
-    const [projectTypes, setProjectTypes] = useState(['Software', 'Marketing', 'Legal']);
-    const [skillGroups, setSkillGroups] = useState(['Frontend', 'Backend', 'DevOps', 'Design']);
+    const [projectTypes, setProjectTypes] = useState(['Phần mềm', 'Tiếp thị', 'Pháp lý']);
+    const [skillGroups, setSkillGroups] = useState(['Frontend', 'Backend', 'Hạ tầng (DevOps)', 'Thiết kế']);
 
     // Schedule State (US-ORG-03-02)
     const [workDays, setWorkDays] = useState(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']);
@@ -235,9 +235,9 @@ export default function WorkspaceSettingsPage() {
                                                     <SelectValue placeholder="Chọn múi giờ" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="Asia/Ho_Chi_Minh">Vietnam (GMT+7)</SelectItem>
-                                                    <SelectItem value="America/New_York">Eastern Time (GMT-5)</SelectItem>
-                                                    <SelectItem value="Europe/London">London (GMT+0)</SelectItem>
+                                                    <SelectItem value="Asia/Ho_Chi_Minh">Việt Nam (GMT+7)</SelectItem>
+                                                    <SelectItem value="America/New_York">Giờ phía Đông Mỹ (GMT-5)</SelectItem>
+                                                    <SelectItem value="Europe/London">Luân Đôn (GMT+0)</SelectItem>
                                                     <SelectItem value="Asia/Tokyo">Tokyo (GMT+9)</SelectItem>
                                                 </SelectContent>
                                             </Select>

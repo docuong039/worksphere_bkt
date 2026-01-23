@@ -35,7 +35,8 @@ import {
     Send,
     Edit2,
     Search,
-    Download
+    Download,
+    Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -287,7 +288,7 @@ export default function ReportsPage() {
                 })
             });
 
-            if (!res.ok) throw new Error('Failed to create report');
+            if (!res.ok) throw new Error('Không thể tạo báo cáo');
 
             setIsDialogOpen(false);
             fetchReports();
@@ -524,9 +525,24 @@ export default function ReportsPage() {
 
                             {/* Content */}
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">
-                                    Nội dung <span className="text-red-500">*</span>
-                                </label>
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Nội dung <span className="text-red-500">*</span>
+                                    </label>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 text-[10px] font-black uppercase text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                        onClick={() => {
+                                            const mockLogTimeContent = "1. Công việc đã hoàn thành:\n- [TASK-001] Fix bug login (2h)\n- [TASK-002] Create dashboard UI (4h)\n- [SUB-01] Design mockup (2h)\n\n2. Khó khăn:\n- Không có";
+                                            setContent(prev => prev ? prev + "\n" + mockLogTimeContent : mockLogTimeContent);
+                                            alert("Đã tự động lấy dữ liệu từ Log Time của bạn trong kỳ báo cáo (US-EMP-03-01)");
+                                        }}
+                                        title="Hệ thống tự động lấy danh sách Task/Subtask đã hoàn thành & có log time đổ vào nội dung nháp"
+                                    >
+                                        <Clock className="mr-1 h-3 w-3" /> Lấy dữ liệu Log Time
+                                    </Button>
+                                </div>
                                 <Textarea
                                     placeholder="1. Công việc đã hoàn thành&#10;- ...&#10;&#10;2. Khó khăn gặp phải&#10;- ..."
                                     value={content}

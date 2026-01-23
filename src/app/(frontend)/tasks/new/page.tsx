@@ -251,6 +251,20 @@ export default function CreateTaskPage() {
         );
     };
 
+    const isPM = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN' || user?.role === 'CEO';
+
+    if (!isPM && !loading) {
+        return (
+            <AppLayout>
+                <div className="flex flex-col items-center justify-center py-32 text-center h-[70vh]">
+                    <AlertCircle size={48} className="text-amber-500 mb-6" />
+                    <h2 className="text-2xl font-black text-slate-900">Truy cập bị hạn chế</h2>
+                    <p className="text-slate-500 mt-2 max-w-xs font-medium">Bạn không có quyền tạo công việc mới. Vui lòng liên hệ Quản lý dự án.</p>
+                </div>
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout>
             <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-700" data-testid="create-task-container">

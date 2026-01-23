@@ -276,9 +276,9 @@ export default function PlatformDashboardPage() {
                                 <CardHeader className="border-b border-slate-100">
                                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                                         <AlertTriangle className="h-5 w-5 text-amber-500" />
-                                        Cảnh báo
+                                        Cảnh báo & Thông báo
                                     </CardTitle>
-                                    <CardDescription>Vấn đề cần chú ý</CardDescription>
+                                    <CardDescription>Các vấn đề hệ thống cần chú ý</CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     {alerts.length > 0 ? (
@@ -307,7 +307,7 @@ export default function PlatformDashboardPage() {
                                     ) : (
                                         <div className="p-8 text-center text-slate-500">
                                             <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
-                                            Không có cảnh báo
+                                            Hệ thống ổn định
                                         </div>
                                     )}
                                 </CardContent>
@@ -318,8 +318,8 @@ export default function PlatformDashboardPage() {
                                 <CardHeader className="border-b border-slate-100">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <CardTitle className="text-lg font-bold">Organizations</CardTitle>
-                                            <CardDescription>Danh sách tổ chức trên hệ thống</CardDescription>
+                                            <CardTitle className="text-lg font-bold">Tổ chức (Organizations)</CardTitle>
+                                            <CardDescription>Danh sách các tổ chức đăng ký trên hệ thống</CardDescription>
                                         </div>
                                         <Button variant="outline" size="sm" data-testid="btn-view-all-orgs">
                                             Xem tất cả <ArrowUpRight className="ml-1 h-3 w-3" />
@@ -332,8 +332,8 @@ export default function PlatformDashboardPage() {
                                             <TableRow className="bg-slate-50/50">
                                                 <TableHead className="font-bold">Tên Org</TableHead>
                                                 <TableHead className="font-bold">Trạng thái</TableHead>
-                                                <TableHead className="font-bold text-right">Users</TableHead>
-                                                <TableHead className="font-bold text-right">Storage</TableHead>
+                                                <TableHead className="font-bold text-right">Thành viên</TableHead>
+                                                <TableHead className="font-bold text-right">Dung lượng</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -372,29 +372,29 @@ export default function PlatformDashboardPage() {
                                         <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
                                             <CheckCircle2 className="h-8 w-8 text-emerald-600" />
                                         </div>
-                                        <p className="font-medium">API Server</p>
-                                        <p className="text-sm text-emerald-600">Healthy</p>
+                                        <p className="font-medium">Máy chủ API</p>
+                                        <p className="text-sm text-emerald-600">Ổn định</p>
                                     </div>
                                     <div className="text-center" data-testid="health-db">
                                         <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
                                             <CheckCircle2 className="h-8 w-8 text-emerald-600" />
                                         </div>
-                                        <p className="font-medium">Database</p>
-                                        <p className="text-sm text-emerald-600">Healthy</p>
+                                        <p className="font-medium">Cơ sở dữ liệu</p>
+                                        <p className="text-sm text-emerald-600">Ổn định</p>
                                     </div>
                                     <div className="text-center" data-testid="health-storage">
                                         <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
                                             <AlertTriangle className="h-8 w-8 text-amber-600" />
                                         </div>
-                                        <p className="font-medium">Storage</p>
-                                        <p className="text-sm text-amber-600">Warning</p>
+                                        <p className="font-medium">Lưu trữ</p>
+                                        <p className="text-sm text-amber-600">Cảnh báo</p>
                                     </div>
                                     <div className="text-center" data-testid="health-security">
                                         <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
                                             <Shield className="h-8 w-8 text-emerald-600" />
                                         </div>
-                                        <p className="font-medium">Security</p>
-                                        <p className="text-sm text-emerald-600">OK</p>
+                                        <p className="font-medium">Bảo mật</p>
+                                        <p className="text-sm text-emerald-600">An toàn</p>
                                     </div>
                                 </div>
                             </CardContent>

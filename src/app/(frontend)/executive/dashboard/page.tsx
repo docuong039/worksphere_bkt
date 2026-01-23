@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -339,10 +340,10 @@ export default function ExecutiveDashboardPage() {
                                             {projects.map(project => (
                                                 <TableRow key={project.id} data-testid={`project-row-${project.id}`}>
                                                     <TableCell>
-                                                        <div>
-                                                            <p className="font-medium">{project.name}</p>
-                                                            <p className="text-xs text-slate-400">PM: {project.pm_name}</p>
-                                                        </div>
+                                                        <Link href={`/projects/${project.id}/overview`} className="hover:text-blue-600 transition-colors">
+                                                            <p className="font-bold">{project.name}</p>
+                                                            <p className="text-xs text-slate-400 font-medium">PM: {project.pm_name}</p>
+                                                        </Link>
                                                     </TableCell>
                                                     <TableCell>{getProjectStatusBadge(project.status)}</TableCell>
                                                     <TableCell>
@@ -395,10 +396,13 @@ export default function ExecutiveDashboardPage() {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-sm truncate">{performer.name}</p>
-                                                    <p className="text-xs text-slate-500">{performer.role}</p>
-                                                </div>
+                                                <Link
+                                                    href={`/hr/employees/${performer.id}`}
+                                                    className="flex-1 min-w-0 hover:bg-slate-50 transition-colors rounded-lg p-1 -ml-1"
+                                                >
+                                                    <p className="font-bold text-sm truncate text-slate-900">{performer.name}</p>
+                                                    <p className="text-xs text-slate-500 font-medium">{performer.role}</p>
+                                                </Link>
                                                 <div className="text-right">
                                                     <p className="font-bold text-emerald-600">{performer.tasks_completed}</p>
                                                     <p className="text-xs text-slate-400">tasks</p>

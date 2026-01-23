@@ -12,28 +12,22 @@ import {
     Layers,
     Plus,
     Clock,
-    MoreVertical,
     Pencil,
     Trash2,
     CheckCircle2,
-    Circle,
     UserCircle,
     Send,
     Loader2,
     AlertCircle,
     ChevronUp,
-    ChevronDown
+    ChevronDown,
+    Lock,
+    FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -48,6 +42,7 @@ import {
 } from '@/components/ui/dialog';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
+import { useTaskStore } from '@/stores/taskStore';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -56,28 +51,30 @@ import {
     TabsList,
     TabsTrigger
 } from '@/components/ui/tabs';
-import { History } from 'lucide-react';
-
-interface TaskDetail {
-    id: string;
-    title: string;
-    description: string | null;
-    status_code: string;
-    priority_code: string;
-    type_code: string;
-    start_date: string | null;
-    due_date: string | null;
-    project: { id: string; name: string; code: string };
-    assignees: { user: { id: string; full_name: string } }[];
-    subtasks: any[];
-    comments: any[];
-}
 
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const router = useRouter();
     const { user } = useAuthStore();
-    const [task, setTask] = useState<TaskDetail | null>(null);
-    const [loading, setLoading] = useState(true);
+    const {
+        currentTask: task,
+        loading,
+        history,
+        loadingHistory,
+        fetchTaskDetail,
+        updateTask,
+        deleteTask,
+        updateTaskFieldStore,
+        addSubtask,
+        updateSubtask,
+        deleteSubtask,
+        reorderSubtask,
+        toggleSubtask,
+        addComment,
+        addTimeLog,
+        fetchHistory
+    } = useTaskStore();
+
     const [commentText, setCommentText] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
@@ -94,6 +91,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     const [logHours, setLogHours] = useState('0');
     const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
     const [logNote, setLogNote] = useState('');
+    const [selectedSubtaskId, setSelectedSubtaskId] = useState<string>('TASK_DIRECT');
     const [isSubmittingTime, setIsSubmittingTime] = useState(false);
 
     // Field Permissions states
@@ -105,295 +103,192 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editTitle, setEditTitle] = useState('');
     const [editDescription, setEditDescription] = useState('');
+    const [editStatus, setEditStatus] = useState('');
     const [editPriority, setEditPriority] = useState('');
     const [editDueDate, setEditDueDate] = useState('');
     const [isUpdatingTask, setIsUpdatingTask] = useState(false);
     const [isDeletingTask, setIsDeletingTask] = useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
-    const router = useRouter();
-
     const isPM = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN';
 
-    // Activity/History states
-    const [history, setHistory] = useState<any[]>([]);
-    const [loadingHistory, setLoadingHistory] = useState(false);
-
-    const fetchTaskDetail = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch(`/api/tasks/${id}`, {
-                headers: {
-                    'x-user-id': user?.id || '',
-                    'x-user-role': user?.role || ''
-                }
-            });
-            if (!res.ok) throw new Error('Failed to fetch');
-            const data = await res.json();
-            setTask(data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchFieldPermissions = async () => {
-        if (!task?.project.id || !user) return;
-        try {
-            const res = await fetch(`/api/projects/${task.project.id}/field-permissions`, {
-                headers: { 'x-user-id': user.id }
-            });
-            const data = await res.json();
-            // In our mock, permissions are mapped by user_id
-            setFieldPermissions(data.permissions?.[user.id] || []);
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const handleReorderSubtask = async (subId: string, direction: 'UP' | 'DOWN') => {
-        try {
-            await fetch(`/api/subtasks/${subId}/reorder`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'x-user-id': user?.id || '' },
-                body: JSON.stringify({ direction })
-            });
-            fetchTaskDetail();
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const updateTaskField = async (field: string, value: any) => {
-        try {
-            await fetch(`/api/tasks/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'x-user-id': user?.id || '' },
-                body: JSON.stringify({ [field]: value })
-            });
-            fetchTaskDetail();
-        } catch (error) {
-            console.error(error);
-        }
-    };
+    // Effects
+    useEffect(() => {
+        if (user) fetchTaskDetail(id, user.id);
+    }, [id, user, fetchTaskDetail]);
 
     useEffect(() => {
-        if (user) fetchTaskDetail();
-    }, [id, user]);
-
-    useEffect(() => {
-        if (task) fetchFieldPermissions();
+        const fetchPerms = async () => {
+            if (!task?.project?.id || !user) return;
+            try {
+                const res = await fetch(`/api/projects/${task.project.id}/field-permissions`, {
+                    headers: { 'x-user-id': user.id }
+                });
+                const data = await res.json();
+                setFieldPermissions(data.permissions?.[user.id] || []);
+            } catch (error) { console.error(error); }
+        };
+        if (task) fetchPerms();
     }, [task, user]);
 
-    // Subtask Handlers
-    const openAddSubtask = () => {
-        setEditingSubtask(null);
-        setSubtaskTitle('');
-        setSubtaskDueDate('');
-        setIsSubtaskDialogOpen(true);
-    };
-
-    const openEditSubtask = (sub: any) => {
-        setEditingSubtask(sub);
-        setSubtaskTitle(sub.title);
-        setSubtaskDueDate(sub.end_date || '');
-        setIsSubtaskDialogOpen(true);
-    };
-
-    const handleSubmitSubtask = async () => {
-        if (!subtaskTitle.trim()) return;
-        setIsSubmittingSubtask(true);
-        try {
-            const url = editingSubtask ? `/api/subtasks/${editingSubtask.id}` : `/api/tasks/${id}/subtasks`;
-            const method = editingSubtask ? 'PUT' : 'POST';
-            await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json', 'x-user-id': user?.id || '' },
-                body: JSON.stringify({ title: subtaskTitle, end_date: subtaskDueDate })
-            });
-            setIsSubtaskDialogOpen(false);
-            fetchTaskDetail();
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsSubmittingSubtask(false);
-        }
-    };
-
-    const fetchHistory = async () => {
-        setLoadingHistory(true);
-        try {
-            const res = await fetch(`/api/tasks/${id}/history`, {
-                headers: { 'x-user-id': user?.id || '' }
-            });
-            const data = await res.json();
-            setHistory(data.data || []);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoadingHistory(false);
-        }
-    };
-
-    const handleDeleteSubtask = async (subId: string) => {
-        if (!confirm('Bạn có chắc muốn xóa subtask này?')) return;
-        try {
-            await fetch(`/api/subtasks/${subId}`, {
-                method: 'DELETE',
-                headers: { 'x-user-id': user?.id || '' }
-            });
-            fetchTaskDetail();
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const handleToggleSubtask = async (subId: string, currentStatus: string) => {
-        const newStatus = currentStatus === 'DONE' ? 'TODO' : 'DONE';
-        try {
-            await fetch(`/api/subtasks/${subId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'x-user-id': user?.id || '' },
-                body: JSON.stringify({ status_code: newStatus })
-            });
-            fetchTaskDetail();
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    // Time Log Handlers
-    const handleSubmitTime = async () => {
-        const totalMinutes = parseInt(logHours) * 60 + parseInt(logMinutes);
-        if (totalMinutes <= 0) return;
-        setIsSubmittingTime(true);
-        try {
-            await fetch(`/api/tasks/${id}/time-logs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-user-id': user?.id || '' },
-                body: JSON.stringify({ minutes: totalMinutes, work_date: logDate, note: logNote })
-            });
-            setIsLogTimeDialogOpen(false);
-            fetchTaskDetail();
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsSubmittingTime(false);
-        }
-    };
-
-    const handleUpdateTask = async () => {
-        if (!editTitle.trim()) return;
-        setIsUpdatingTask(true);
-        try {
-            await fetch(`/api/tasks/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'x-user-id': user?.id || '' },
-                body: JSON.stringify({
-                    title: editTitle,
-                    description: editDescription,
-                    priority_code: editPriority,
-                    due_date: editDueDate,
-                })
-            });
-            setIsEditDialogOpen(false);
-            fetchTaskDetail();
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsUpdatingTask(false);
-        }
-    };
-
-    const handleDeleteTask = async () => {
-        setIsDeletingTask(true);
-        try {
-            await fetch(`/api/tasks/${id}`, {
-                method: 'DELETE',
-                headers: { 'x-user-id': user?.id || '' }
-            });
-            router.push('/tasks');
-        } catch (error) {
-            console.error(error);
-            setIsDeletingTask(false);
-        }
-    };
-
-    const openEditDialog = () => {
-        if (!task) return;
-        setEditTitle(task.title);
-        setEditDescription(task.description || '');
-        setEditPriority(task.priority_code);
-        setEditDueDate(task.due_date ? task.due_date.split('T')[0] : '');
-        setIsEditDialogOpen(true);
-    };
-
-    const handlePostComment = async () => {
-        if (!commentText.trim() || !user) return;
+    // Handlers
+    const handleAddCommentAction = async () => {
+        if (!commentText.trim() || !user || !task || task.is_locked) return;
         setIsSubmittingComment(true);
-        try {
-            await fetch(`/api/tasks/${id}/comments`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
-                body: JSON.stringify({ content: commentText })
-            });
-            setCommentText('');
-            fetchTaskDetail();
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsSubmittingComment(false);
+        await addComment(id, user.id, commentText);
+        setCommentText('');
+        setIsSubmittingComment(false);
+    };
+
+    const handleSubtaskSubmitAction = async () => {
+        if (!subtaskTitle.trim() || !task || !user || task.is_locked) return;
+        setIsSubmittingSubtask(true);
+        if (editingSubtask) {
+            await updateSubtask(editingSubtask.id, user.id, { title: subtaskTitle, end_date: subtaskDueDate });
+        } else {
+            await addSubtask(id, user.id, { title: subtaskTitle, end_date: subtaskDueDate });
         }
+        setIsSubtaskDialogOpen(false);
+        setIsSubmittingSubtask(false);
+    };
+
+    const handleTimeSubmitAction = async () => {
+        const totalMinutes = parseInt(logHours) * 60 + parseInt(logMinutes);
+        if (totalMinutes <= 0 || !task || !user || task.is_locked) return;
+
+        // BA Rule US-EMP-02-01: Must be DONE
+        if (selectedSubtaskId === 'TASK_DIRECT') {
+            if (task.status_code !== 'DONE') {
+                alert("Bạn chỉ có thể log time trực tiếp vào công việc chính khi nó đã ở trạng thái HOÀN THÀNH (DONE).");
+                return;
+            }
+        } else {
+            const sub = task.subtasks?.find(s => s.id === selectedSubtaskId);
+            if (sub && sub.status_code !== 'DONE') {
+                alert("Bạn chỉ có thể log time vào công việc con khi nó đã được đánh dấu là HOÀN THÀNH.");
+                return;
+            }
+        }
+
+        setIsSubmittingTime(true);
+        await addTimeLog(id, user.id, {
+            minutes: totalMinutes,
+            work_date: logDate,
+            note: logNote,
+            subtask_id: selectedSubtaskId === 'TASK_DIRECT' ? null : selectedSubtaskId
+        });
+        setIsLogTimeDialogOpen(false);
+        setLogMinutes('0');
+        setLogHours('0');
+        setLogNote('');
+        setSelectedSubtaskId('TASK_DIRECT');
+        setIsSubmittingTime(false);
+    };
+
+    const handleUpdateTaskAction = async () => {
+        if (!editTitle.trim() || !task || !user || task.is_locked) return;
+
+        // BA Rule: Only PM can move main task to DONE
+        const isCurrentlyDone = task.status_code === 'DONE';
+        const targetIsDone = editStatus === 'DONE';
+        if (targetIsDone && !isCurrentlyDone && !isPM) {
+            alert("Chỉ Quản lý mới có quyền chuyển trạng thái công việc chính sang DONE.");
+            return;
+        }
+
+        setIsUpdatingTask(true);
+        const success = await updateTask(id, user.id, {
+            title: editTitle,
+            description: editDescription,
+            priority_code: editPriority,
+            status_code: editStatus,
+            due_date: editDueDate,
+        });
+        if (success) setIsEditDialogOpen(false);
+        setIsUpdatingTask(false);
+    };
+
+    const handleDeleteTaskAction = async () => {
+        if (task?.is_locked || !user) return;
+        setIsDeletingTask(true);
+        const success = await deleteTask(id, user.id);
+        if (success) router.push('/tasks');
+        else setIsDeletingTask(false);
     };
 
     if (loading) {
         return (
             <AppLayout>
                 <div className="max-w-5xl mx-auto space-y-8 animate-pulse">
-                    <Skeleton className="h-6 w-32" />
-                    <div className="flex justify-between items-start">
-                        <div className="space-y-4 w-2/3">
-                            <Skeleton className="h-10 w-full" />
-                            <div className="flex gap-4">
-                                <Skeleton className="h-6 w-24" />
-                                <Skeleton className="h-6 w-24" />
-                            </div>
-                        </div>
-                        <Skeleton className="h-10 w-24" />
-                    </div>
-                    <Card className="border-none shadow-sm">
-                        <CardContent className="p-8 space-y-6">
-                            <Skeleton className="h-32 w-full" />
-                            <Separator />
-                            <Skeleton className="h-48 w-full" />
-                        </CardContent>
-                    </Card>
+                    <Skeleton className="h-6 w-32" /><Skeleton className="h-10 w-full" /><Skeleton className="h-48 w-full" />
                 </div>
             </AppLayout>
         );
     }
 
-    if (!task) return null;
+    if (!task) return (
+        <AppLayout>
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-500">
+                <AlertCircle size={48} className="mb-4 text-slate-300" />
+                <p className="text-lg font-medium">Không tìm thấy công việc.</p>
+                <Button variant="link" asChild><Link href="/tasks">Quay lại danh sách</Link></Button>
+            </div>
+        </AppLayout>
+    );
 
     return (
         <AppLayout>
             <div className="max-w-5xl mx-auto pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700" data-testid="task-detail-container">
-                {/* Top Navigation */}
+                {/* Locked Banner Notification - US-MNG-01-13 */}
+                {task.is_locked && (
+                    <div className="mb-6 bg-rose-50 border border-rose-100 p-5 rounded-3xl flex items-center justify-between shadow-sm animate-in zoom-in duration-300">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-rose-500 p-3 rounded-2xl shadow-lg shadow-rose-100">
+                                <Lock className="text-white h-5 w-5" />
+                            </div>
+                            <div>
+                                <h4 className="text-base font-black text-rose-900 leading-none mb-1">CÔNG VIỆC ĐÃ BỊ KHÓA</h4>
+                                <p className="text-xs text-rose-600 font-bold opacity-80 uppercase tracking-wider">Mọi thay đổi về trạng thái và ghi nhận thời gian (Log Time) đều bị vô hiệu hóa trong kỳ đóng băng dữ liệu.</p>
+                            </div>
+                        </div>
+                        <AlertCircle className="text-rose-200 h-10 w-10 hidden md:block" />
+                    </div>
+                )}
+
+                {/* Header Section */}
                 <div className="flex items-center justify-between mb-8">
                     <Button variant="ghost" asChild className="-ml-4 text-slate-500 hover:text-slate-900 group">
-                        <Link href="/tasks">
-                            <ChevronLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                            Quay lại Công việc
-                        </Link>
+                        <Link href="/tasks"><ChevronLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />Quay lại Công việc</Link>
                     </Button>
                     <div className="flex gap-2">
                         {isPM && (
                             <>
-                                <Button variant="outline" size="sm" className="h-9 gap-2 font-bold border-slate-200" onClick={openEditDialog}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className={cn("h-9 gap-2 font-bold border-slate-200", task.is_locked && "opacity-50 grayscale")}
+                                    disabled={task.is_locked}
+                                    title={task.is_locked ? "Công việc này đã bị khóa, không thể chỉnh sửa." : "Chỉnh sửa công việc"}
+                                    onClick={() => {
+                                        setEditTitle(task.title);
+                                        setEditDescription(task.description || '');
+                                        setEditPriority(task.priority_code);
+                                        setEditStatus(task.status_code);
+                                        setEditDueDate(task.due_date ? task.due_date.split('T')[0] : '');
+                                        setIsEditDialogOpen(true);
+                                    }}
+                                >
                                     <Pencil size={14} /> Chỉnh sửa
                                 </Button>
-                                <Button variant="outline" size="sm" className="h-9 gap-2 font-bold text-rose-600 border-rose-100 hover:bg-rose-50" onClick={() => setIsDeleteConfirmOpen(true)}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className={cn("h-9 gap-2 font-bold text-rose-600 border-rose-100 hover:bg-rose-50", task.is_locked && "opacity-50 grayscale")}
+                                    disabled={task.is_locked}
+                                    title={task.is_locked ? "Công việc này đã bị khóa, không thể xóa." : "Xóa công việc"}
+                                    onClick={() => setIsDeleteConfirmOpen(true)}
+                                    data-testid="btn-delete-task"
+                                >
                                     <Trash2 size={14} /> Xóa
                                 </Button>
                             </>
@@ -402,507 +297,296 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Main Content Area */}
                     <div className="lg:col-span-2 space-y-8">
-                        {/* Task Header */}
                         <div className="space-y-4">
                             <div className="flex flex-wrap gap-2">
                                 <Badge className={cn(
-                                    "px-3 py-1 font-extrabold uppercase tracking-widest text-[10px] border-none",
-                                    task.status_code === 'DONE' ? "bg-emerald-500 text-white" : "bg-blue-600 text-white"
-                                )} data-testid="detail-status">
-                                    {task.status_code === 'DONE' ? 'HOÀN THÀNH' :
-                                        task.status_code === 'IN_PROGRESS' ? 'ĐANG THỰC HIỆN' : 'CHƯA THỰC HIỆN'}
-                                </Badge>
-                                <Badge variant="outline" className={cn(
-                                    "px-3 py-1 font-extrabold uppercase tracking-widest text-[10px] border-slate-200",
-                                    task.priority_code === 'URGENT' ? "text-rose-600 bg-rose-50 border-rose-100" : "text-slate-600"
-                                )} data-testid="detail-priority">
-                                    <Flag size={10} className="mr-1" />
-                                    {task.priority_code === 'URGENT' ? 'KHẨN CẤP' :
-                                        task.priority_code === 'HIGH' ? 'CAO' :
-                                            task.priority_code === 'MEDIUM' ? 'TRUNG BÌNH' : 'THẤP'}
-                                </Badge>
+                                    "px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider",
+                                    task.priority_code === 'URGENT' ? "bg-rose-500 text-white" : "bg-emerald-500 text-white"
+                                )} data-testid="task-priority-badge">{task.priority_code}</Badge>
+                                {task.is_locked && <Badge className="px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider bg-slate-900 text-white flex gap-1 items-center"><Lock size={10} /> Đã khóa</Badge>}
                             </div>
-                            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 leading-tight tracking-tight" data-testid="detail-title">
-                                {task.title}
-                            </h1>
-                            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-bold text-slate-500">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-blue-600">{task.project.code}</span>
-                                    <span>•</span>
-                                    <span>{task.project.name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Calendar size={16} className="text-slate-400" />
-                                    <span>Hạn chót: {task.due_date ? new Date(task.due_date).toLocaleDateString('vi-VN') : 'Không có'}</span>
-                                </div>
-                            </div>
+                            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight" data-testid="task-title-display">{task.title}</h1>
+                            <div className="flex items-center gap-2 text-slate-500 font-medium">Dự án: <span className="text-slate-900 font-bold" data-testid="task-project-name">{task.project?.name || 'N/A'}</span></div>
                         </div>
 
-                        {/* Tab-based Content Area */}
-                        <Tabs defaultValue="subtasks" className="w-full">
-                            <TabsList className="bg-slate-100/50 p-1 rounded-xl w-full justify-start h-12 mb-6">
-                                <TabsTrigger value="subtasks" className="rounded-lg px-6 font-bold flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
-                                    <CheckCircle2 size={16} /> Công việc con
-                                </TabsTrigger>
-                                <TabsTrigger value="comments" className="rounded-lg px-6 font-bold flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm text-slate-500">
-                                    <MessageSquare size={16} /> Thảo luận
-                                </TabsTrigger>
-                                <TabsTrigger value="history" onClick={fetchHistory} className="rounded-lg px-6 font-bold flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm text-slate-500">
-                                    <History size={16} /> Lịch sử
-                                </TabsTrigger>
+                        <Tabs defaultValue="details" className="w-full" data-testid="task-tabs">
+                            <TabsList className="bg-slate-100/50 p-1 rounded-2xl mb-6">
+                                <TabsTrigger value="details" className="rounded-xl px-4 md:px-6 font-bold" data-testid="tab-details">Chi tiết</TabsTrigger>
+                                <TabsTrigger value="comments" className="rounded-xl px-4 md:px-6 font-bold flex gap-2" data-testid="tab-comments">Thảo luận <Badge variant="secondary" className="h-5 px-1">{task.comments?.length || 0}</Badge></TabsTrigger>
+                                <TabsTrigger value="attachments" className="rounded-xl px-4 md:px-6 font-bold flex gap-2" data-testid="tab-attachments">Đính kèm <Badge variant="secondary" className="h-5 px-1">{task.attachments?.length || 0}</Badge></TabsTrigger>
+                                <TabsTrigger value="history" onClick={() => user && fetchHistory(id, user.id)} className="rounded-xl px-4 md:px-6 font-bold" data-testid="tab-history">Lịch sử</TabsTrigger>
                             </TabsList>
 
-                            {/* Subtasks Tab */}
-                            <TabsContent value="subtasks" className="space-y-6 outline-none">
-                                {/* Log Time Quick Action (POL-TIME-01 Compliance) */}
-                                <div className={cn(
-                                    "p-4 rounded-2xl border flex items-center justify-between",
-                                    task.status_code === 'DONE' ? "bg-emerald-50 border-emerald-100" : "bg-slate-50 border-slate-100 opacity-70"
-                                )}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn("p-2 rounded-xl", task.status_code === 'DONE' ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-400")}>
-                                            <Clock size={20} />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-slate-900">Ghi nhận thời gian (Log Time)</h4>
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase">
-                                                {task.status_code === 'DONE' ? 'Sẵn sàng ghi giờ' : 'Chỉ hoàn thành mới được log time'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        disabled={task.status_code !== 'DONE'}
-                                        onClick={() => setIsLogTimeDialogOpen(true)}
-                                        className={cn("font-bold", task.status_code === 'DONE' ? "bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-100" : "")}
-                                        data-testid="log-time-btn"
-                                    >
-                                        <Plus className="mr-2 h-4 w-4" /> Log Time
-                                    </Button>
-                                </div>
-
-                                {/* Description */}
-                                <Card className="border-none shadow-sm bg-white overflow-hidden group/desc">
+                            <TabsContent value="details" className="space-y-8 animate-in fade-in duration-500">
+                                <Card className="border-none shadow-sm group/desc">
                                     <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                                        <CardTitle className="text-lg font-bold flex items-center gap-2">
-                                            <Layers size={18} className="text-blue-600" />
-                                            Mô tả công việc
-                                        </CardTitle>
-                                        {(isPM || fieldPermissions.includes('description')) && !isEditingDescription && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 text-blue-600 opacity-0 group-hover/desc:opacity-100 transition-opacity"
-                                                onClick={() => {
-                                                    setTempDescription(task.description || '');
-                                                    setIsEditingDescription(true);
-                                                }}
-                                            >
-                                                Sửa
-                                            </Button>
+                                        <CardTitle className="text-lg font-bold flex items-center gap-2"><Layers size={18} className="text-blue-600" />Mô tả công việc</CardTitle>
+                                        {(isPM || fieldPermissions.includes('description')) && !isEditingDescription && !task.is_locked && (
+                                            <Button variant="ghost" size="sm" className="h-8 text-blue-600" onClick={() => { setTempDescription(task.description || ''); setIsEditingDescription(true); }}>Sửa</Button>
                                         )}
                                     </CardHeader>
                                     <CardContent className="pt-4">
                                         {isEditingDescription ? (
                                             <div className="space-y-3">
-                                                <Textarea
-                                                    value={tempDescription}
-                                                    onChange={(e) => setTempDescription(e.target.value)}
-                                                    className="min-h-[150px]"
-                                                />
-                                                <div className="flex justify-end gap-2">
-                                                    <Button variant="outline" size="sm" onClick={() => setIsEditingDescription(false)}>Hủy</Button>
-                                                    <Button size="sm" className="bg-blue-600" onClick={() => {
-                                                        updateTaskField('description', tempDescription);
-                                                        setIsEditingDescription(false);
-                                                    }}>Lưu</Button>
-                                                </div>
+                                                <Textarea value={tempDescription} onChange={(e) => setTempDescription(e.target.value)} className="min-h-[150px]" data-testid="description-textarea" />
+                                                <div className="flex justify-end gap-2"><Button variant="outline" size="sm" onClick={() => setIsEditingDescription(false)}>Hủy</Button><Button size="sm" className="bg-blue-600" onClick={() => { updateTaskFieldStore(id, user!.id, 'description', tempDescription); setIsEditingDescription(false); }}>Lưu</Button></div>
                                             </div>
-                                        ) : (
-                                            <div className="text-slate-600 leading-relaxed font-medium whitespace-pre-wrap" data-testid="detail-description">
-                                                {task.description || "Chưa có mô tả cho công việc này."}
-                                            </div>
-                                        )}
+                                        ) : <div className="text-slate-600 whitespace-pre-wrap">{task.description || "Chưa có mô tả."}</div>}
                                     </CardContent>
                                 </Card>
 
                                 <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                                            <CheckCircle2 size={24} className="text-blue-600" />
-                                            Công việc con
-                                            <span className="text-sm font-bold text-slate-400 ml-2">({task.subtasks.filter(s => s.status === 'DONE').length}/{task.subtasks.length})</span>
-                                        </h2>
-                                        <Button size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 font-bold px-4" onClick={openAddSubtask} data-testid="add-subtask-btn">
-                                            <Plus className="mr-1 h-4 w-4" /> Thêm CV con
-                                        </Button>
+                                    <div className="flex items-center justify-between px-1">
+                                        <h3 className="text-lg font-bold">Công việc con ({task.subtasks?.filter(s => s.status_code === 'DONE').length || 0}/{task.subtasks?.length || 0})</h3>
+                                        {!task.is_locked && <Button variant="ghost" size="sm" onClick={() => { setEditingSubtask(null); setSubtaskTitle(''); setSubtaskDueDate(''); setIsSubtaskDialogOpen(true); }} className="text-blue-600 font-bold"><Plus size={16} /> Thêm</Button>}
                                     </div>
-
-                                    <div className="space-y-2" data-testid="subtasks-list">
-                                        {task.subtasks.length > 0 ? [...task.subtasks].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)).map((sub) => (
-                                            <div
-                                                key={sub.id}
-                                                className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100 hover:border-blue-200 hover:shadow-sm transition-all group"
-                                                data-testid={`subtask-item-${sub.id}`}
-                                            >
-                                                <div className="flex items-center gap-4">
-                                                    <Checkbox
-                                                        id={`sub-${sub.id}`}
-                                                        checked={sub.status === 'DONE'}
-                                                        onCheckedChange={() => handleToggleSubtask(sub.id, sub.status)}
-                                                        className="w-5 h-5 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
-                                                    />
-                                                    <div className="flex flex-col">
-                                                        <label
-                                                            htmlFor={`sub-${sub.id}`}
-                                                            className={cn(
-                                                                "text-sm font-bold text-slate-800 cursor-pointer",
-                                                                sub.status === 'DONE' && "text-slate-400 line-through"
-                                                            )}
-                                                        >
-                                                            {sub.title}
-                                                        </label>
-                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">
-                                                            {sub.creator_name} • {sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'N/A'}
-                                                        </span>
+                                    <div className="space-y-3">
+                                        {task.subtasks?.map((sub) => (
+                                            <div key={sub.id} className="group flex items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all">
+                                                <div className="flex items-center gap-3">
+                                                    <Checkbox checked={sub.status_code === 'DONE'} onCheckedChange={() => user && toggleSubtask(sub.id, user.id, sub.status_code)} disabled={task.is_locked} />
+                                                    <div className="flex flex-col"><span className={cn("text-sm font-bold", sub.status_code === 'DONE' && "line-through text-slate-400")}>{sub.title}</span><span className="text-[10px] text-slate-400 font-bold">{sub.creator_name}</span></div>
+                                                </div>
+                                                {!task.is_locked && (isPM || sub.created_by === user?.id) && (
+                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Button variant="ghost" size="icon" onClick={() => user && reorderSubtask(sub.id, user.id, 'UP')} className="h-7 w-7"><ChevronUp size={14} /></Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => user && reorderSubtask(sub.id, user.id, 'DOWN')} className="h-7 w-7"><ChevronDown size={14} /></Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => { setEditingSubtask(sub); setSubtaskTitle(sub.title); setSubtaskDueDate(sub.end_date || ''); setIsSubtaskDialogOpen(true); }} className="h-7 w-7 text-blue-600"><Pencil size={14} /></Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => user && deleteSubtask(sub.id, user.id)} className="h-7 w-7 text-rose-600"><Trash2 size={14} /></Button>
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {(isPM || sub.created_by === user?.id) && (
-                                                        <div className="flex items-center border-r border-slate-100 pr-2 mr-2">
-                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600" onClick={() => handleReorderSubtask(sub.id, 'UP')}>
-                                                                <ChevronUp size={14} />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600" onClick={() => handleReorderSubtask(sub.id, 'DOWN')}>
-                                                                <ChevronDown size={14} />
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                    {(isPM || sub.created_by === user?.id) && (
-                                                        <>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600" onClick={() => openEditSubtask(sub)}>
-                                                                <Pencil size={14} />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-rose-600" onClick={() => handleDeleteSubtask(sub.id)}>
-                                                                <Trash2 size={14} />
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                </div>
+                                                )}
                                             </div>
-                                        )) : (
-                                            <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-slate-200">
-                                                <p className="text-slate-400 font-medium">Chưa có công việc con nào. Hãy chia nhỏ nhiệm vụ!</p>
-                                            </div>
-                                        )}
+                                        ))}
                                     </div>
                                 </div>
                             </TabsContent>
 
-                            {/* Discussion Tab */}
-                            <TabsContent value="comments" className="space-y-6 outline-none">
-                                <Card className="border-none shadow-sm bg-white overflow-hidden">
-                                    <CardContent className="p-6 space-y-8">
-                                        <div className="space-y-8" data-testid="comments-feed">
-                                            {task.comments.length > 0 ? task.comments.map((comment) => (
-                                                <div key={comment.id} className="flex gap-4">
-                                                    <Avatar className="h-10 w-10 border-2 border-slate-50">
-                                                        <AvatarFallback className="bg-blue-100 text-blue-700 font-bold text-xs uppercase">
-                                                            {comment.author_name.charAt(0)}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="flex-1 space-y-2">
-                                                        <div className="flex items-center justify-between">
-                                                            <h4 className="text-sm font-bold text-slate-900">{comment.author_name}</h4>
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                                {new Date(comment.created_at).toLocaleDateString()} • {new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
-                                                        </div>
-                                                        <div className="p-4 bg-slate-50 rounded-2xl rounded-tl-none text-sm text-slate-600 font-medium leading-relaxed">
-                                                            {comment.content}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )) : (
-                                                <p className="text-center text-slate-400 font-medium py-4">Chưa có bình luận nào.</p>
-                                            )}
-                                        </div>
-
-                                        <Separator />
-
-                                        <div className="space-y-4">
-                                            <div className="flex gap-4">
-                                                <Avatar className="h-10 w-10 border-2 border-slate-50">
-                                                    <AvatarFallback className="bg-slate-900 text-white font-bold text-xs">
-                                                        {user?.full_name?.charAt(0) || 'U'}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex-1 space-y-3">
-                                                    <Textarea
-                                                        placeholder="Chia sẻ cập nhật hoặc đặt câu hỏi..."
-                                                        className="min-h-[100px] border-slate-200 focus:ring-blue-500 rounded-2xl resize-none p-4"
-                                                        value={commentText}
-                                                        onChange={(e) => setCommentText(e.target.value)}
-                                                        data-testid="comment-textarea"
-                                                    />
-                                                    <div className="flex justify-end">
-                                                        <Button
-                                                            className="bg-blue-600 hover:bg-blue-700 font-bold px-6 shadow-md shadow-blue-100 h-10 rounded-xl"
-                                                            disabled={!commentText.trim() || isSubmittingComment}
-                                                            onClick={handlePostComment}
-                                                            data-testid="send-comment-btn"
-                                                        >
-                                                            {isSubmittingComment ? <Loader2 className="animate-spin h-4 w-4" /> : <><Send className="mr-2 h-4 w-4" /> Gửi bình luận</>}
-                                                        </Button>
-                                                    </div>
+                            <TabsContent value="comments" className="space-y-4 animate-in fade-in duration-500">
+                                <Card className="border-none shadow-sm bg-white p-6 space-y-6">
+                                    <div className="space-y-6">
+                                        {task.comments?.map((comment) => (
+                                            <div key={comment.id} className="flex gap-4">
+                                                <Avatar className="h-8 w-8"><AvatarFallback className="bg-slate-900 text-white text-[10px]">{comment.creator_name?.charAt(0)}</AvatarFallback></Avatar>
+                                                <div className="flex-1 bg-slate-50 p-3 rounded-2xl rounded-tl-none border border-slate-100">
+                                                    <div className="flex items-center gap-2 mb-1"><span className="font-bold text-xs">{comment.creator_name}</span><span className="text-[10px] text-slate-400">{new Date(comment.created_at).toLocaleString()}</span></div>
+                                                    <div className="text-sm text-slate-600">{comment.content}</div>
                                                 </div>
                                             </div>
+                                        ))}
+                                    </div>
+                                    <Separator />
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex gap-4">
+                                            <Textarea placeholder="Viết bình luận... (sử dụng @ để nhắc tên đồng nghiệp)" className="rounded-2xl resize-none" value={commentText} onChange={(e) => setCommentText(e.target.value)} />
+                                            <Button className="bg-blue-600 rounded-xl px-6 self-end" disabled={!commentText.trim() || isSubmittingComment || task.is_locked} onClick={handleAddCommentAction}>{isSubmittingComment ? <Loader2 className="animate-spin" /> : <Send size={18} />}</Button>
                                         </div>
-                                    </CardContent>
+                                        <p className="text-[10px] text-slate-400 font-bold ml-1">Mẹo: Bạn có thể nhắc tên đồng nghiệp bằng @username (US-EMP-01-08)</p>
+                                    </div>
                                 </Card>
                             </TabsContent>
 
-                            {/* History Tab */}
-                            <TabsContent value="history" className="space-y-4 outline-none">
-                                <Card className="border-none shadow-sm bg-white overflow-hidden">
-                                    <CardContent className="p-6">
-                                        {loadingHistory ? (
-                                            <div className="space-y-4">
-                                                {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
-                                            </div>
-                                        ) : history.length > 0 ? (
-                                            <div className="relative pl-6 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
-                                                {history.map((event) => (
-                                                    <div key={event.id} className="relative">
-                                                        <div className="absolute -left-[24px] top-1.5 w-4 h-4 rounded-full border-2 border-white bg-blue-100 ring-2 ring-slate-50"></div>
-                                                        <div className="flex flex-col">
-                                                            <div className="flex items-center justify-between mb-1">
-                                                                <span className="text-sm font-bold text-slate-900">{event.actor_name}</span>
-                                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(event.created_at).toLocaleDateString()} {new Date(event.created_at).toLocaleTimeString()}</span>
-                                                            </div>
-                                                            <p className="text-sm text-slate-600 font-medium">
-                                                                <span className="font-bold text-blue-600">{event.action}:</span> {event.summary}
-                                                            </p>
-                                                        </div>
+                            <TabsContent value="attachments" className="space-y-4 animate-in fade-in duration-500">
+                                <Card className="border-none shadow-sm bg-white p-6">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-lg font-bold flex items-center gap-2"><Paperclip size={18} className="text-blue-600" />Tài liệu đính kèm (US-EMP-01-06)</h3>
+                                        <Button variant="outline" size="sm" className="h-8 border-dashed border-blue-200 text-blue-600 hover:bg-blue-50" disabled={task.is_locked}>
+                                            <Plus size={14} className="mr-1" /> Tải lên
+                                        </Button>
+                                    </div>
+
+                                    {task.attachments && task.attachments.length > 0 ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {task.attachments.map((file) => (
+                                                <div key={file.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                                                    <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                                        <FileText size={20} />
                                                     </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-12">
-                                                <p className="text-slate-400 font-medium">Chưa có lịch sử hoạt động.</p>
-                                            </div>
-                                        )}
-                                    </CardContent>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-bold truncate">{file.name}</p>
+                                                        <p className="text-[10px] text-slate-400">{file.creator_name} • {new Date(file.created_at).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="py-12 text-center">
+                                            <Paperclip size={32} className="mx-auto text-slate-200 mb-2" />
+                                            <p className="text-sm text-slate-400 font-medium">Chưa có tài liệu đính kèm.</p>
+                                        </div>
+                                    )}
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="history" className="space-y-4">
+                                <Card className="border-none shadow-sm bg-white p-6">
+                                    {loadingHistory ? <div className="space-y-4"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : (
+                                        <div className="space-y-6 relative before:absolute before:inset-0 before:left-3 before:w-0.5 before:bg-slate-100">
+                                            {history.map((item, idx) => (
+                                                <div key={idx} className="relative pl-10">
+                                                    <div className="absolute left-1 top-2 h-4 w-4 bg-white border-2 border-blue-500 rounded-full z-10" />
+                                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                                        <p className="text-sm font-medium"><span className="font-bold">{item.user_name}</span> {item.action_text}</p>
+                                                        <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">{new Date(item.created_at).toLocaleString()}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </Card>
                             </TabsContent>
                         </Tabs>
                     </div>
 
-                    {/* Sidebar / Info Panel */}
                     <div className="space-y-8">
-                        {/* Status Change Card (PM Only) */}
-                        {isPM && task.status_code !== 'DONE' && (
-                            <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 border-none shadow-xl text-white">
-                                <CardHeader>
-                                    <CardTitle className="text-lg font-bold">Cần xử lý</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <p className="text-blue-100 text-sm font-medium">Xác nhận rằng tất cả các yêu cầu đã được đáp ứng trước khi hoàn thành công việc này.</p>
-                                    <Button className="w-full bg-white text-blue-700 hover:bg-blue-50 font-bold h-11" data-testid="complete-task-btn">
-                                        Đánh dấu Hoàn thành
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Details Panel */}
-                        <Card className="border-none shadow-sm bg-white overflow-hidden">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-lg font-bold">Chi tiết</CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-4 space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Người thực hiện</label>
-                                    <div className="space-y-3" data-testid="detail-assignees">
-                                        {task.assignees.map((a, i) => (
-                                            <div key={i} className="flex items-center gap-3">
-                                                <Avatar className="h-8 w-8 border border-slate-200">
-                                                    <AvatarFallback className="text-[10px] font-bold">{a.user.full_name.charAt(0)}</AvatarFallback>
-                                                </Avatar>
-                                                <span className="text-sm font-bold text-slate-800">{a.user.full_name}</span>
-                                            </div>
-                                        ))}
-                                        {isPM && (
-                                            <Button variant="ghost" className="w-full justify-start h-9 text-blue-600 font-bold hover:bg-blue-50 -ml-2">
-                                                <Plus size={16} className="mr-2" /> Thêm nhân sự
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <Separator />
-
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs font-bold text-slate-500">Dự án</span>
-                                        <span className="text-sm font-bold text-blue-600">{task.project.code}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs font-bold text-slate-500">Phân loại</span>
-                                        <Badge variant="secondary" className="font-bold text-[10px]">{task.type_code}</Badge>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs font-bold text-slate-500">Ngày bắt đầu</span>
-                                        <span className="text-sm font-bold text-slate-800">{task.start_date ? new Date(task.start_date).toLocaleDateString('vi-VN') : '-'}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs font-bold text-slate-500">Hạn chót</span>
-                                        <span className="text-sm font-bold text-rose-600">{task.due_date ? new Date(task.due_date).toLocaleDateString('vi-VN') : '-'}</span>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Attachments Card */}
-                        <Card className="border-none shadow-sm bg-white overflow-hidden">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-lg font-bold">Tài liệu đính kèm</CardTitle>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" data-testid="upload-file-btn">
-                                    <Plus size={18} />
+                        <Card className="border-none shadow-sm overflow-hidden pt-6">
+                            <CardContent className="space-y-6">
+                                <div className="space-y-2"><div className="flex justify-between text-[10px] font-bold uppercase text-slate-400 tracking-widest"><span>Trạng thái</span><span className="text-blue-600">{task.status_code}</span></div><div className="bg-slate-100 h-2 rounded-full"><div className="bg-blue-600 h-full" style={{ width: task.status_code === 'DONE' ? '100%' : '50%' }} /></div></div>
+                                <div className="grid grid-cols-2 gap-4 text-xs font-bold uppercase text-slate-400"><div><p className="mb-1 flex items-center gap-1"><Calendar size={12} /> Bắt đầu</p><p className="text-slate-900">{task.start_date || 'N/A'}</p></div><div><p className="mb-1 flex items-center gap-1"><Calendar size={12} /> Hết hạn</p><p className="text-slate-900">{task.due_date || 'N/A'}</p></div></div>
+                                <Button
+                                    className={cn(
+                                        "w-full font-bold h-12 rounded-xl shadow-lg transition-all",
+                                        (task.is_locked || (task.status_code !== 'DONE' && (!task.subtasks || task.subtasks.length === 0)))
+                                            ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                                            : "bg-slate-900 text-white hover:bg-slate-800"
+                                    )}
+                                    onClick={() => setIsLogTimeDialogOpen(true)}
+                                    disabled={task.is_locked}
+                                    title={task.is_locked ? "Dữ liệu thời gian đã bị khóa" : (task.status_code === 'DONE' ? "Ghi nhận thời gian" : "Chỉ được log thời gian khi công việc hoặc công việc con hoàn thành")}
+                                    data-testid="btn-open-log-time"
+                                >
+                                    <Clock className="mr-2" size={16} />
+                                    {task.is_locked ? 'LOG TIME ĐÃ KHÓA' : (task.status_code !== 'DONE' && (!task.subtasks || task.subtasks.length === 0) ? 'CHỜ HOÀN THÀNH' : 'Ghi nhận thời gian')}
                                 </Button>
-                            </CardHeader>
-                            <CardContent className="pt-4 space-y-4">
-                                <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
-                                    <Paperclip size={24} className="mx-auto text-slate-300 mb-2" />
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Chưa có tài liệu nào</p>
-                                </div>
                             </CardContent>
                         </Card>
                     </div>
                 </div>
 
-                {/* Subtask Dialog */}
+                {/* Dialogs */}
                 <Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>{editingSubtask ? 'Sửa công việc con' : 'Thêm công việc con'}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold">Tên công việc</label>
-                                <Input value={subtaskTitle} onChange={(e) => setSubtaskTitle(e.target.value)} placeholder="VD: Review code..." />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold">Hạn chót</label>
-                                <Input type="date" value={subtaskDueDate} onChange={(e) => setSubtaskDueDate(e.target.value)} />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="outline">Hủy</Button></DialogClose>
-                            <Button onClick={handleSubmitSubtask} disabled={isSubmittingSubtask} className="bg-blue-600">
-                                {isSubmittingSubtask ? 'Đang lưu...' : 'Lưu'}
-                            </Button>
-                        </DialogFooter>
+                    <DialogContent>
+                        <DialogHeader><DialogTitle>{editingSubtask ? 'Sửa Subtask' : 'Thêm Subtask'}</DialogTitle></DialogHeader>
+                        <div className="space-y-4 py-4"><Input value={subtaskTitle} onChange={(e) => setSubtaskTitle(e.target.value)} placeholder="Tên công việc..." /><Input type="date" value={subtaskDueDate} onChange={(e) => setSubtaskDueDate(e.target.value)} /></div>
+                        <DialogFooter><DialogClose asChild><Button variant="outline">Hủy</Button></DialogClose><Button onClick={handleSubtaskSubmitAction} disabled={isSubmittingSubtask} className="bg-blue-600">Lưu</Button></DialogFooter>
                     </DialogContent>
                 </Dialog>
 
-                {/* Log Time Dialog */}
                 <Dialog open={isLogTimeDialogOpen} onOpenChange={setIsLogTimeDialogOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Ghi nhận thời gian</DialogTitle>
-                        </DialogHeader>
+                    <DialogContent>
+                        <DialogHeader><DialogTitle>Ghi nhận thời gian</DialogTitle></DialogHeader>
                         <div className="space-y-4 py-4">
-                            <div className="flex gap-4">
-                                <div className="flex-1 space-y-2">
-                                    <label className="text-sm font-bold">Giờ</label>
-                                    <Input type="number" value={logHours} onChange={(e) => setLogHours(e.target.value)} />
-                                </div>
-                                <div className="flex-1 space-y-2">
-                                    <label className="text-sm font-bold">Phút</label>
-                                    <Input type="number" value={logMinutes} onChange={(e) => setLogMinutes(e.target.value)} />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold">Ngày làm việc</label>
-                                <Input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold">Ghi chú</label>
-                                <Textarea value={logNote} onChange={(e) => setLogNote(e.target.value)} placeholder="Bạn đã làm gì?" />
-                            </div>
+                            <select className="w-full p-2 border rounded-md" value={selectedSubtaskId} onChange={(e) => setSelectedSubtaskId(e.target.value)}>
+                                <option value="TASK_DIRECT">Ghi trực tiếp vào Công việc chính</option>
+                                {task.subtasks?.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+                            </select>
+                            <div className="flex gap-4"><Input type="number" value={logHours} onChange={(e) => setLogHours(e.target.value)} placeholder="Giờ" /><Input type="number" value={logMinutes} onChange={(e) => setLogMinutes(e.target.value)} placeholder="Phút" /></div>
+                            <Input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)} />
+                            <Textarea value={logNote} onChange={(e) => setLogNote(e.target.value)} placeholder="Ghi chú..." />
                         </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="outline">Hủy</Button></DialogClose>
-                            <Button onClick={handleSubmitTime} disabled={isSubmittingTime} className="bg-emerald-600 text-white">
-                                {isSubmittingTime ? 'Đang lưu...' : 'Lưu thời gian'}
-                            </Button>
-                        </DialogFooter>
+                        <DialogFooter><Button onClick={handleTimeSubmitAction} disabled={isSubmittingTime} className="bg-emerald-600 text-white">Lưu thời gian</Button></DialogFooter>
                     </DialogContent>
                 </Dialog>
 
-                {/* Edit Task Dialog */}
                 <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                    <DialogContent className="sm:max-w-lg">
+                    <DialogContent className="max-w-2xl">
                         <DialogHeader>
-                            <DialogTitle>Chỉnh sửa công việc</DialogTitle>
+                            <DialogTitle>Sửa công việc</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-bold">Tiêu đề</label>
-                                <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                                <label className="text-xs font-bold uppercase text-slate-500">Tiêu đề</label>
+                                <Input
+                                    value={editTitle}
+                                    onChange={(e) => setEditTitle(e.target.value)}
+                                    disabled={!isPM && !fieldPermissions.includes('title')}
+                                    className={cn(!isPM && !fieldPermissions.includes('title') && "bg-slate-50 opacity-70")}
+                                />
                             </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-bold">Độ ưu tiên</label>
+                                    <label className="text-xs font-bold uppercase text-slate-500">Trạng thái</label>
                                     <select
-                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={editPriority}
-                                        onChange={(e) => setEditPriority(e.target.value)}
+                                        className={cn(
+                                            "w-full p-2 border rounded-md text-sm font-medium",
+                                            (!isPM && !fieldPermissions.includes('status_code')) && "bg-slate-50 opacity-70"
+                                        )}
+                                        value={editStatus}
+                                        onChange={(e) => setEditStatus(e.target.value)}
+                                        disabled={!isPM && !fieldPermissions.includes('status_code')}
                                     >
-                                        <option value="LOW">Thấp</option>
-                                        <option value="MEDIUM">Trung bình</option>
-                                        <option value="HIGH">Cao</option>
-                                        <option value="URGENT">Khẩn cấp</option>
+                                        <option value="TODO">Cần làm (To Do)</option>
+                                        <option value="IN_PROGRESS">Đang làm (In Progress)</option>
+                                        <option value="DONE">Hoàn thành (Done)</option>
+                                        <option value="BLOCKED">Bị chặn (Blocked)</option>
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-bold">Hạn chót</label>
-                                    <Input type="date" value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} />
+                                    <label className="text-xs font-bold uppercase text-slate-500">Độ ưu tiên</label>
+                                    <select
+                                        className={cn(
+                                            "w-full p-2 border rounded-md text-sm font-medium",
+                                            (!isPM && !fieldPermissions.includes('priority_code')) && "bg-slate-50 opacity-70"
+                                        )}
+                                        value={editPriority}
+                                        onChange={(e) => setEditPriority(e.target.value)}
+                                        disabled={!isPM && !fieldPermissions.includes('priority_code')}
+                                    >
+                                        <option value="LOW">Thấp (Low)</option>
+                                        <option value="MEDIUM">Trung bình (Medium)</option>
+                                        <option value="HIGH">Cao (High)</option>
+                                        <option value="URGENT">Khẩn cấp (Urgent)</option>
+                                    </select>
                                 </div>
                             </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500">Hạn chót</label>
+                                    <Input
+                                        type="date"
+                                        value={editDueDate}
+                                        onChange={(e) => setEditDueDate(e.target.value)}
+                                        disabled={!isPM && !fieldPermissions.includes('due_date')}
+                                        className={cn(!isPM && !fieldPermissions.includes('due_date') && "bg-slate-50 opacity-70")}
+                                    />
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
-                                <label className="text-sm font-bold">Mô tả</label>
-                                <Textarea className="min-h-[100px]" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                                <label className="text-xs font-bold uppercase text-slate-500">Mô tả</label>
+                                <Textarea
+                                    value={editDescription}
+                                    onChange={(e) => setEditDescription(e.target.value)}
+                                    className={cn("min-h-[100px]", (!isPM && !fieldPermissions.includes('description')) && "bg-slate-50 opacity-70")}
+                                    disabled={!isPM && !fieldPermissions.includes('description')}
+                                />
                             </div>
                         </div>
                         <DialogFooter>
-                            <DialogClose asChild><Button variant="outline">Hủy</Button></DialogClose>
-                            <Button onClick={handleUpdateTask} disabled={isUpdatingTask} className="bg-blue-600">
-                                {isUpdatingTask ? 'Đang lưu...' : 'Lưu thay đổi'}
+                            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Hủy</Button>
+                            <Button onClick={handleUpdateTaskAction} disabled={isUpdatingTask} className="bg-blue-600 px-8 font-bold">
+                                {isUpdatingTask ? <Loader2 className="animate-spin mr-2" /> : null}
+                                Lưu thay đổi
                             </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
 
-                {/* Delete Confirm Dialog */}
                 <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-                    <DialogContent className="sm:max-w-sm">
+                    <DialogContent>
                         <DialogHeader>
-                            <DialogTitle className="text-rose-600 flex items-center gap-2">
-                                <AlertCircle size={20} /> Xác nhận xóa
-                            </DialogTitle>
+                            <DialogTitle className="text-rose-600">Xác nhận xóa</DialogTitle>
                         </DialogHeader>
                         <div className="py-4">
-                            <p className="text-slate-600">
-                                Bạn có chắc chắn muốn xóa công việc này? Hành động này không thể hoàn tác.
-                            </p>
+                            <p className="text-slate-600 font-medium">Bạn có chắc chắn muốn xóa công việc này? Hành động này không thể hoàn tác.</p>
                         </div>
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>Hủy</Button>
-                            <Button onClick={handleDeleteTask} disabled={isDeletingTask} className="bg-rose-600 hover:bg-rose-700">
-                                {isDeletingTask ? 'Đang xóa...' : 'Xóa vĩnh viễn'}
+                            <Button onClick={handleDeleteTaskAction} disabled={isDeletingTask} className="bg-rose-600 text-white font-bold">
+                                {isDeletingTask ? <Loader2 className="animate-spin mr-2" /> : null}
+                                Xóa vĩnh viễn
                             </Button>
                         </DialogFooter>
                     </DialogContent>

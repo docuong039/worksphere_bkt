@@ -9,7 +9,7 @@ export const mockActivities = [
         activity_type: 'TASK_UPDATE',
         entity_type: 'TASK',
         entity_id: 'task-1',
-        summary: 'Phạm Văn Nhân Viên đã cập nhật trạng thái công việc "Thiết kế Mock Data System"',
+        summary: 'Nguyễn Thị Lan Anh đã cập nhật trạng thái công việc "Thiết kế Hệ thống Mock Data"',
         metadata: { status: 'IN_PROGRESS' }
     },
     {
@@ -22,7 +22,7 @@ export const mockActivities = [
         activity_type: 'TASK_CREATE',
         entity_type: 'TASK',
         entity_id: 'task-2',
-        summary: 'Lê Văn PM đã tạo công việc mới "Viết tài liệu hướng dẫn sử dụng Playwright"',
+        summary: 'Hoàng Ngọc Sơn đã tạo công việc mới "Tài liệu hướng dẫn Kiểm thử Tự động"',
         metadata: { priority: 'MEDIUM' }
     }
 ];

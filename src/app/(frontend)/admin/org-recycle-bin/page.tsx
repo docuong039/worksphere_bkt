@@ -126,8 +126,8 @@ export default function AdminOrgRecycleBinPage() {
             <AppLayout>
                 <div className="flex flex-col items-center justify-center py-32 text-center h-[70vh]">
                     <ShieldAlert size={48} className="text-rose-500 mb-6" />
-                    <h2 className="text-2xl font-black text-slate-900">Platform Custody Only</h2>
-                    <p className="text-slate-500 mt-2 max-w-xs font-medium">The System Recycle Bin is restricted to Global Platform Administrators.</p>
+                    <h2 className="text-2xl font-black text-slate-900">Chỉ dành cho Quản trị viên hệ thống</h2>
+                    <p className="text-slate-500 mt-2 max-w-xs font-medium">Thùng rác hệ thống chỉ có thể truy cập bởi Quản trị viên cấp cao.</p>
                 </div>
             </AppLayout>
         );
@@ -149,9 +149,9 @@ export default function AdminOrgRecycleBinPage() {
                             <Badge className="bg-rose-50 text-rose-700 border-none text-[10px] font-black tracking-widest uppercase">Lifecycle Management</Badge>
                         </div>
                         <h1 className="text-3xl font-black text-slate-900 tracking-tight" data-testid="org-recycle-bin-title">
-                            System Recycle Bin
+                            Thùng rác hệ thống
                         </h1>
-                        <p className="text-slate-500 font-medium">Review and manage deleted Organizations. Data can be recovered within 30 days of deletion.</p>
+                        <p className="text-slate-500 font-medium">Xem và quản lý các Tổ chức đã xóa. Dữ liệu có thể được khôi phục trong vòng 30 ngày.</p>
                     </div>
                 </div>
 
@@ -167,8 +167,8 @@ export default function AdminOrgRecycleBinPage() {
                     </Card>
                     <Card className="border-none shadow-sm bg-rose-600 text-white p-6 rounded-2xl relative overflow-hidden group">
                         <div className="relative z-10">
-                            <p className="text-[10px] font-black text-rose-200 uppercase tracking-widest mb-1">Auto-Purge In</p>
-                            <p className="text-3xl font-black">18 Hours</p>
+                            <p className="text-[10px] font-black text-rose-200 uppercase tracking-widest mb-1">Tự động xóa sau</p>
+                            <p className="text-3xl font-black">18 Giờ</p>
                         </div>
                         <Trash2 className="absolute -right-2 -bottom-2 h-20 w-20 text-rose-500/30 group-hover:scale-110 transition-transform" />
                     </Card>
@@ -180,7 +180,7 @@ export default function AdminOrgRecycleBinPage() {
                         <div className="relative group">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-rose-500 transition-colors" size={16} />
                             <Input
-                                placeholder="Search by name or code..."
+                                placeholder="Tìm theo tên hoặc mã..."
                                 className="pl-10 h-10 w-72 bg-white border-slate-200 rounded-xl text-sm font-semibold shadow-sm focus:ring-1 focus:ring-rose-500"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -192,10 +192,10 @@ export default function AdminOrgRecycleBinPage() {
                         <Table data-testid="deleted-orgs-table">
                             <TableHeader>
                                 <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                                    <TableHead className="px-8 py-6 font-black text-slate-500 uppercase tracking-widest text-[10px]">Organization</TableHead>
-                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Deletion Info</TableHead>
-                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Resources</TableHead>
-                                    <TableHead className="text-right px-8 font-black text-slate-500 uppercase tracking-widest text-[10px]">Actions</TableHead>
+                                    <TableHead className="px-8 py-6 font-black text-slate-500 uppercase tracking-widest text-[10px]">Tổ chức</TableHead>
+                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Thông tin xóa</TableHead>
+                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Tài nguyên</TableHead>
+                                    <TableHead className="text-right px-8 font-black text-slate-500 uppercase tracking-widest text-[10px]">Thao tác</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -213,7 +213,7 @@ export default function AdminOrgRecycleBinPage() {
                                         <TableCell colSpan={4} className="h-64 text-center">
                                             <div className="flex flex-col items-center justify-center space-y-3">
                                                 <History className="h-10 w-10 text-slate-200" />
-                                                <p className="text-sm font-bold text-slate-400">Recycle bin is empty</p>
+                                                <p className="text-sm font-bold text-slate-400">Thùng rác trống</p>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -242,10 +242,10 @@ export default function AdminOrgRecycleBinPage() {
                                         <TableCell>
                                             <div className="flex gap-2">
                                                 <Badge variant="outline" className="text-[10px] font-bold text-slate-400 border-slate-100">
-                                                    {org.member_count} Members
+                                                    {org.member_count} Thành viên
                                                 </Badge>
                                                 <Badge variant="outline" className="text-[10px] font-bold text-slate-400 border-slate-100">
-                                                    {org.project_count} Projects
+                                                    {org.project_count} Dự án
                                                 </Badge>
                                             </div>
                                         </TableCell>
@@ -261,7 +261,7 @@ export default function AdminOrgRecycleBinPage() {
                                                     }}
                                                     data-testid={`restore-org-${org.id}`}
                                                 >
-                                                    <RotateCcw className="mr-2 h-4 w-4" /> Restore
+                                                    <RotateCcw className="mr-2 h-4 w-4" /> Khôi phục
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
@@ -291,10 +291,10 @@ export default function AdminOrgRecycleBinPage() {
                             <AlertTriangle className="text-rose-500" />
                         </div>
                         <div className="space-y-2">
-                            <h4 className="text-lg font-black uppercase tracking-widest">Global Data Safetly Protocol</h4>
+                            <h4 className="text-lg font-black uppercase tracking-widest">Giao thức An toàn Dữ liệu</h4>
                             <p className="text-sm font-semibold text-slate-400 max-w-2xl leading-relaxed">
-                                Restoring an organization will recover all associated members, projects, tasks, and historical logs.
-                                Permanent deletion is irreversible and complies with GDPR "Right to be Forgotten" standards.
+                                Khôi phục tổ chức sẽ phục hồi tất cả thành viên, dự án, nhiệm vụ và nhật ký lịch sử liên quan.
+                                Xóa vĩnh viễn là thao tác không thể hoàn tác và tuân thủ các tiêu chuẩn quyền được lãng quên.
                             </p>
                         </div>
                     </div>
@@ -305,16 +305,16 @@ export default function AdminOrgRecycleBinPage() {
                     <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
                         <AlertDialogHeader>
                             <AlertDialogTitle className="text-xl font-black">
-                                {confirmType === 'RESTORE' ? "Confirm Restoration" : "Irreversible Action"}
+                                {confirmType === 'RESTORE' ? "Xác nhận Khôi phục" : "Hành động không thể hoàn tác"}
                             </AlertDialogTitle>
                             <AlertDialogDescription className="font-medium text-slate-500">
                                 {confirmType === 'RESTORE'
-                                    ? "This will bring the organization and all its data back to active status immediately."
-                                    : "This will permanently ERASE all data, logs, and files associated with this organization. This cannot be undone."}
+                                    ? "Thao tác này sẽ đưa tổ chức và tất cả dữ liệu trở lại trạng thái hoạt động ngay lập tức."
+                                    : "Thao tác này sẽ XÓA VĨNH VIỄN tất cả dữ liệu, nhật ký và tệp liên quan. Không thể hoàn tác."}
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter className="gap-2">
-                            <AlertDialogCancel className="font-bold rounded-xl border-slate-200">Cancel</AlertDialogCancel>
+                            <AlertDialogCancel className="font-bold rounded-xl border-slate-200">Hủy</AlertDialogCancel>
                             <Button
                                 className={cn(
                                     "font-black px-8 rounded-xl",
@@ -327,7 +327,7 @@ export default function AdminOrgRecycleBinPage() {
                                 {(isRestoring || isDeletingPermanently) ? (
                                     <Loader2 className="animate-spin h-4 w-4" />
                                 ) : (
-                                    confirmType === 'RESTORE' ? "Recover Data" : "Purge Permanently"
+                                    confirmType === 'RESTORE' ? "Khôi phục dữ liệu" : "Xóa vĩnh viễn"
                                 )}
                             </Button>
                         </AlertDialogFooter>

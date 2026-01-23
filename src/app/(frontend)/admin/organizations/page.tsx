@@ -124,30 +124,30 @@ const OrgCard = ({ org, onAction }: { org: Organization; onAction: (action: stri
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onAction('impersonate')} className="text-blue-600">
                                 <Building2 size={14} className="mr-2" />
-                                Impersonate
+                                Đăng nhập với danh nghĩa
                             </DropdownMenuItem>
                             {org.status === 'PENDING' && (
                                 <>
                                     <DropdownMenuItem onClick={() => onAction('approve')} className="text-emerald-600">
                                         <CheckCircle2 size={14} className="mr-2" />
-                                        Phê duyệt (Approve)
+                                        Phê duyệt
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => onAction('reject')} className="text-rose-600">
                                         <XCircle size={14} className="mr-2" />
-                                        Từ chối (Reject)
+                                        Từ chối
                                     </DropdownMenuItem>
                                 </>
                             )}
                             {org.status === 'ACTIVE' && (
                                 <DropdownMenuItem onClick={() => onAction('suspend')} className="text-amber-600">
                                     <Clock size={14} className="mr-2" />
-                                    Tạm đình chỉ (Suspend)
+                                    Tạm đình chỉ
                                 </DropdownMenuItem>
                             )}
                             {org.status === 'SUSPENDED' && (
                                 <DropdownMenuItem onClick={() => onAction('activate')} className="text-emerald-600">
                                     <CheckCircle2 size={14} className="mr-2" />
-                                    Kích hoạt lại (Activate)
+                                    Kích hoạt lại
                                 </DropdownMenuItem>
                             )}
                         </DropdownMenuContent>

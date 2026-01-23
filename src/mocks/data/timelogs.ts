@@ -8,7 +8,7 @@ export const mockTimeLogs = [
         owner_user_id: 'user-emp',
         work_date: '2025-01-19',
         minutes: 120,
-        note: 'Cấu hình MSW base.',
+        note: 'Cấu hình thư viện MSW và khởi tạo cấu trúc mock data.',
         status: 'APPROVED',
     },
     {
@@ -20,7 +20,7 @@ export const mockTimeLogs = [
         owner_user_id: 'user-emp',
         work_date: '2025-01-20',
         minutes: 180,
-        note: 'Viết mock data cho 5 thực thể chính.',
+        note: 'Hoàn thiện dữ liệu giả lập cho các thực thể người dùng, dự án và công việc.',
         status: 'PENDING',
     }
 ];

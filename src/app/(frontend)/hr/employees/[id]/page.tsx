@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, Phone, MapPin, Briefcase, Calendar, Star, Building, Award, ArrowLeft } from 'lucide-react';
+import { Mail, Phone, MapPin, Briefcase, Calendar, Star, Building, Award, ArrowLeft, FileText, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -189,9 +189,51 @@ export default function EmployeeProfilePage() {
                         </Card>
                     </TabsContent>
 
-                    <TabsContent value="documents">
-                        <Card className="h-[200px] flex items-center justify-center bg-slate-50">
-                            <p className="text-slate-400">Chức năng đang phát triển...</p>
+                    <TabsContent value="documents" className="animate-in fade-in duration-300">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-amber-500" /> Hồ sơ & Hợp đồng
+                                </CardTitle>
+                                <CardDescription>Quản lý các văn bản pháp lý và hồ sơ nhân sự (US-CEO-02-03)</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4" data-testid="employee-documents-list">
+                                    <div className="rounded-xl border border-slate-100 overflow-hidden">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left">Tên tài liệu</th>
+                                                    <th className="px-6 py-3 text-left">Loại</th>
+                                                    <th className="px-6 py-3 text-left">Ngày ký/Tải lên</th>
+                                                    <th className="px-6 py-3 text-right">Thao tác</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {[
+                                                    { name: 'Hợp đồng lao động chính thức', type: 'Contract', date: '15/01/2024', id: 'doc1' },
+                                                    { name: 'Thỏa thuận bảo mật (NDA)', type: 'Legal', date: '15/01/2024', id: 'doc2' },
+                                                    { name: 'Bằng tốt nghiệp Đại học', type: 'Education', date: '10/01/2024', id: 'doc3' },
+                                                    { name: 'Chứng chỉ AWS Solutions Architect', type: 'Certificate', date: '20/05/2024', id: 'doc4' },
+                                                ].map((doc) => (
+                                                    <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="px-6 py-4 font-bold text-slate-900">{doc.name}</td>
+                                                        <td className="px-6 py-4">
+                                                            <Badge variant="outline" className="text-[10px] font-bold uppercase">{doc.type}</Badge>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-slate-500">{doc.date}</td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <Button variant="ghost" size="sm" className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold">
+                                                                <Download className="mr-2 h-3.5 w-3.5" /> Tải xuống
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </CardContent>
                         </Card>
                     </TabsContent>
                 </Tabs>

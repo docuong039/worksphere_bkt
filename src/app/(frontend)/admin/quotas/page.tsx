@@ -141,8 +141,8 @@ export default function AdminQuotasPage() {
             <AppLayout>
                 <div className="flex flex-col items-center justify-center py-32 text-center h-[70vh]">
                     <Shield size={48} className="text-rose-500 mb-6" />
-                    <h2 className="text-2xl font-black text-slate-900">Platform Management Restricted</h2>
-                    <p className="text-slate-500 mt-2 max-w-xs font-medium">Quota management is only accessible to System Administrators.</p>
+                    <h2 className="text-2xl font-black text-slate-900">Quản trị Nền tảng bị Hạn chế</h2>
+                    <p className="text-slate-500 mt-2 max-w-xs font-medium">Quản lý giới hạn chỉ dành cho Quản trị viên hệ thống.</p>
                 </div>
             </AppLayout>
         );
@@ -167,18 +167,18 @@ export default function AdminQuotasPage() {
                             <Badge className="bg-blue-600 text-white border-none text-[10px] font-black tracking-widest uppercase">System Control</Badge>
                         </div>
                         <h1 className="text-3xl font-black text-slate-900 tracking-tight" data-testid="admin-quotas-title">
-                            Organization Quotas
+                            Giới hạn Tài nguyên (Quota)
                         </h1>
-                        <p className="text-slate-500 font-medium">Monitor and manage resource limits for all tenant organizations.</p>
+                        <p className="text-slate-500 font-medium">Giám sát và quản lý giới hạn tài nguyên cho tất cả các tổ chức.</p>
                     </div>
 
                     <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
                         <div className="px-4 py-2 border-r border-slate-100">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Organizations</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Tổng số Tổ chức</p>
                             <p className="text-lg font-black text-slate-900">{quotas.length}</p>
                         </div>
                         <div className="px-4 py-2">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Over Quota</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Vượt giới hạn</p>
                             <p className="text-lg font-black text-rose-600">{quotas.filter(q => q.status === 'EXCEEDED').length}</p>
                         </div>
                     </div>
@@ -190,7 +190,7 @@ export default function AdminQuotasPage() {
                         <div className="relative group">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
                             <Input
-                                placeholder="Search organization..."
+                                placeholder="Tìm kiếm tổ chức..."
                                 className="pl-10 h-10 w-72 bg-white border-slate-200 rounded-xl text-sm font-semibold shadow-sm focus:ring-1 focus:ring-blue-500"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -209,7 +209,7 @@ export default function AdminQuotasPage() {
                                 </SelectContent>
                             </Select>
                             <Button variant="outline" size="sm" className="h-10 px-4 font-bold border-slate-200">
-                                <TrendingUp className="mr-2 h-4 w-4" /> Usage Optimization
+                                <TrendingUp className="mr-2 h-4 w-4" /> Tối ưu hóa Sử dụng
                             </Button>
                         </div>
                     </div>
@@ -217,11 +217,11 @@ export default function AdminQuotasPage() {
                         <Table data-testid="quotas-table">
                             <TableHeader>
                                 <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                                    <TableHead className="px-8 py-6 font-black text-slate-500 uppercase tracking-widest text-[10px]">Organization</TableHead>
-                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">User Seats</TableHead>
-                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Storage (GB)</TableHead>
-                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Projects</TableHead>
-                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Status</TableHead>
+                                    <TableHead className="px-8 py-6 font-black text-slate-500 uppercase tracking-widest text-[10px]">Tổ chức</TableHead>
+                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Tài khoản (Seats)</TableHead>
+                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Dung lượng (GB)</TableHead>
+                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Dự án</TableHead>
+                                    <TableHead className="font-black text-slate-500 uppercase tracking-widest text-[10px]">Trạng thái</TableHead>
                                     <TableHead className="text-right px-8"></TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -283,7 +283,8 @@ export default function AdminQuotasPage() {
                                                 org.status === 'ACTIVE' ? "bg-emerald-50 text-emerald-700" :
                                                     org.status === 'WARNING' ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
                                             )}>
-                                                {org.status}
+                                                {org.status === 'ACTIVE' ? "Hoạt động" :
+                                                    org.status === 'WARNING' ? "Cảnh báo" : "Vượt mức"}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right px-8">
@@ -308,9 +309,9 @@ export default function AdminQuotasPage() {
                 <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                     <DialogContent className="max-w-md" data-testid="edit-quota-dialog">
                         <DialogHeader>
-                            <DialogTitle>Update Organization Quota</DialogTitle>
+                            <DialogTitle>Cập nhật Giới hạn Tổ chức</DialogTitle>
                             <DialogDescription>
-                                Set hard limits for <strong>{selectedOrg?.org_name}</strong> resources.
+                                Thiết lập giới hạn tài nguyên cho <strong>{selectedOrg?.org_name}</strong>.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-6 py-4">
@@ -328,20 +329,20 @@ export default function AdminQuotasPage() {
                             </div>
                             <div className="space-y-3">
                                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                    <Layers size={14} className="text-blue-500" /> Max Project Count
+                                    <Layers size={14} className="text-blue-500" /> Số lượng Dự án tối đa
                                 </label>
                                 <Input type="number" defaultValue={selectedOrg?.max_projects} className="h-11 font-bold" data-testid="input-max-projects" />
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="ghost" className="font-bold" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+                            <Button variant="ghost" className="font-bold" onClick={() => setIsEditOpen(false)}>Hủy</Button>
                             <Button
                                 className="bg-blue-600 hover:bg-blue-700 font-bold px-8 shadow-lg shadow-blue-100"
                                 onClick={handleSaveQuota}
                                 disabled={isSaving}
                                 data-testid="save-quota-btn"
                             >
-                                {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : "Save Changes"}
+                                {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : "Lưu Thay đổi"}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -353,13 +354,13 @@ export default function AdminQuotasPage() {
                         <div className="relative z-10 space-y-4">
                             <div className="flex items-center gap-3 text-blue-400">
                                 <Info size={20} />
-                                <h4 className="text-sm font-black uppercase tracking-widest">Platform Note</h4>
+                                <h4 className="text-sm font-black uppercase tracking-widest">Ghi chú Nền tảng</h4>
                             </div>
                             <p className="text-xs font-semibold text-slate-400 leading-relaxed">
-                                Quotas are enforced at the API level. When an organization hits 90% of a limit, users will see a warning.
-                                At 100%, write operations will be blocked until the quota is increased.
+                                Các giới hạn được thực thi ở cấp độ API. Khi một tổ chức đạt mức 90% giới hạn, người dùng sẽ thấy cảnh báo.
+                                Ở mức 100%, các thao tác ghi sẽ bị chặn cho đến khi giới hạn được tăng lên.
                             </p>
-                            <Button variant="link" className="p-0 h-auto text-blue-400 text-[10px] font-black uppercase tracking-widest">View Platform SLA</Button>
+                            <Button variant="link" className="p-0 h-auto text-blue-400 text-[10px] font-black uppercase tracking-widest">Xem SLA Nền tảng</Button>
                         </div>
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-all duration-700"></div>
                     </Card>
@@ -376,7 +377,7 @@ export default function AdminQuotasPage() {
                             </p>
                             <div className="p-3 bg-emerald-50 rounded-xl flex items-center gap-3 text-emerald-700">
                                 <CheckCircle2 size={16} />
-                                <span className="text-[10px] font-bold">Recommended: Business Tier (500GB)</span>
+                                <span className="text-[10px] font-bold">Khuyến nghị: Gói Doanh nghiệp (500GB)</span>
                             </div>
                         </div>
                     </Card>

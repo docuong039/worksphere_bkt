@@ -108,6 +108,27 @@ export default function ProjectCostPage({ params }: { params: Promise<{ id: stri
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
     };
 
+    const canViewCost = user?.role === 'CEO' || user?.role === 'ORG_ADMIN' || user?.role === 'PROJECT_MANAGER';
+
+    if (!canViewCost) {
+        return (
+            <AppLayout>
+                <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4" data-testid="access-denied">
+                    <div className="bg-red-50 p-4 rounded-full">
+                        <DollarSign className="h-12 w-12 text-red-500" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900">Truy cập bị từ chối</h2>
+                    <p className="text-slate-500 max-w-md text-center">
+                        Bạn không có quyền xem thông tin chi phí của dự án này. Vui lòng liên hệ quản trị viên nếu bạn tin rằng đây là một sai sót.
+                    </p>
+                    <Button asChild variant="outline">
+                        <Link href={`/projects/${projectId}/overview`}>Quay lại dự án</Link>
+                    </Button>
+                </div>
+            </AppLayout>
+        );
+    }
+
     return (
         <AppLayout>
             <div className="space-y-6 animate-in fade-in duration-700" data-testid="project-cost-page">

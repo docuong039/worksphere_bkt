@@ -544,7 +544,7 @@ export default function SettingsProfilePage() {
                         <CardContent className="space-y-6">
                             {/* Email notifications */}
                             <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-slate-700">Email notifications</h3>
+                                <h3 className="text-sm font-bold text-slate-700">Thông báo qua Email</h3>
                                 <div className="space-y-3">
                                     <label className="flex items-center gap-3 cursor-pointer">
                                         <Checkbox
@@ -583,7 +583,7 @@ export default function SettingsProfilePage() {
 
                             {/* In-app notifications */}
                             <div className="space-y-4 pt-4 border-t border-slate-100">
-                                <h3 className="text-sm font-bold text-slate-700">In-app notifications</h3>
+                                <h3 className="text-sm font-bold text-slate-700">Thông báo trong ứng dụng</h3>
                                 <div className="space-y-3">
                                     <label className="flex items-center gap-3 cursor-pointer">
                                         <Checkbox

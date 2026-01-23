@@ -69,6 +69,7 @@ interface RecycleBinItem {
     deleted_by: { id: string; full_name: string };
     project: { id: string; name: string } | null;
     days_remaining: number;
+    is_locked?: boolean;
 }
 
 const ENTITY_TYPES = {
@@ -168,11 +169,24 @@ const RecycleBinItemCard = ({
                             variant="outline"
                             size="sm"
                             onClick={onRestore}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            disabled={item.is_locked}
+                            className={cn(
+                                "text-blue-600 hover:text-blue-700 hover:bg-blue-50",
+                                item.is_locked && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200"
+                            )}
                             data-testid={`btn-restore-${item.id}`}
                         >
-                            <RotateCcw size={14} className="mr-1" />
-                            Khôi phục
+                            {item.is_locked ? (
+                                <>
+                                    <RotateCcw size={14} className="mr-1" />
+                                    Đã bị khóa
+                                </>
+                            ) : (
+                                <>
+                                    <RotateCcw size={14} className="mr-1" />
+                                    Khôi phục
+                                </>
+                            )}
                         </Button>
                         <Button
                             variant="outline"

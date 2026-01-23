@@ -140,7 +140,7 @@ const MemberCard = ({
                         {member.last_login_at && (
                             <p className="text-xs text-slate-400 mt-2">
                                 <Clock size={12} className="inline mr-1" />
-                                Last login: {new Date(member.last_login_at).toLocaleDateString('vi-VN')}
+                                Đăng nhập cuối: {new Date(member.last_login_at).toLocaleDateString('vi-VN')}
                             </p>
                         )}
                     </div>
@@ -198,6 +198,8 @@ export default function AdminUsersPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('ALL');
     const [filterRole, setFilterRole] = useState('ALL');
+    const [filterOrg, setFilterOrg] = useState('ALL');
+    const [orgs, setOrgs] = useState<{ id: string; name: string }[]>([]);
 
     // Create/Invite dialog
     const [inviteOpen, setInviteOpen] = useState(false);
@@ -230,6 +232,12 @@ export default function AdminUsersPage() {
             if (filterStatus !== 'ALL') params.append('status', filterStatus);
             if (filterRole !== 'ALL') params.append('role', filterRole);
 
+            if (user.role === 'SYS_ADMIN') {
+                if (filterOrg !== 'ALL') params.append('org_id', filterOrg);
+            } else {
+                params.append('org_id', user.org_id || '');
+            }
+
             const res = await fetch(`/api/admin/users?${params.toString()}`, {
                 headers: {
                     'x-user-id': user.id,
@@ -252,9 +260,27 @@ export default function AdminUsersPage() {
         return true;
     });
 
+    const fetchOrgs = async () => {
+        try {
+            const res = await fetch('/api/admin/organizations', {
+                headers: {
+                    'x-user-id': user?.id || '',
+                    'x-user-role': user?.role || ''
+                }
+            });
+            const data = await res.json();
+            setOrgs(data.data || []);
+        } catch (error) {
+            console.error('Error fetching orgs:', error);
+        }
+    };
+
     useEffect(() => {
-        if (user) fetchMembers();
-    }, [user]);
+        if (user) {
+            fetchMembers();
+            if (user.role === 'SYS_ADMIN') fetchOrgs();
+        }
+    }, [user, filterOrg]);
 
     // Toggle invite role
     const toggleInviteRole = (roleCode: string) => {
@@ -447,6 +473,20 @@ export default function AdminUsersPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
+
+                                {user?.role === 'SYS_ADMIN' && (
+                                    <Select value={filterOrg} onValueChange={setFilterOrg}>
+                                        <SelectTrigger className="w-[180px]" data-testid="filter-org">
+                                            <SelectValue placeholder="Tất cả tổ chức" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">Tất cả tổ chức</SelectItem>
+                                            {orgs.map(o => (
+                                                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
 
                                 <Button variant="outline" onClick={fetchMembers} data-testid="admin-users-btn-search">
                                     Tìm kiếm

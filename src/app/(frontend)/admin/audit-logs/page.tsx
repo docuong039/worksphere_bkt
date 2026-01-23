@@ -81,7 +81,7 @@ const ACTION_CONFIG: Record<string, { icon: React.ReactNode; color: string; labe
     DELETE: { icon: <Trash2 size={14} />, color: 'bg-red-100 text-red-700', label: 'Xóa' },
     LOGIN: { icon: <LogIn size={14} />, color: 'bg-blue-100 text-blue-700', label: 'Đăng nhập' },
     LOGOUT: { icon: <LogOut size={14} />, color: 'bg-slate-100 text-slate-600', label: 'Đăng xuất' },
-    IMPERSONATE: { icon: <Shield size={14} />, color: 'bg-red-100 text-red-700', label: 'Impersonate' },
+    IMPERSONATE: { icon: <Shield size={14} />, color: 'bg-red-100 text-red-700', label: 'Hỗ trợ (Impersonate)' },
     IMPERSONATE_END: { icon: <Unlock size={14} />, color: 'bg-emerald-100 text-emerald-700', label: 'Kết thúc hỗ trợ' },
     LOCK_PERIOD: { icon: <Lock size={14} />, color: 'bg-amber-100 text-amber-700', label: 'Khóa kỳ' },
     UNLOCK_PERIOD: { icon: <Unlock size={14} />, color: 'bg-emerald-100 text-emerald-700', label: 'Mở khóa kỳ' },
@@ -154,12 +154,12 @@ const AuditLogItem = ({ log, onViewDetail }: { log: AuditLog; onViewDetail: () =
                                         {log.actor?.full_name?.charAt(0) || '?'}
                                     </AvatarFallback>
                                 </Avatar>
-                                {log.actor?.email || 'Unknown'}
+                                {log.actor?.email || 'Không xác định'}
                             </span>
 
                             {log.is_impersonation && log.impersonation_subject && (
                                 <span className="text-red-600">
-                                    ↳ as {log.impersonation_subject.email}
+                                    ↳ dưới danh nghĩa {log.impersonation_subject.email}
                                 </span>
                             )}
 
@@ -292,7 +292,7 @@ export default function AdminAuditLogsPage() {
 
                     <Button variant="outline" data-testid="btn-export">
                         <Download className="mr-2 h-4 w-4" />
-                        Export
+                        Xuất dữ liệu
                     </Button>
                 </div>
 
@@ -340,10 +340,10 @@ export default function AdminAuditLogsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="ALL">Tất cả</SelectItem>
-                                    <SelectItem value="USER">User</SelectItem>
-                                    <SelectItem value="PROJECT">Project</SelectItem>
-                                    <SelectItem value="TASK">Task</SelectItem>
-                                    <SelectItem value="ORGANIZATION">Organization</SelectItem>
+                                    <SelectItem value="USER">Người dùng</SelectItem>
+                                    <SelectItem value="PROJECT">Dự án</SelectItem>
+                                    <SelectItem value="TASK">Công việc</SelectItem>
+                                    <SelectItem value="ORGANIZATION">Tổ chức</SelectItem>
                                 </SelectContent>
                             </Select>
 
