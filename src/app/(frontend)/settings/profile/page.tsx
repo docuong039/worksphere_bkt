@@ -41,7 +41,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 
-type TabType = 'profile' | 'security' | 'notifications';
+type TabType = 'profile';
 
 interface UserProfile {
     id: string;
@@ -85,14 +85,6 @@ export default function SettingsProfilePage() {
     const [passwordSuccess, setPasswordSuccess] = useState(false);
     const [changingPassword, setChangingPassword] = useState(false);
 
-    // Notification settings
-    const [emailTaskAssigned, setEmailTaskAssigned] = useState(true);
-    const [emailComments, setEmailComments] = useState(true);
-    const [emailStatusChange, setEmailStatusChange] = useState(true);
-    const [emailWeeklyReport, setEmailWeeklyReport] = useState(false);
-    const [inAppAll, setInAppAll] = useState(true);
-    const [inAppBadge, setInAppBadge] = useState(true);
-    const [inAppSound, setInAppSound] = useState(true);
 
     // Fetch user profile
     const fetchProfile = async () => {
@@ -221,10 +213,6 @@ export default function SettingsProfilePage() {
 
     const tabs = [
         { id: 'profile' as TabType, label: 'Hồ sơ', icon: User },
-        ...(user?.role !== 'EMPLOYEE' ? [
-            { id: 'security' as TabType, label: 'Bảo mật', icon: Lock },
-            { id: 'notifications' as TabType, label: 'Thông báo', icon: Bell }
-        ] : []),
     ];
 
     return (
@@ -240,28 +228,7 @@ export default function SettingsProfilePage() {
                     </p>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 border-b border-slate-200 pb-2" data-testid="settings-tabs">
-                    {tabs.map((tab) => {
-                        const Icon = tab.icon;
-                        return (
-                            <Button
-                                key={tab.id}
-                                variant={activeTab === tab.id ? 'default' : 'ghost'}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={cn(
-                                    activeTab === tab.id ? 'bg-blue-600' : ''
-                                )}
-                                data-testid={`tab-${tab.id}`}
-                            >
-                                <Icon className="mr-2 h-4 w-4" />
-                                {tab.label}
-                            </Button>
-                        );
-                    })}
-                </div>
-
-                {/* Profile Tab */}
+                {/* Content */}
                 {activeTab === 'profile' && (
                     <Card className="border-none shadow-lg" data-testid="tab-content-profile">
                         <CardContent className="p-8 space-y-6">
@@ -322,7 +289,7 @@ export default function SettingsProfilePage() {
                                             data-testid="input-email"
                                         />
                                         <p className="text-xs text-slate-400">
-                                            {user?.role === 'EMPLOYEE'
+                                            {user?.role === 'PROJECT_MANAGER' || user?.role === 'EMPLOYEE'
                                                 ? "Email và mật khẩu không thể thay đổi tại đây. Vui lòng sử dụng tính năng 'Quên mật khẩu' để đặt lại mật khẩu."
                                                 : "Email không thể thay đổi"}
                                         </p>
@@ -416,214 +383,6 @@ export default function SettingsProfilePage() {
                                     </div>
                                 </>
                             )}
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Security Tab */}
-                {activeTab === 'security' && (
-                    <div className="space-y-6" data-testid="tab-content-security">
-                        {/* Change Password */}
-                        <Card className="border-none shadow-lg">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Lock className="h-5 w-5 text-blue-600" />
-                                    Đổi mật khẩu
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {passwordSuccess && (
-                                    <div className="p-3 bg-emerald-50 text-emerald-700 rounded-lg flex items-center gap-2" data-testid="password-success">
-                                        <CheckCircle2 size={16} />
-                                        Đã đổi mật khẩu thành công!
-                                    </div>
-                                )}
-
-                                {/* Current Password */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-slate-700">
-                                        Mật khẩu hiện tại <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <Input
-                                            type={showCurrentPassword ? 'text' : 'password'}
-                                            value={currentPassword}
-                                            onChange={(e) => setCurrentPassword(e.target.value)}
-                                            className={passwordErrors.currentPassword ? 'border-red-300 pr-10' : 'pr-10'}
-                                            data-testid="input-current-password"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                        >
-                                            {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                        </button>
-                                    </div>
-                                    {passwordErrors.currentPassword && (
-                                        <p className="text-sm text-red-600">{passwordErrors.currentPassword}</p>
-                                    )}
-                                </div>
-
-                                {/* New Password */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-slate-700">
-                                        Mật khẩu mới <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <Input
-                                            type={showNewPassword ? 'text' : 'password'}
-                                            value={newPassword}
-                                            onChange={(e) => setNewPassword(e.target.value)}
-                                            className={passwordErrors.newPassword ? 'border-red-300 pr-10' : 'pr-10'}
-                                            data-testid="input-new-password"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowNewPassword(!showNewPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                        >
-                                            {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                        </button>
-                                    </div>
-                                    <p className="text-xs text-slate-400">Tối thiểu 8 ký tự, bao gồm chữ và số</p>
-                                    {passwordErrors.newPassword && (
-                                        <p className="text-sm text-red-600">{passwordErrors.newPassword}</p>
-                                    )}
-                                </div>
-
-                                {/* Confirm Password */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-slate-700">
-                                        Xác nhận mật khẩu mới <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <Input
-                                            type={showConfirmPassword ? 'text' : 'password'}
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            className={passwordErrors.confirmPassword ? 'border-red-300 pr-10' : 'pr-10'}
-                                            data-testid="input-confirm-password"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                        >
-                                            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                        </button>
-                                    </div>
-                                    {passwordErrors.confirmPassword && (
-                                        <p className="text-sm text-red-600">{passwordErrors.confirmPassword}</p>
-                                    )}
-                                </div>
-
-                                <div className="flex justify-end pt-4">
-                                    <Button
-                                        onClick={handleChangePassword}
-                                        disabled={changingPassword}
-                                        className="bg-blue-600 hover:bg-blue-700"
-                                        data-testid="btn-change-password"
-                                    >
-                                        {changingPassword ? (
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Lock className="mr-2 h-4 w-4" />
-                                        )}
-                                        Đổi mật khẩu
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                )}
-
-                {/* Notifications Tab */}
-                {activeTab === 'notifications' && (
-                    <Card className="border-none shadow-lg" data-testid="tab-content-notifications">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Bell className="h-5 w-5 text-blue-600" />
-                                Cài đặt thông báo
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {/* Email notifications */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-slate-700">Thông báo qua Email</h3>
-                                <div className="space-y-3">
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <Checkbox
-                                            checked={emailTaskAssigned}
-                                            onCheckedChange={(c) => setEmailTaskAssigned(!!c)}
-                                            data-testid="checkbox-email-task-assigned"
-                                        />
-                                        <span className="text-sm text-slate-600">Khi được gán task mới</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <Checkbox
-                                            checked={emailComments}
-                                            onCheckedChange={(c) => setEmailComments(!!c)}
-                                            data-testid="checkbox-email-comments"
-                                        />
-                                        <span className="text-sm text-slate-600">Khi có comment/reply</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <Checkbox
-                                            checked={emailStatusChange}
-                                            onCheckedChange={(c) => setEmailStatusChange(!!c)}
-                                            data-testid="checkbox-email-status"
-                                        />
-                                        <span className="text-sm text-slate-600">Khi task bị chuyển trạng thái</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <Checkbox
-                                            checked={emailWeeklyReport}
-                                            onCheckedChange={(c) => setEmailWeeklyReport(!!c)}
-                                            data-testid="checkbox-email-weekly"
-                                        />
-                                        <span className="text-sm text-slate-600">Báo cáo hàng tuần</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            {/* In-app notifications */}
-                            <div className="space-y-4 pt-4 border-t border-slate-100">
-                                <h3 className="text-sm font-bold text-slate-700">Thông báo trong ứng dụng</h3>
-                                <div className="space-y-3">
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <Checkbox
-                                            checked={inAppAll}
-                                            onCheckedChange={(c) => setInAppAll(!!c)}
-                                            data-testid="checkbox-inapp-all"
-                                        />
-                                        <span className="text-sm text-slate-600">Tất cả thông báo</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <Checkbox
-                                            checked={inAppBadge}
-                                            onCheckedChange={(c) => setInAppBadge(!!c)}
-                                            data-testid="checkbox-inapp-badge"
-                                        />
-                                        <span className="text-sm text-slate-600">Hiển thị badge trên icon</span>
-                                    </label>
-                                    <label className="flex items-center gap-3 cursor-pointer">
-                                        <Checkbox
-                                            checked={inAppSound}
-                                            onCheckedChange={(c) => setInAppSound(!!c)}
-                                            data-testid="checkbox-inapp-sound"
-                                        />
-                                        <span className="text-sm text-slate-600">Âm thanh thông báo</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end pt-4">
-                                <Button className="bg-blue-600 hover:bg-blue-700" data-testid="btn-save-notifications">
-                                    <Save className="mr-2 h-4 w-4" />
-                                    Lưu
-                                </Button>
-                            </div>
                         </CardContent>
                     </Card>
                 )}

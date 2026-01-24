@@ -42,6 +42,7 @@ export interface Task {
     assignee_ids?: string[];
     tag_ids?: string[];
     is_locked?: boolean;
+    row_version?: number;
     capabilities?: {
         can_update: boolean;
         can_delete: boolean;
@@ -137,12 +138,25 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     },
 
     updateTask: async (id, userId, data) => {
+        const currentTask = get().currentTask;
+        const payload: any = { ...data };
+        if (currentTask && currentTask.id === id) {
+            payload.row_version = currentTask.row_version;
+        }
+
         try {
             const res = await fetch(`/api/tasks/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-                body: JSON.stringify(data)
+                body: JSON.stringify(payload)
             });
+
+            if (res.status === 409) {
+                const errorData = await res.json();
+                set({ error: errorData.message || 'Xung đột dữ liệu. Vui lòng tải lại trang.' });
+                return false;
+            }
+
             if (res.ok) {
                 await get().fetchTaskDetail(id, userId);
                 return true;
@@ -168,12 +182,26 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     },
 
     updateTaskFieldStore: async (id, userId, field, value) => {
+        const currentTask = get().currentTask;
+        const payload: any = { [field]: value };
+        if (currentTask && currentTask.id === id) {
+            payload.row_version = currentTask.row_version;
+        }
+
         try {
-            await fetch(`/api/tasks/${id}`, {
+            const res = await fetch(`/api/tasks/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-                body: JSON.stringify({ [field]: value })
+                body: JSON.stringify(payload)
             });
+
+            if (res.status === 409) {
+                const errorData = await res.json();
+                set({ error: errorData.message || 'Xung đột dữ liệu. Vui lòng tải lại trang.' });
+                alert(errorData.message || 'Xung đột dữ liệu. Vui lòng tải lại trang.');
+                return;
+            }
+
             await get().fetchTaskDetail(id, userId);
         } catch (error) {
             set({ error: 'Không thể cập nhật công việc' });

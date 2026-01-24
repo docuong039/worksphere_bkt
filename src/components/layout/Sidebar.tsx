@@ -57,7 +57,7 @@ const HR_ITEMS: MenuItem[] = [
 const ADMIN_ITEMS: MenuItem[] = [
     { label: 'Tổ chức', href: '/admin/organizations', icon: Building2, requiredPermission: PERMISSIONS.PLATFORM_ORG_READ },
     { label: 'Hạn mức hệ thống', href: '/admin/quotas', icon: HardDrive, requiredPermission: PERMISSIONS.PLATFORM_ORG_READ }, // Should probably have its own perm but this is close
-    { label: 'Người dùng', href: '/admin/users', icon: User, requiredPermission: PERMISSIONS.ORG_USER_READ },
+    { label: 'Người dùng', href: '/admin/users', icon: User, requiredPermission: PERMISSIONS.ORG_USER_UPDATE },
     { label: 'Phân quyền & Vai trò', href: '/admin/roles', icon: Lock, requiredPermission: PERMISSIONS.ROLE_PERM_UPDATE },
     { label: 'Nhật ký hệ thống', href: '/admin/audit-logs', icon: Activity, requiredPermission: PERMISSIONS.SYS_AUDIT_READ },
     { label: 'Giả lập người dùng', href: '/admin/impersonation', icon: Shield, requiredPermission: PERMISSIONS.SESSION_IMPERSONATE },
@@ -187,17 +187,7 @@ export default function Sidebar() {
                 </div>
             </nav>
 
-            {/* User Profile / Logout */}
-            <div className="p-4 border-t border-slate-800 space-y-2">
-                <button
-                    onClick={() => logout()}
-                    className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
-                    data-testid="sidebar-logout-button"
-                >
-                    <LogOut size={18} />
-                    Đăng xuất
-                </button>
-            </div>
+            {/* Removed Logout from Sidebar as it already exists in the Navbar user menu */}
         </aside>
     );
 }

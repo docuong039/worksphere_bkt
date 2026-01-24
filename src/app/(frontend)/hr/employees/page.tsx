@@ -66,6 +66,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions';
+import { useToast } from '@/hooks/use-toast';
 
 interface Employee {
     id: string;
@@ -84,6 +85,7 @@ interface Employee {
 
 export default function EmployeesListPage() {
     const { user, hasPermission } = useAuthStore();
+    const { toast } = useToast();
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -111,20 +113,24 @@ export default function EmployeesListPage() {
     const fetchEmployees = async () => {
         setLoading(true);
         try {
-            // Mock data - US-ORG-01-01
-            const mockEmployees: Employee[] = [
-                { id: 'e1', full_name: 'Nguyễn Văn A', email: 'nguyen.a@company.com', phone: '0987654321', avatar_url: null, role: 'PROJECT_MANAGER', member_status: 'ACTIVE', department: 'Kỹ thuật', position: 'Quản lý Kỹ thuật', join_method: 'MANUAL', joined_at: '2023-01-15', created_at: '2023-01-10' },
-                { id: 'e2', full_name: 'Trần Thị B', email: 'tran.b@company.com', phone: '0912345678', avatar_url: null, role: 'EMPLOYEE', member_status: 'ACTIVE', department: 'Thiết kế', position: 'Trưởng nhóm Thiết kế', join_method: 'INVITE', joined_at: '2023-06-01', created_at: '2023-05-20' },
-                { id: 'e3', full_name: 'Lê Văn C', email: 'le.c@company.com', phone: '0901234567', avatar_url: null, role: 'EMPLOYEE', member_status: 'INVITED', department: 'Kỹ thuật', position: 'Lập trình viên Sơ cấp', join_method: 'INVITE', joined_at: null, created_at: '2025-01-18' },
-                { id: 'e4', full_name: 'Phạm Thị D', email: 'pham.d@company.com', phone: '0976543210', avatar_url: null, role: 'EMPLOYEE', member_status: 'DEACTIVATED', department: 'Tiếp thị', position: 'Chuyên viên Marketing', join_method: 'MANUAL', joined_at: '2024-01-01', created_at: '2023-12-20' },
-                { id: 'e5', full_name: 'Hoàng Văn E', email: 'hoang.e@company.com', phone: '0965432109', avatar_url: null, role: 'EMPLOYEE', member_status: 'ACTIVE', department: 'Hỗ trợ khách hàng', position: 'Nhân viên Hỗ trợ', join_method: 'INVITE', joined_at: '2024-09-01', created_at: '2024-08-25' },
-                { id: 'e6', full_name: 'Đỗ Minh F', email: 'do.f@company.com', phone: '0954321098', avatar_url: null, role: 'CEO', member_status: 'ACTIVE', department: 'Ban điều hành', position: 'Giám đốc điều hành (CEO)', join_method: 'MANUAL', joined_at: '2022-01-01', created_at: '2022-01-01' },
-                { id: 'e7', full_name: 'Vũ Thị G', email: 'vu.g@company.com', phone: '0943210987', avatar_url: null, role: 'PROJECT_MANAGER', member_status: 'ACTIVE', department: 'Kỹ thuật', position: 'Nhóm trưởng kỹ thuật (Tech Lead)', join_method: 'MANUAL', joined_at: '2023-03-15', created_at: '2023-03-10' },
-                { id: 'e8', full_name: 'Ngô Văn H', email: 'ngo.h@company.com', phone: '0932109876', avatar_url: null, role: 'EMPLOYEE', member_status: 'ACTIVE', department: 'Kỹ thuật', position: 'Lập trình viên Cao cấp', join_method: 'INVITE', joined_at: '2024-02-01', created_at: '2024-01-20' },
-            ];
-            setEmployees(mockEmployees);
+            const res = await fetch('/api/hr/employees');
+            const result = await res.json();
+            if (result.success) {
+                setEmployees(result.data);
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Lỗi',
+                    description: 'Không thể tải danh sách nhân viên'
+                });
+            }
         } catch (error) {
             console.error(error);
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi kết nối',
+                description: 'Vui lòng thử lại sau'
+            });
         } finally {
             setLoading(false);
         }
@@ -416,7 +422,7 @@ export default function EmployeesListPage() {
                                                 <TableCell data-testid={`emp-status-${emp.id}`}>
                                                     {getStatusBadge(emp.member_status)}
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell data-testid={`emp-joined-at-${emp.id}`}>
                                                     {emp.joined_at ? (
                                                         <div className="flex items-center gap-1 text-sm text-slate-600">
                                                             <Calendar className="h-3 w-3" />
@@ -434,7 +440,7 @@ export default function EmployeesListPage() {
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem asChild>
+                                                            <DropdownMenuItem asChild data-testid={`menu-view-profile-${emp.id}`}>
                                                                 <Link href={`/hr/employees/${emp.id}`}>
                                                                     <Eye className="mr-2 h-4 w-4" /> Xem hồ sơ
                                                                 </Link>

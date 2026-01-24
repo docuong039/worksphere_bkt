@@ -6,6 +6,8 @@ import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { useAuthStore } from '@/stores/authStore';
 
+import { Toaster } from '../ui/toaster';
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { isAuthenticated } = useAuthStore();
     const router = useRouter();
@@ -37,6 +39,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     {children}
                 </main>
             </div>
+            <Toaster />
         </div>
     );
 }

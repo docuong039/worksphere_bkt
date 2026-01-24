@@ -46,6 +46,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { useTaskStore } from '@/stores/taskStore';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Tabs,
@@ -76,6 +77,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         addTimeLog,
         fetchHistory
     } = useTaskStore();
+    const { toast } = useToast();
 
     const [commentText, setCommentText] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -176,7 +178,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
             const subDate = new Date(subtaskDueDate);
             const mainDate = new Date(task.due_date);
             if (subDate > mainDate) {
-                alert(`QUY TẮC: Hạn chót của công việc con (${subDate.toLocaleDateString('vi-VN')}) không được vượt quá hạn chót của công việc chính (${mainDate.toLocaleDateString('vi-VN')}).`);
+                toast({
+                    title: 'Lỗi ngày hoàn thành',
+                    description: `Hạn chót của công việc con không được vượt quá hạn chót của công việc chính (${mainDate.toLocaleDateString('vi-VN')}).`,
+                    variant: 'warning'
+                });
                 return;
             }
         }
@@ -202,13 +208,13 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 return;
             }
             if (task.status_code !== 'DONE') {
-                alert("Bạn chỉ có thể log time trực tiếp vào công việc chính khi nó đã ở trạng thái HOÀN THÀNH (DONE).");
+                toast({ title: 'Trạng thái không hợp lệ', description: 'Bạn chỉ có thế log time trực tiếp vào công việc chính khi nó ở trạng thái DONE.', variant: 'warning' });
                 return;
             }
         } else {
             const sub = task.subtasks?.find(s => s.id === selectedSubtaskId);
             if (sub && sub.status_code !== 'DONE') {
-                alert("Bạn chỉ có thể log time vào công việc con khi nó đã được đánh dấu là HOÀN THÀNH.");
+                toast({ title: 'Trạng thái không hợp lệ', description: 'Chỉ có thể log time vào công việc con khi nó đã HOÀN THÀNH.', variant: 'warning' });
                 return;
             }
         }
@@ -231,7 +237,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 });
 
                 if (isLocked) {
-                    alert("QUY TẮC: Kỳ làm việc này đã bị khóa (Period Locked), bạn không thể ghi nhận thời gian vào khoảng này. Vui lòng liên hệ PM.");
+                    toast({
+                        title: 'Kỳ làm việc bị khóa',
+                        description: 'Bạn không thể ghi nhận thời gian vào khoảng thời gian này. Vui lòng liên hệ PM.',
+                        variant: 'destructive'
+                    });
                     return;
                 }
             }
@@ -281,7 +291,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         const isCurrentlyDone = task.status_code === 'DONE';
         const targetIsDone = editStatus === 'DONE';
         if (targetIsDone && !isCurrentlyDone && !(user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN')) {
-            alert("Chỉ Quản lý mới có quyền chuyển trạng thái công việc chính sang DONE.");
+            toast({ title: 'Quyền hạn hạn chế', description: 'Chỉ Quản lý mới có quyền chuyển trạng thái công việc chính sang DONE.', variant: 'warning' });
             return;
         }
 
@@ -297,7 +307,17 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
             assignee_ids: selectedAssignees,
             tag_ids: selectedTags
         });
-        if (success) setIsEditDialogOpen(false);
+
+        if (success) {
+            setIsEditDialogOpen(false);
+            toast({ title: 'Cập nhật thành công', variant: 'success' });
+        } else {
+            toast({
+                title: 'Lỗi cập nhật',
+                description: 'Dữ liệu có thể đã bị thay đổi bởi người khác hoặc bạn không có đủ quyền.',
+                variant: 'destructive'
+            });
+        }
         setIsUpdatingTask(false);
     };
 
@@ -305,8 +325,13 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         if (task?.is_locked || !user) return;
         setIsDeletingTask(true);
         const success = await deleteTask(id, user.id);
-        if (success) router.push('/tasks');
-        else setIsDeletingTask(false);
+        if (success) {
+            toast({ title: 'Đã xóa công việc', variant: 'success' });
+            router.push('/tasks');
+        } else {
+            setIsDeletingTask(false);
+            toast({ title: 'Lỗi khi xóa', variant: 'destructive' });
+        }
     };
 
     if (loading) {
@@ -486,7 +511,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    {!task.is_locked && ((user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN') || isOwner) && (
+                                                    {!task.is_locked && (isOwner || user?.role === 'ORG_ADMIN') && (
                                                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <Button variant="ghost" size="icon" onClick={() => user && reorderSubtask(sub.id, user.id, 'UP')} className="h-7 w-7" data-testid={`subtask-reorder-up-${sub.id}`}><ChevronUp size={14} /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => user && reorderSubtask(sub.id, user.id, 'DOWN')} className="h-7 w-7" data-testid={`subtask-reorder-down-${sub.id}`}><ChevronDown size={14} /></Button>
@@ -505,7 +530,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingSubtask(sub); setSubtaskTitle(sub.title); setSubtaskDueDate(sub.end_date || ''); setIsSubtaskDialogOpen(true); }} className="h-7 w-7 text-blue-600" data-testid={`subtask-edit-${sub.id}`}><Pencil size={14} /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => {
                                                                 if (sub.has_logs) {
-                                                                    alert("KHÔNG THỂ XÓA: Công việc con này đã có dữ liệu Log Time. Bạn phải xóa hết Nhật ký thời gian của đầu việc này trước.");
+                                                                    toast({ title: 'Không thể xóa', description: 'Đầu việc con này đã có dữ liệu Log Time.', variant: 'warning' });
                                                                     return;
                                                                 }
                                                                 user && deleteSubtask(sub.id, user.id);

@@ -13,6 +13,7 @@ export const mockTasks = [
         created_at: '2025-01-18T09:00:00Z',
         created_by: 'user-pm',
         updated_at: '2025-01-20T10:00:00Z',
+        row_version: 1,
         assignees: [
             { id: 'user-emp-dev1', full_name: 'Pham Minh Thu' },
             { id: 'user-emp', full_name: 'Nguyễn Thị Lan Anh' }

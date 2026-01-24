@@ -64,6 +64,7 @@ import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface RecycleBinItem {
     id: string;
@@ -198,7 +199,7 @@ const RecycleBinItemCard = ({
                                     "text-red-600 hover:text-red-700 hover:bg-red-50",
                                     item.is_locked && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200"
                                 )}
-                                title={item.is_locked ? "Không thể xóa mục này vì đã có dữ liệu ràng buộc (Time Log)" : "Xóa vĩnh viễn"}
+                                title={item.is_locked ? "KHÔNG THỂ XÓA: Mục này đang chứa dữ liệu quan trọng hoặc đã được khóa để đối soát." : "Xóa vĩnh viễn"}
                                 data-testid={`btn-delete-${item.id}`}
                             >
                                 <Trash2 size={14} className="mr-1" />
@@ -215,6 +216,7 @@ const RecycleBinItemCard = ({
 // Main Page Component
 export default function RecycleBinPage() {
     const { user } = useAuthStore();
+    const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState<RecycleBinItem[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -286,8 +288,18 @@ export default function RecycleBinPage() {
             });
             setItems(prev => prev.filter(i => i.id !== id));
             setSelectedIds(prev => prev.filter(i => i !== id));
+            toast({
+                title: 'Khôi phục thành công',
+                description: 'Mục đã được đưa về vị trí cũ.',
+                variant: 'success'
+            });
         } catch (error) {
             console.error('Error restoring item:', error);
+            toast({
+                title: 'Lỗi khôi phục',
+                description: 'Không thể khôi phục mục này. Vui lòng thử lại.',
+                variant: 'destructive'
+            });
         } finally {
             setIsProcessing(false);
         }
@@ -306,8 +318,18 @@ export default function RecycleBinPage() {
             });
             setItems(prev => prev.filter(i => i.id !== id));
             setSelectedIds(prev => prev.filter(i => i !== id));
+            toast({
+                title: 'Đã xóa vĩnh viễn',
+                description: 'Dữ liệu đã được gỡ bỏ khỏi hệ thống.',
+                variant: 'success'
+            });
         } catch (error) {
             console.error('Error deleting item:', error);
+            toast({
+                title: 'Lỗi khi xóa',
+                description: 'Không thể xóa mục này vĩnh viễn.',
+                variant: 'destructive'
+            });
         } finally {
             setIsProcessing(false);
             setDeleteDialogOpen(false);

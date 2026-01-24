@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { mockUsers, mockUserRoles, mockOrgMemberships } from './data/users';
-import { mockProjects } from './data/projects';
+import { mockProjects, mockProjectMembers } from './data/projects';
 import { mockTasks, mockSubtasks } from './data/tasks';
 import { mockActivities } from './data/activity';
 import { mockNotifications } from './data/notifications';
@@ -422,9 +422,19 @@ export const handlers = [
 
     http.put('/api/tasks/:id', async ({ params, request }) => {
         const body = await request.json() as any;
+        const task = mockTasks.find(t => t.id === params.id);
+
+        // BA Rule: Optimistic Locking (row_version)
+        if (task && body.row_version && body.row_version !== (task as any).row_version) {
+            return HttpResponse.json({
+                success: false,
+                message: 'CONF-01: Dữ liệu đã được thay đổi bởi người khác. Vui lòng tải lại trang.'
+            }, { status: 409 });
+        }
+
         return HttpResponse.json({
             success: true,
-            data: { id: params.id, ...body }
+            data: { id: params.id, ...body, row_version: ((task as any).row_version || 1) + 1 }
         });
     }),
 
@@ -573,7 +583,21 @@ export const handlers = [
         // Scoping Logic: EMP only see own reports
         if (role === 'EMPLOYEE') {
             reports = reports.filter(r => r.submitted_by === userId);
+        } else if (role === 'PROJECT_MANAGER') {
+            // BA Policy: PM sees reports of team members in managed projects
+            const managedProjectIds = mockProjectMembers
+                .filter(m => m.user_id === userId && m.member_role === 'PM')
+                .map(m => m.project_id);
+
+            const teamMemberIds = mockProjectMembers
+                .filter(m => managedProjectIds.includes(m.project_id))
+                .map(m => m.user_id);
+
+            reports = reports.filter(r => teamMemberIds.includes(r.submitted_by) || r.submitted_by === userId);
         }
+
+        // Rule: Non-owners cannot see DRAFT
+        reports = reports.filter(r => r.status !== 'DRAFT' || r.submitted_by === userId);
 
         // Enrich the reports
         const enrichedReports = reports.map(r => {
@@ -1153,6 +1177,162 @@ export const handlers = [
                 status_code: 'TODO',
                 created_at: new Date().toISOString()
             }
+        });
+    }),
+
+    // HR - Employees List
+    http.get('/api/hr/employees', ({ request }) => {
+        const role = request.headers.get('x-user-role');
+        const userId = request.headers.get('x-user-id');
+        const orgId = request.headers.get('x-org-id') || 'org-1';
+
+        let employees = mockUsers.map(u => {
+            const membership = mockOrgMemberships.find(m => m.user_id === u.id);
+            const userRole = mockUserRoles.find(r => r.user_id === u.id);
+            return {
+                id: u.id,
+                full_name: u.full_name,
+                email: u.email,
+                phone: '0987654321',
+                avatar_url: null,
+                role: userRole?.role_code || 'EMPLOYEE',
+                member_status: membership?.member_status || 'ACTIVE',
+                department: u.id.includes('dev') || u.id.includes('pm') || u.id.includes('qa') ? 'Engineering' : (u.id.includes('designer') ? 'Design' : 'Executive'),
+                position: u.id.includes('pm') ? 'Project Manager' : (u.id.includes('ceo') ? 'CEO' : (u.id.includes('qa') ? 'QA Engineer' : 'Developer')),
+                join_method: membership?.join_method || 'MANUAL',
+                joined_at: membership?.activated_at?.split('T')[0] || null,
+                created_at: u.created_at
+            };
+        });
+
+        // Filter by Org
+        employees = employees.filter(e => {
+            const roleEntry = mockUserRoles.find(r => r.user_id === e.id);
+            return roleEntry?.org_id === orgId;
+        });
+
+        // Scoping Logic: PM only sees members in managed projects
+        if (role === 'PROJECT_MANAGER') {
+            const managedProjectIds = mockProjectMembers
+                .filter(m => m.user_id === userId && m.member_role === 'PM')
+                .map(m => m.project_id);
+
+            const teamMemberIds = mockProjectMembers
+                .filter(m => managedProjectIds.includes(m.project_id))
+                .map(m => m.user_id);
+
+            employees = employees.filter(e => teamMemberIds.includes(e.id) || e.id === userId);
+        }
+
+        return HttpResponse.json({
+            success: true,
+            data: employees
+        });
+    }),
+
+    // HR - Employee Detail
+    http.get('/api/hr/employees/:id', ({ params, request }) => {
+        const { id } = params;
+        const role = request.headers.get('x-user-role');
+        const userId = request.headers.get('x-user-id');
+
+        const u = mockUsers.find(user => user.id === id);
+        if (!u) return HttpResponse.json({ success: false, message: 'Not found' }, { status: 404 });
+
+        // Scoping Logic for PM
+        if (role === 'PROJECT_MANAGER') {
+            const managedProjectIds = mockProjectMembers
+                .filter(m => m.user_id === userId && m.member_role === 'PM')
+                .map(m => m.project_id);
+
+            const teamMemberIds = mockProjectMembers
+                .filter(m => managedProjectIds.includes(m.project_id))
+                .map(m => m.user_id);
+
+            if (!teamMemberIds.includes(u.id) && u.id !== userId) {
+                return HttpResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
+            }
+        }
+
+        const membership = mockOrgMemberships.find(m => m.user_id === u.id);
+        const userRole = mockUserRoles.find(r => r.user_id === u.id);
+
+        return HttpResponse.json({
+            success: true,
+            data: {
+                id: u.id,
+                full_name: u.full_name,
+                email: u.email,
+                phone: '0987654321',
+                avatar_url: null,
+                role: userRole?.role_code || 'EMPLOYEE',
+                member_status: membership?.member_status || 'ACTIVE',
+                department: u.id.includes('dev') || u.id.includes('pm') || u.id.includes('qa') ? 'Engineering' : (u.id.includes('designer') ? 'Design' : 'Executive'),
+                position: u.id.includes('pm') ? 'Project Manager' : (u.id.includes('ceo') ? 'CEO' : (u.id.includes('qa') ? 'QA Engineer' : 'Developer')),
+                joined_at: membership?.activated_at?.split('T')[0] || null,
+            }
+        });
+    }),
+
+    // HR - Job Levels
+    http.get('/api/hr/job-levels', () => {
+        return HttpResponse.json({
+            success: true,
+            data: mockJobLevels
+        });
+    }),
+
+    // HR - Compensations
+    http.get('/api/hr/compensations', ({ request }) => {
+        const role = request.headers.get('x-user-role');
+        const userId = request.headers.get('x-user-id');
+        const orgId = request.headers.get('x-org-id') || 'org-1';
+
+        let data = mockCompensations.map(c => {
+            const u = mockUsers.find(user => user.id === c.user_id);
+            const level = mockJobLevels.find(l => l.id === c.level_id);
+            return {
+                ...c,
+                user_name: u?.full_name || 'Unknown',
+                user_email: u?.email || '',
+                level_name: level?.name || 'Unknown',
+                level_code: level?.code || '',
+                department: u?.id.includes('dev') || u?.id.includes('pm') || u?.id.includes('qa') ? 'Engineering' : (u?.id.includes('designer') ? 'Design' : 'Executive'),
+                position: u?.id.includes('pm') ? 'Project Manager' : (u?.id.includes('ceo') ? 'CEO' : (u?.id.includes('qa') ? 'QA Engineer' : 'Developer')),
+            };
+        });
+
+        // Filter by Org
+        data = data.filter(c => {
+            const roleEntry = mockUserRoles.find(r => r.user_id === c.user_id);
+            return roleEntry?.org_id === orgId;
+        });
+
+        // Scoping Logic: PM only sees compensations of team members in managed projects
+        if (role === 'PROJECT_MANAGER') {
+            const managedProjectIds = mockProjectMembers
+                .filter(m => m.user_id === userId && m.member_role === 'PM')
+                .map(m => m.project_id);
+
+            const teamMemberIds = mockProjectMembers
+                .filter(m => managedProjectIds.includes(m.project_id))
+                .map(m => m.user_id);
+
+            data = data.filter(c => teamMemberIds.includes(c.user_id) || c.user_id === userId);
+        }
+
+        return HttpResponse.json({
+            success: true,
+            data: data
+        });
+    }),
+
+    // HR - Update Compensation
+    http.put('/api/hr/compensations/:id', async ({ params, request }) => {
+        const body = await request.json() as any;
+        return HttpResponse.json({
+            success: true,
+            data: { id: params.id, ...body }
         });
     }),
 ];

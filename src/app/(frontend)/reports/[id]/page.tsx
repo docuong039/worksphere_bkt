@@ -39,6 +39,7 @@ import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReportComment {
     id: string;
@@ -73,6 +74,7 @@ export default function ReportDetailPage() {
     const params = useParams();
     const router = useRouter();
     const { user } = useAuthStore();
+    const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [report, setReport] = useState<ReportDetail | null>(null);
     const [commentText, setCommentText] = useState('');
@@ -160,17 +162,18 @@ export default function ReportDetailPage() {
             if (res.ok) {
                 setCommentText('');
                 fetchReport();
+                toast({ title: 'Gửi thành công', description: 'Đã thêm nhận xét vào báo cáo.', variant: 'success' });
             }
         } catch (error) {
             console.error(error);
+            toast({ title: 'Lỗi gửi nhận xét', description: 'Không thể gửi bình luận vào lúc này.', variant: 'destructive' });
         } finally {
             setIsSubmittingComment(false);
         }
     };
 
     const handleExportPDF = () => {
-        // Mock export
-        alert('Đang xuất báo cáo sang PDF...');
+        toast({ title: 'Đang chuẩn bị bản in', description: 'Tài liệu PDF đang được khởi tạo...', variant: 'default' });
     };
 
     if (loading) {
@@ -225,9 +228,13 @@ export default function ReportDetailPage() {
                             <Badge className="bg-emerald-50 text-emerald-700 border-none font-bold" data-testid="badge-approved">
                                 <CheckCircle2 size={12} className="mr-1" /> Đã duyệt
                             </Badge>
-                        ) : (
+                        ) : report.status === 'SUBMITTED' ? (
                             <Badge className="bg-blue-50 text-blue-700 border-none font-bold" data-testid="badge-pending">
-                                <Clock size={12} className="mr-1" /> Chờ duyệt
+                                <Clock size={12} className="mr-1" /> {user?.role === 'PROJECT_MANAGER' ? 'Chờ CEO duyệt' : 'Chờ duyệt'}
+                            </Badge>
+                        ) : (
+                            <Badge variant="outline" className="text-slate-500 font-bold" data-testid="badge-draft">
+                                <Clock size={12} className="mr-1" /> Bản nháp
                             </Badge>
                         )}
                     </div>

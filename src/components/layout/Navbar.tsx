@@ -17,9 +17,11 @@ import { useAuthStore } from '@/stores/authStore';
 import { Badge } from '@/components/ui/badge';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { PERMISSIONS } from '@/lib/permissions';
 
 export default function Navbar() {
-    const { user, logout } = useAuthStore();
+    const { user, logout, hasPermission } = useAuthStore();
     const [notifications, setNotifications] = React.useState<any[]>([]);
     const [loading, setLoading] = React.useState(false);
 
@@ -66,10 +68,14 @@ export default function Navbar() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-4">
-                {/* Language / Region */}
-                <Button variant="ghost" size="icon" className="text-slate-500 hidden sm:flex" data-testid="navbar-language-btn">
-                    <Globe size={20} />
-                </Button>
+                {/* Language / Region - Hidden for PMs as it often maps to Workspace settings */}
+                {hasPermission(PERMISSIONS.TENANT_ORG_UPDATE) && (
+                    <Button variant="ghost" size="icon" className="text-slate-500 hidden sm:flex" data-testid="navbar-language-btn" asChild>
+                        <Link href="/settings/workspace">
+                            <Globe size={20} />
+                        </Link>
+                    </Button>
+                )}
 
                 {/* Notifications */}
                 <DropdownMenu>
@@ -174,9 +180,13 @@ export default function Navbar() {
                         <DropdownMenuItem className="cursor-pointer" data-testid="navbar-profile-item">
                             <UserIcon className="mr-2 h-4 w-4" /> Hồ sơ cá nhân
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer" data-testid="navbar-settings-item">
-                            <Globe className="mr-2 h-4 w-4" /> Cài đặt không gian
-                        </DropdownMenuItem>
+                        {hasPermission(PERMISSIONS.TENANT_ORG_UPDATE) && (
+                            <DropdownMenuItem className="cursor-pointer" data-testid="navbar-settings-item" asChild>
+                                <Link href="/settings/workspace" className="flex items-center w-full">
+                                    <Globe className="mr-2 h-4 w-4" /> Cài đặt không gian
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             className="text-red-600 cursor-pointer focus:text-red-600"

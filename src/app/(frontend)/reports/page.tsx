@@ -64,6 +64,7 @@ import {
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions';
 
@@ -243,6 +244,7 @@ const ReportCard = ({
 // Main Page Component
 export default function ReportsPage() {
     const { user, hasPermission } = useAuthStore();
+    const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [reports, setReports] = useState<Report[]>([]);
     const [filter, setFilter] = useState('ALL');
@@ -379,8 +381,18 @@ export default function ReportsPage() {
 
             setIsDialogOpen(false);
             fetchReports();
+            toast({
+                title: editingId ? 'Đã cập nhật' : 'Đã tạo báo cáo',
+                description: asDraft ? 'Báo cáo được lưu dưới dạng bản nháp.' : 'Báo cáo đã được gửi tới người quản lý.',
+                variant: 'success'
+            });
         } catch (error: any) {
             setFormErrors({ submit: error.message });
+            toast({
+                title: 'Lỗi nộp báo cáo',
+                description: error.message,
+                variant: 'destructive'
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -408,7 +420,7 @@ export default function ReportsPage() {
                             <Button
                                 variant="outline"
                                 className="text-slate-600 font-bold"
-                                onClick={() => alert('Đang xuất báo cáo sang CSV...')}
+                                onClick={() => toast({ title: 'Đang trích xuất dữ liệu', description: 'Hệ thống đang chuẩn bị file CSV cho bạn...', variant: 'default' })}
                                 data-testid="btn-export-reports"
                             >
                                 <Download className="mr-2 h-4 w-4" /> Xuất File
@@ -450,7 +462,7 @@ export default function ReportsPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="ALL">Tất cả</SelectItem>
-                                        <SelectItem value="DRAFT">Bản nháp</SelectItem>
+                                        {!isManager && <SelectItem value="DRAFT">Bản nháp</SelectItem>}
                                         <SelectItem value="SUBMITTED">Đã gửi</SelectItem>
                                         <SelectItem value="APPROVED">Đã duyệt</SelectItem>
                                     </SelectContent>

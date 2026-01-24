@@ -52,6 +52,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions';
+import { useToast } from '@/hooks/use-toast';
 
 // Types
 interface JobLevel {
@@ -84,6 +85,7 @@ interface EmployeeCompensation {
 
 export default function SalaryManagementPage() {
     const { user, hasPermission } = useAuthStore();
+    const { toast } = useToast();
     const [activeTab, setActiveTab] = useState('compensations');
 
     // Job Levels State
@@ -114,17 +116,11 @@ export default function SalaryManagementPage() {
     const fetchJobLevels = async () => {
         setLoadingLevels(true);
         try {
-            // Mock data - US-CEO-02-01
-            const mockLevels: JobLevel[] = [
-                { id: 'lv1', code: 'INTERN', name: 'Thực tập sinh', sort_order: 1, employee_count: 5, min_salary: 3000000, max_salary: 6000000, created_at: '2024-01-01' },
-                { id: 'lv2', code: 'FRESHER', name: 'Fresher', sort_order: 2, employee_count: 12, min_salary: 8000000, max_salary: 12000000, created_at: '2024-01-01' },
-                { id: 'lv3', code: 'JUNIOR', name: 'Junior', sort_order: 3, employee_count: 18, min_salary: 12000000, max_salary: 20000000, created_at: '2024-01-01' },
-                { id: 'lv4', code: 'MIDDLE', name: 'Middle', sort_order: 4, employee_count: 25, min_salary: 20000000, max_salary: 35000000, created_at: '2024-01-01' },
-                { id: 'lv5', code: 'SENIOR', name: 'Senior', sort_order: 5, employee_count: 15, min_salary: 35000000, max_salary: 55000000, created_at: '2024-01-01' },
-                { id: 'lv6', code: 'LEAD', name: 'Team Lead', sort_order: 6, employee_count: 8, min_salary: 45000000, max_salary: 70000000, created_at: '2024-01-01' },
-                { id: 'lv7', code: 'MANAGER', name: 'Manager', sort_order: 7, employee_count: 4, min_salary: 60000000, max_salary: 100000000, created_at: '2024-01-01' },
-            ];
-            setJobLevels(mockLevels);
+            const res = await fetch('/api/hr/job-levels');
+            const result = await res.json();
+            if (result.success) {
+                setJobLevels(result.data);
+            }
         } catch (error) {
             console.error(error);
         } finally {
@@ -135,18 +131,24 @@ export default function SalaryManagementPage() {
     const fetchCompensations = async () => {
         setLoadingCompensations(true);
         try {
-            // Mock data - US-MNG-03-02
-            const mockCompensations: EmployeeCompensation[] = [
-                { id: 'c1', user_id: 'u1', user_name: 'Nguyễn Văn A', user_email: 'nguyen.a@company.com', level_id: 'lv5', level_name: 'Senior', level_code: 'SENIOR', monthly_salary: 45000000, hourly_cost_rate: 270000, currency: 'VND', effective_from: '2024-01-01', effective_to: null, department: 'Engineering', position: 'Senior Developer' },
-                { id: 'c2', user_id: 'u2', user_name: 'Trần Thị B', user_email: 'tran.b@company.com', level_id: 'lv6', level_name: 'Team Lead', level_code: 'LEAD', monthly_salary: 55000000, hourly_cost_rate: 330000, currency: 'VND', effective_from: '2024-03-01', effective_to: null, department: 'Design', position: 'Design Lead' },
-                { id: 'c3', user_id: 'u3', user_name: 'Lê Văn C', user_email: 'le.c@company.com', level_id: 'lv3', level_name: 'Junior', level_code: 'JUNIOR', monthly_salary: 15000000, hourly_cost_rate: 90000, currency: 'VND', effective_from: '2024-06-01', effective_to: null, department: 'Engineering', position: 'Junior Developer' },
-                { id: 'c4', user_id: 'u4', user_name: 'Phạm Thị D', user_email: 'pham.d@company.com', level_id: 'lv4', level_name: 'Middle', level_code: 'MIDDLE', monthly_salary: 28000000, hourly_cost_rate: 168000, currency: 'VND', effective_from: '2024-02-01', effective_to: null, department: 'Marketing', position: 'Marketing Specialist' },
-                { id: 'c5', user_id: 'u5', user_name: 'Hoàng Văn E', user_email: 'hoang.e@company.com', level_id: 'lv2', level_name: 'Fresher', level_code: 'FRESHER', monthly_salary: 10000000, hourly_cost_rate: 60000, currency: 'VND', effective_from: '2024-09-01', effective_to: null, department: 'Customer Support', position: 'Support Agent' },
-                { id: 'c6', user_id: 'u6', user_name: 'Đỗ Minh F', user_email: 'do.f@company.com', level_id: 'lv7', level_name: 'Manager', level_code: 'MANAGER', monthly_salary: 75000000, hourly_cost_rate: 450000, currency: 'VND', effective_from: '2023-01-01', effective_to: null, department: 'Engineering', position: 'Engineering Manager' },
-            ];
-            setCompensations(mockCompensations);
+            const res = await fetch('/api/hr/compensations');
+            const result = await res.json();
+            if (result.success) {
+                setCompensations(result.data);
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Lỗi',
+                    description: 'Không thể tải bảng lương'
+                });
+            }
         } catch (error) {
             console.error(error);
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi kết nối',
+                description: 'Vui lòng thử lại sau'
+            });
         } finally {
             setLoadingCompensations(false);
         }
@@ -206,18 +208,53 @@ export default function SalaryManagementPage() {
         setEditCompensationDialogOpen(true);
     };
 
-    const handleSaveLevel = () => {
-        // TODO: Call API to save level
-        console.log('Save level:', levelForm);
+    const handleSaveLevel = async () => {
+        toast({
+            title: 'Đang xử lý',
+            description: 'Đang lưu thông tin cấp bậc...'
+        });
         setEditLevelDialogOpen(false);
-        fetchJobLevels();
+        // Mock success
+        setTimeout(() => {
+            toast({
+                title: 'Thành công',
+                description: 'Đã cập nhật danh mục cấp bậc'
+            });
+            fetchJobLevels();
+        }, 500);
     };
 
-    const handleSaveCompensation = () => {
-        // TODO: Call API to save compensation
-        console.log('Save compensation:', compForm);
-        setEditCompensationDialogOpen(false);
-        fetchCompensations();
+    const handleSaveCompensation = async () => {
+        if (!selectedCompensation) return;
+
+        try {
+            const res = await fetch(`/api/hr/compensations/${selectedCompensation.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(compForm)
+            });
+            const result = await res.json();
+            if (result.success) {
+                toast({
+                    title: 'Thành công',
+                    description: `Đã cập nhật lương cho ${selectedCompensation.user_name}`
+                });
+                setEditCompensationDialogOpen(false);
+                fetchCompensations();
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Lỗi',
+                    description: 'Không thể cập nhật lương'
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi kết nối',
+                description: 'Vui lòng thử lại sau'
+            });
+        }
     };
 
     const canEdit = hasPermission(PERMISSIONS.COMPENSATION_UPDATE);
