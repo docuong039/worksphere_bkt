@@ -31,7 +31,10 @@ import {
     FolderOpen,
     File,
     Loader2,
-    Trash
+    Trash,
+    User,
+    Users,
+    BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -57,18 +60,21 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import AppLayout from '@/components/layout/AppLayout';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 
 interface RecycleBinItem {
     id: string;
-    entity_type: 'TASK' | 'SUBTASK' | 'PROJECT' | 'DOCUMENT';
+    entity_type: 'TASK' | 'SUBTASK' | 'PROJECT' | 'DOCUMENT' | 'USER' | 'REPORT';
     entity_id: string;
     entity_title: string;
     deleted_at: string;
     deleted_by: { id: string; full_name: string };
     project: { id: string; name: string } | null;
     days_remaining: number;
+    details?: string;
     is_locked?: boolean;
 }
 
@@ -77,6 +83,8 @@ const ENTITY_TYPES = {
     SUBTASK: { label: 'Subtask', icon: CheckSquare, color: 'text-green-600' },
     PROJECT: { label: 'Project', icon: FolderOpen, color: 'text-purple-600' },
     DOCUMENT: { label: 'Tài liệu', icon: File, color: 'text-amber-600' },
+    USER: { label: 'Thành viên', icon: User, color: 'text-indigo-600' },
+    REPORT: { label: 'Báo cáo', icon: BarChart3, color: 'text-rose-600' },
 };
 
 // Recycle Bin Item Component
@@ -85,13 +93,15 @@ const RecycleBinItemCard = ({
     isSelected,
     onSelect,
     onRestore,
-    onDelete
+    onDelete,
+    canDestroy
 }: {
     item: RecycleBinItem;
     isSelected: boolean;
     onSelect: (checked: boolean) => void;
     onRestore: () => void;
     onDelete: () => void;
+    canDestroy: boolean;
 }) => {
     const typeConfig = ENTITY_TYPES[item.entity_type] || ENTITY_TYPES.TASK;
     const Icon = typeConfig.icon;
@@ -160,6 +170,9 @@ const RecycleBinItemCard = ({
                                 <Clock size={12} className="inline mr-1" />
                                 Còn {item.days_remaining} ngày
                             </span>
+                            {item.details && (
+                                <span className="text-slate-400 italic">({item.details})</span>
+                            )}
                         </div>
                     </div>
 
@@ -188,16 +201,18 @@ const RecycleBinItemCard = ({
                                 </>
                             )}
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={onDelete}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            data-testid={`btn-delete-${item.id}`}
-                        >
-                            <Trash2 size={14} className="mr-1" />
-                            Xóa
-                        </Button>
+                        {canDestroy && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={onDelete}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                data-testid={`btn-delete-${item.id}`}
+                            >
+                                <Trash2 size={14} className="mr-1" />
+                                Xóa
+                            </Button>
+                        )}
                     </div>
                 </div>
             </CardContent>
@@ -213,6 +228,8 @@ export default function RecycleBinPage() {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [filterType, setFilterType] = useState('ALL');
     const [isProcessing, setIsProcessing] = useState(false);
+
+    const canDestroy = user?.role !== 'EMPLOYEE';
 
     // Dialogs
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -335,182 +352,187 @@ export default function RecycleBinPage() {
 
     return (
         <AppLayout>
-            <div className="space-y-6 animate-in fade-in duration-700" data-testid="recycle-bin-container">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="recycle-bin-title">
-                            <Trash2 className="inline-block mr-2 h-8 w-8 text-slate-600" />
-                            Thùng rác
-                        </h1>
-                        <p className="text-slate-500 mt-1 font-medium">
-                            Các mục đã xóa được giữ trong 30 ngày trước khi xóa vĩnh viễn.
-                        </p>
-                    </div>
-
-                    {items.length > 0 && (
-                        <Button
-                            variant="destructive"
-                            onClick={() => setEmptyDialogOpen(true)}
-                            data-testid="btn-empty-all"
-                        >
-                            <Trash className="mr-2 h-4 w-4" /> Làm trống
-                        </Button>
-                    )}
-                </div>
-
-                {/* Filters */}
-                <Card className="border-none shadow-sm" data-testid="recycle-filters">
-                    <CardContent className="p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                                <Select value={filterType} onValueChange={setFilterType}>
-                                    <SelectTrigger className="w-[160px]" data-testid="recycle-bin-filter-type">
-                                        <SelectValue placeholder="Loại" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ALL">Tất cả loại</SelectItem>
-                                        {Object.entries(ENTITY_TYPES).map(([code, config]) => (
-                                            <SelectItem key={code} value={code}>
-                                                {config.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                {items.length > 0 && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={selectAll}
-                                        data-testid="btn-select-all"
-                                    >
-                                        {selectedIds.length === items.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-                                    </Button>
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-2 text-sm text-amber-600">
-                                <AlertTriangle size={16} />
-                                <span>Giữ 30 ngày trước khi xóa vĩnh viễn</span>
-                            </div>
+            <PermissionGuard permission={PERMISSIONS.RECYCLE_BIN_READ} showFullPageError>
+                <div className="space-y-6 animate-in fade-in duration-700" data-testid="recycle-bin-container">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="recycle-bin-title">
+                                <Trash2 className="inline-block mr-2 h-8 w-8 text-slate-600" />
+                                Thùng rác
+                            </h1>
+                            <p className="text-slate-500 mt-1 font-medium">
+                                Các mục đã xóa được giữ trong 30 ngày trước khi xóa vĩnh viễn.
+                            </p>
                         </div>
 
-                        {/* Bulk Actions */}
-                        {selectedIds.length > 0 && (
-                            <div className="flex items-center gap-3 mt-4 p-3 bg-slate-50 rounded-lg" data-testid="bulk-actions">
-                                <span className="text-sm font-medium text-slate-600">
-                                    Đã chọn {selectedIds.length} mục
-                                </span>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => selectedIds.forEach(id => handleRestore(id))}
-                                    disabled={isProcessing}
-                                    data-testid="btn-bulk-restore"
-                                >
-                                    <RotateCcw size={14} className="mr-1" />
-                                    Khôi phục đã chọn
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-red-600"
-                                    onClick={() => setDeleteDialogOpen(true)}
-                                    disabled={isProcessing}
-                                    data-testid="btn-bulk-delete"
-                                >
-                                    <Trash2 size={14} className="mr-1" />
-                                    Xóa đã chọn
-                                </Button>
-                            </div>
+                        {items.length > 0 && canDestroy && (
+                            <Button
+                                variant="destructive"
+                                onClick={() => setEmptyDialogOpen(true)}
+                                data-testid="btn-empty-all"
+                            >
+                                <Trash className="mr-2 h-4 w-4" /> Làm trống
+                            </Button>
                         )}
-                    </CardContent>
-                </Card>
+                    </div>
 
-                {/* Items List */}
-                {loading ? (
-                    <div className="space-y-4" data-testid="recycle-loading">
-                        {[1, 2, 3].map((i) => (
-                            <Skeleton key={i} className="h-24 w-full rounded-xl" />
-                        ))}
-                    </div>
-                ) : items.length > 0 ? (
-                    <div className="space-y-3" data-testid="recycle-list">
-                        {items.map((item) => (
-                            <RecycleBinItemCard
-                                key={item.id}
-                                item={item}
-                                isSelected={selectedIds.includes(item.id)}
-                                onSelect={(checked) => toggleSelect(item.id, checked)}
-                                onRestore={() => handleRestore(item.id)}
-                                onDelete={() => openDeleteConfirm(item.id)}
-                            />
-                        ))}
-                        <p className="text-sm text-slate-400 text-center pt-4">
-                            Hiển thị {items.length} mục
-                        </p>
-                    </div>
-                ) : (
-                    <Card className="border-none shadow-sm" data-testid="recycle-empty">
-                        <CardContent className="py-16 text-center">
-                            <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                                <Trash2 className="h-8 w-8 text-slate-300" />
+                    {/* Filters */}
+                    <Card className="border-none shadow-sm" data-testid="recycle-filters">
+                        <CardContent className="p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    <Select value={filterType} onValueChange={setFilterType}>
+                                        <SelectTrigger className="w-[160px]" data-testid="recycle-bin-filter-type">
+                                            <SelectValue placeholder="Loại" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">Tất cả loại</SelectItem>
+                                            {Object.entries(ENTITY_TYPES).map(([code, config]) => (
+                                                <SelectItem key={code} value={code}>
+                                                    {config.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    {items.length > 0 && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={selectAll}
+                                            data-testid="btn-select-all"
+                                        >
+                                            {selectedIds.length === items.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                                        </Button>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-2 text-sm text-amber-600">
+                                    <AlertTriangle size={16} />
+                                    <span>Giữ 30 ngày trước khi xóa vĩnh viễn</span>
+                                </div>
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">
-                                Thùng rác trống
-                            </h3>
-                            <p className="text-slate-500">
-                                Các mục đã xóa sẽ xuất hiện ở đây.
-                            </p>
+
+                            {/* Bulk Actions */}
+                            {selectedIds.length > 0 && (
+                                <div className="flex items-center gap-3 mt-4 p-3 bg-slate-50 rounded-lg" data-testid="bulk-actions">
+                                    <span className="text-sm font-medium text-slate-600">
+                                        Đã chọn {selectedIds.length} mục
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => selectedIds.forEach(id => handleRestore(id))}
+                                        disabled={isProcessing}
+                                        data-testid="btn-bulk-restore"
+                                    >
+                                        <RotateCcw size={14} className="mr-1" />
+                                        Khôi phục đã chọn
+                                    </Button>
+                                    {canDestroy && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-red-600"
+                                            onClick={() => setDeleteDialogOpen(true)}
+                                            disabled={isProcessing}
+                                            data-testid="btn-bulk-delete"
+                                        >
+                                            <Trash2 size={14} className="mr-1" />
+                                            Xóa đã chọn
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
-                )}
 
-                {/* Delete Confirmation Dialog */}
-                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                    <AlertDialogContent data-testid="dialog-confirm-delete">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Xác nhận xóa vĩnh viễn</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Hành động này không thể hoàn tác. Dữ liệu sẽ bị xóa vĩnh viễn khỏi hệ thống.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel data-testid="btn-cancel-delete">Hủy</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={() => itemToDelete && handleDelete(itemToDelete)}
-                                className="bg-red-600 hover:bg-red-700"
-                                data-testid="btn-confirm-delete"
-                            >
-                                {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xóa vĩnh viễn'}
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                    {/* Items List */}
+                    {loading ? (
+                        <div className="space-y-4" data-testid="recycle-loading">
+                            {[1, 2, 3].map((i) => (
+                                <Skeleton key={i} className="h-24 w-full rounded-xl" />
+                            ))}
+                        </div>
+                    ) : items.length > 0 ? (
+                        <div className="space-y-3" data-testid="recycle-list">
+                            {items.map((item) => (
+                                <RecycleBinItemCard
+                                    key={item.id}
+                                    item={item}
+                                    isSelected={selectedIds.includes(item.id)}
+                                    onSelect={(checked) => toggleSelect(item.id, checked)}
+                                    onRestore={() => handleRestore(item.id)}
+                                    onDelete={() => openDeleteConfirm(item.id)}
+                                    canDestroy={canDestroy}
+                                />
+                            ))}
+                            <p className="text-sm text-slate-400 text-center pt-4">
+                                Hiển thị {items.length} mục
+                            </p>
+                        </div>
+                    ) : (
+                        <Card className="border-none shadow-sm" data-testid="recycle-empty">
+                            <CardContent className="py-16 text-center">
+                                <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                                    <Trash2 className="h-8 w-8 text-slate-300" />
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2">
+                                    Thùng rác trống
+                                </h3>
+                                <p className="text-slate-500">
+                                    Các mục đã xóa sẽ xuất hiện ở đây.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
 
-                {/* Empty All Dialog */}
-                <AlertDialog open={emptyDialogOpen} onOpenChange={setEmptyDialogOpen}>
-                    <AlertDialogContent data-testid="dialog-confirm-empty">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Làm trống thùng rác?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Tất cả {items.length} mục sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel data-testid="btn-cancel-empty">Hủy</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={handleEmptyAll}
-                                className="bg-red-600 hover:bg-red-700"
-                                data-testid="btn-confirm-empty"
-                            >
-                                {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Làm trống'}
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </div>
+                    {/* Delete Confirmation Dialog */}
+                    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                        <AlertDialogContent data-testid="dialog-confirm-delete">
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Xác nhận xóa vĩnh viễn</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Hành động này không thể hoàn tác. Dữ liệu sẽ bị xóa vĩnh viễn khỏi hệ thống.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel data-testid="btn-cancel-delete">Hủy</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={() => itemToDelete && handleDelete(itemToDelete)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                    data-testid="btn-confirm-delete"
+                                >
+                                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xóa vĩnh viễn'}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+
+                    {/* Empty All Dialog */}
+                    <AlertDialog open={emptyDialogOpen} onOpenChange={setEmptyDialogOpen}>
+                        <AlertDialogContent data-testid="dialog-confirm-empty">
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Làm trống thùng rác?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Tất cả {items.length} mục sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel data-testid="btn-cancel-empty">Hủy</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={handleEmptyAll}
+                                    className="bg-red-600 hover:bg-red-700"
+                                    data-testid="btn-confirm-empty"
+                                >
+                                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Làm trống'}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            </PermissionGuard>
         </AppLayout>
     );
 }

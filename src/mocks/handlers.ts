@@ -9,6 +9,7 @@ import { mockTimeLogs } from './data/timelogs';
 import { mockCompensations, mockJobLevels } from './data/hr';
 import { mockOrganizations } from './data/organizations';
 import { mockRecycleBin } from './data/recycle-bin';
+import { mockPersonalTasks } from './data/personal-tasks';
 import { ROLE_PERMISSIONS, AppRole } from '@/lib/permissions';
 
 
@@ -78,6 +79,14 @@ export const handlers = [
     http.put('/api/users/me/password', async ({ request }) => {
         const body = await request.json() as any;
         const { current_password, new_password } = body;
+        const role = request.headers.get('x-user-role');
+
+        if (role === 'EMPLOYEE') {
+            return HttpResponse.json({
+                success: false,
+                message: 'Nhân viên không được phép đổi mật khẩu chủ động'
+            }, { status: 403 });
+        }
 
         if (current_password === 'wrong') {
             return HttpResponse.json({
@@ -446,29 +455,50 @@ export const handlers = [
     }),
 
     // Personal Task Handlers
-    http.get('/api/personal-tasks', () => {
+    http.get('/api/personal-tasks', ({ request }) => {
+        const userId = request.headers.get('x-user-id') || 'user-emp';
+
+        // BA Rule: Strict Isolation (US-EMP-07-05)
+        // Only return tasks belonging to the current user
+        const userTasks = mockPersonalTasks.filter(t => t.user_id === userId);
+
+        const grouped = {
+            TODO: userTasks.filter(t => t.status_code === 'TODO').sort((a, b) => a.sort_order - b.sort_order),
+            IN_PROGRESS: userTasks.filter(t => t.status_code === 'IN_PROGRESS').sort((a, b) => a.sort_order - b.sort_order),
+            DONE: userTasks.filter(t => t.status_code === 'DONE').sort((a, b) => a.sort_order - b.sort_order)
+        };
+
         return HttpResponse.json({
             success: true,
-            data: {
-                TODO: [
-                    { id: 'pt-1', title: 'Học Next.js 15 & React Server Components', description: 'Xem tài liệu mới tại nextjs.org/docs', status_code: 'TODO', priority_code: 'HIGH', due_date: '2025-02-01' }
-                ],
-                IN_PROGRESS: [],
-                DONE: [
-                    { id: 'pt-2', title: 'Thiết lập cấu trúc dự án', description: 'Đã hoàn thành base project với Shadcn UI', status_code: 'DONE', priority_code: 'MEDIUM' }
-                ]
-            }
+            data: grouped
         });
     }),
 
     http.post('/api/personal-tasks', async ({ request }) => {
         const body = await request.json() as any;
-        return HttpResponse.json({ success: true, data: { id: Math.random().toString(36).substr(2, 9), ...body } });
+        const userId = request.headers.get('x-user-id');
+
+        const newTask = {
+            id: 'pt-' + Math.random().toString(36).substr(2, 9),
+            user_id: userId,
+            ...body,
+            created_at: new Date().toISOString(),
+            sort_order: 100 // Default sort order
+        };
+
+        // In reality, we'd push to the array. For mock, we just return success.
+        return HttpResponse.json({ success: true, data: newTask });
     }),
 
     http.put('/api/personal-tasks/:id', async ({ params, request }) => {
         const body = await request.json() as any;
-        return HttpResponse.json({ success: true, data: { id: params.id, ...body } });
+        const userId = request.headers.get('x-user-id');
+
+        // In a real mock server with state, we would find by id and check user_id
+        return HttpResponse.json({
+            success: true,
+            data: { id: params.id, user_id: userId, ...body }
+        });
     }),
 
     http.delete('/api/personal-tasks/:id', () => {
@@ -777,13 +807,14 @@ export const handlers = [
     http.patch('/api/admin/workspace/settings', async ({ request }) => {
         return HttpResponse.json({ success: true });
     }),
-
     // Activity Handlers
     http.get('/api/activity', ({ request }) => {
         const url = new URL(request.url);
         const actorId = url.searchParams.get('actor_id');
         const projectId = url.searchParams.get('project_id');
         const activityType = url.searchParams.get('activity_type');
+        const role = request.headers.get('x-user-role') || 'EMPLOYEE';
+        const userId = request.headers.get('x-user-id');
 
         let data = mockActivities.map(a => {
             const user = mockUsers.find(u => u.id === a.actor_user_id);
@@ -802,9 +833,17 @@ export const handlers = [
             };
         });
 
-        if (actorId && actorId !== 'ALL') {
-            data = data.filter(a => a.actor_user_id === actorId);
+        // BA Rule: Scoping Logic (docs/EMP/hoat-dong.md)
+        // EMP only sees their own activity. PM/ADMIN sees all.
+        if (role === 'EMPLOYEE') {
+            data = data.filter(a => a.actor_user_id === userId);
+        } else {
+            // Further filters for PM/ADMIN
+            if (actorId && actorId !== 'ALL') {
+                data = data.filter(a => a.actor_user_id === actorId);
+            }
         }
+
         if (projectId && projectId !== 'ALL') {
             data = data.filter(a => a.project_id === projectId);
         }
@@ -819,8 +858,17 @@ export const handlers = [
     http.get('/api/recycle-bin', ({ request }) => {
         const url = new URL(request.url);
         const type = url.searchParams.get('entity_type');
+        const role = request.headers.get('x-user-role') || 'EMPLOYEE';
+        const userId = request.headers.get('x-user-id');
 
         let filtered = [...mockRecycleBin];
+
+        // BA Rule: Ownership Policy (docs/EMP/thung-rac.md)
+        // EMP only sees items they deleted themselves.
+        if (role === 'EMPLOYEE') {
+            filtered = filtered.filter(item => item.deleted_by.id === userId);
+        }
+
         if (type && type !== 'ALL') {
             filtered = filtered.filter(item => item.entity_type === type);
         }
@@ -835,11 +883,19 @@ export const handlers = [
         return HttpResponse.json({ success: true });
     }),
 
-    http.delete('/api/recycle-bin/empty', () => {
+    http.delete('/api/recycle-bin/empty', ({ request }) => {
+        const role = request.headers.get('x-user-role') || 'EMPLOYEE';
+        if (role === 'EMPLOYEE') {
+            return HttpResponse.json({ success: false, message: 'Nhân viên không có quyền xóa vĩnh viễn' }, { status: 403 });
+        }
         return HttpResponse.json({ success: true });
     }),
 
-    http.delete('/api/recycle-bin/:id', () => {
+    http.delete('/api/recycle-bin/:id', ({ request }) => {
+        const role = request.headers.get('x-user-role') || 'EMPLOYEE';
+        if (role === 'EMPLOYEE') {
+            return HttpResponse.json({ success: false, message: 'Nhân viên không có quyền xóa vĩnh viễn' }, { status: 403 });
+        }
         return HttpResponse.json({ success: true });
     }),
 

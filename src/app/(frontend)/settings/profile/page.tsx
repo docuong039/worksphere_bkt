@@ -221,8 +221,10 @@ export default function SettingsProfilePage() {
 
     const tabs = [
         { id: 'profile' as TabType, label: 'Hồ sơ', icon: User },
-        { id: 'security' as TabType, label: 'Bảo mật', icon: Lock },
-        { id: 'notifications' as TabType, label: 'Thông báo', icon: Bell },
+        ...(user?.role !== 'EMPLOYEE' ? [
+            { id: 'security' as TabType, label: 'Bảo mật', icon: Lock },
+            { id: 'notifications' as TabType, label: 'Thông báo', icon: Bell }
+        ] : []),
     ];
 
     return (
@@ -319,7 +321,11 @@ export default function SettingsProfilePage() {
                                             className="bg-slate-50"
                                             data-testid="input-email"
                                         />
-                                        <p className="text-xs text-slate-400">Email không thể thay đổi</p>
+                                        <p className="text-xs text-slate-400">
+                                            {user?.role === 'EMPLOYEE'
+                                                ? "Email và mật khẩu không thể thay đổi tại đây. Vui lòng sử dụng tính năng 'Quên mật khẩu' để đặt lại mật khẩu."
+                                                : "Email không thể thay đổi"}
+                                        </p>
                                     </div>
 
                                     {/* Phone */}

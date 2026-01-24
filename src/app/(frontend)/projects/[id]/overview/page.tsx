@@ -23,6 +23,9 @@ import {
   Github,
   Table as TableIcon,
   Globe,
+  History,
+  Recycle,
+  LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -426,6 +429,70 @@ export default function ProjectOverviewPage({
             value="overview"
             className="space-y-10 animate-in fade-in slide-in-from-top-2 duration-500"
           >
+            {/* Governance & Management Card (PM Only) */}
+            {isPM && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                <Card className="border-none shadow-sm bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden relative">
+                  <div className="absolute top-0 right-0 p-8 text-white/5 pointer-events-none">
+                    <History size={120} />
+                  </div>
+                  <CardHeader>
+                    <CardTitle className="text-xl font-black flex items-center gap-3">
+                      <History className="text-blue-400" />
+                      Quản trị & Nhật ký
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 relative z-10">
+                    <p className="text-sm text-slate-400 font-medium">Theo dõi lịch sử thay đổi và quản lý các mục bị xóa trong dự án này.</p>
+                    <div className="flex gap-3 pt-2">
+                      <Button variant="secondary" className="font-bold bg-white/10 hover:bg-white/20 border-none text-white rounded-xl h-10 px-4" asChild>
+                        <Link href={`/projects/${id}/activity`}>
+                          Xem Nhật ký
+                        </Link>
+                      </Button>
+                      <Button variant="secondary" className="font-bold bg-white/10 hover:bg-white/20 border-none text-white rounded-xl h-10 px-4" asChild>
+                        <Link href={`/projects/${id}/settings/recycle-bin`}>
+                          Thùng rác
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-sm bg-gradient-to-br from-indigo-900 to-blue-900 text-white overflow-hidden relative">
+                  <div className="absolute top-0 right-0 p-8 text-white/5 pointer-events-none">
+                    <Settings size={120} />
+                  </div>
+                  <CardHeader>
+                    <CardTitle className="text-xl font-black flex items-center gap-3">
+                      <Settings className="text-blue-300" />
+                      Cấu hình Dự án
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 relative z-10">
+                    <p className="text-sm text-slate-300 font-medium">Thiết lập Custom Fields, quyền chỉnh sửa trường và thông báo.</p>
+                    <div className="flex flex-wrap gap-3 pt-2">
+                      <Button variant="secondary" className="font-bold bg-white/10 hover:bg-white/20 border-none text-white rounded-xl h-10 px-4" asChild>
+                        <Link href={`/projects/${id}/settings/custom-fields`}>
+                          Custom Fields
+                        </Link>
+                      </Button>
+                      <Button variant="secondary" className="font-bold bg-white/10 hover:bg-white/20 border-none text-white rounded-xl h-10 px-4" asChild>
+                        <Link href={`/projects/${id}/settings/notifications`}>
+                          Thông báo
+                        </Link>
+                      </Button>
+                      <Button variant="secondary" className="font-bold bg-white/10 hover:bg-white/20 border-none text-white rounded-xl h-10 px-4" asChild>
+                        <Link href={`/projects/${id}/settings/tags`}>
+                          Gắn thẻ (Tags)
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             {/* Summary Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatCard

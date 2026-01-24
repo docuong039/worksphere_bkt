@@ -473,22 +473,22 @@ export default function DashboardPage() {
                                 <p className="text-slate-400 text-sm mb-6">Truy cập nhanh các hành động quan trọng.</p>
                                 <div className="space-y-4">
                                     {hasPermission(PERMISSIONS.REPORT_READ) && (
-                                        <Button className="w-full justify-start bg-indigo-600 hover:bg-indigo-500 text-white border-0 h-11" onClick={() => (window.location.href = '/reports')}>
+                                        <Button className="w-full justify-start bg-indigo-600 hover:bg-indigo-500 text-white border-0 h-11" onClick={() => (window.location.href = '/reports')} data-testid="quick-btn-reports">
                                             <BarChart3 className="mr-2 h-4 w-4" /> Xem báo cáo chiến lược
                                         </Button>
                                     )}
                                     {hasPermission(PERMISSIONS.ORG_USER_CREATE) && (
-                                        <Button className="w-full justify-start bg-blue-600 hover:bg-blue-500 text-white border-0 h-11" onClick={() => (window.location.href = '/admin/users')}>
+                                        <Button className="w-full justify-start bg-blue-600 hover:bg-blue-500 text-white border-0 h-11" onClick={() => (window.location.href = '/admin/users')} data-testid="quick-btn-invite">
                                             <Plus className="mr-2 h-4 w-4" /> Mời thành viên mới
                                         </Button>
                                     )}
                                     {hasPermission(PERMISSIONS.ROLE_PERM_UPDATE) && (
-                                        <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10 border-0 h-11" onClick={() => (window.location.href = '/admin/roles')}>
+                                        <Button variant="ghost" className="w-full justify-start text-white hover:bg-white/10 border-0 h-11" onClick={() => (window.location.href = '/admin/roles')} data-testid="quick-btn-roles">
                                             <Shield className="mr-2 h-4 w-4" /> Quản trị phân quyền
                                         </Button>
                                     )}
                                     {hasPermission(PERMISSIONS.TIME_LOG_LOG) && (
-                                        <Button className="w-full justify-start bg-blue-600 hover:bg-blue-500 text-white border-0 h-11" onClick={() => (window.location.href = '/tasks')}>
+                                        <Button className="w-full justify-start bg-blue-600 hover:bg-blue-500 text-white border-0 h-11" onClick={() => (window.location.href = '/tasks')} data-testid="quick-btn-timelog">
                                             <Clock className="mr-2 h-4 w-4" /> Ghi nhận giờ làm
                                         </Button>
                                     )}

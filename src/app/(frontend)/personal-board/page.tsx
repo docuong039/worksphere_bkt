@@ -566,7 +566,7 @@ export default function PersonalBoardPage() {
                                         type="date"
                                         value={dueDate}
                                         onChange={(e) => setDueDate(e.target.value)}
-                                        data-testid="input-due-date"
+                                        data-testid="personal-board-input-due-date"
                                     />
                                 </div>
                             </div>

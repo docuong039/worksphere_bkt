@@ -51,6 +51,9 @@ import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
+
 interface ActivityEvent {
     id: string;
     actor: { id: string; full_name: string };
@@ -76,6 +79,7 @@ const ACTIVITY_TYPES = {
     LOG_TIME: { label: 'Log time', icon: Clock, color: 'text-amber-600 bg-amber-50' },
     COMMENT: { label: 'Bình luận', icon: MessageSquare, color: 'text-purple-600 bg-purple-50' },
     REPORT_SUBMITTED: { label: 'Gửi báo cáo', icon: BarChart3, color: 'text-indigo-600 bg-indigo-50' },
+    TASK_UPDATE: { label: 'Cập nhật task', icon: FileText, color: 'text-slate-600 bg-slate-50' },
 };
 
 // Activity Item Component
@@ -294,47 +298,47 @@ export default function ActivityPage() {
 
     return (
         <AppLayout>
-            <div className="space-y-6 animate-in fade-in duration-700" data-testid="activity-page-container">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="activity-page-title">
-                            📰 Nhật ký hoạt động
-                        </h1>
-                        <p className="text-slate-500 mt-1 font-medium">
-                            {user?.role === 'EMPLOYEE'
-                                ? 'Theo dõi lịch sử hoạt động của bạn.'
-                                : 'Theo dõi hoạt động của team và dự án.'}
-                        </p>
+            <PermissionGuard permission={PERMISSIONS.ACTIVITY_READ} showFullPageError>
+                <div className="space-y-6 animate-in fade-in duration-700" data-testid="activity-page-container">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="activity-page-title">
+                                📰 Nhật ký hoạt động
+                            </h1>
+                            <p className="text-slate-500 mt-1 font-medium">
+                                {user?.role === 'EMPLOYEE'
+                                    ? 'Theo dõi lịch sử hoạt động của bạn.'
+                                    : 'Theo dõi hoạt động của team và dự án.'}
+                            </p>
+                        </div>
                     </div>
-                </div>
 
-                {/* Filters */}
-                <Card className="border-none shadow-sm" data-testid="activity-filters">
-                    <CardContent className="p-4">
-                        <div className="flex flex-wrap items-center gap-4">
-                            {/* Date Range */}
-                            <div className="flex items-center gap-2">
-                                <Calendar size={16} className="text-slate-400" />
-                                <Input
-                                    type="date"
-                                    value={dateFrom}
-                                    onChange={(e) => setDateFrom(e.target.value)}
-                                    className="w-36"
-                                    data-testid="input-date-from"
-                                />
-                                <span className="text-slate-400">→</span>
-                                <Input
-                                    type="date"
-                                    value={dateTo}
-                                    onChange={(e) => setDateTo(e.target.value)}
-                                    className="w-36"
-                                    data-testid="input-date-to"
-                                />
-                            </div>
+                    {/* Filters */}
+                    <Card className="border-none shadow-sm" data-testid="activity-filters">
+                        <CardContent className="p-4">
+                            <div className="flex flex-wrap items-center gap-4">
+                                {/* Date Range */}
+                                <div className="flex items-center gap-2">
+                                    <Calendar size={16} className="text-slate-400" />
+                                    <Input
+                                        type="date"
+                                        value={dateFrom}
+                                        onChange={(e) => setDateFrom(e.target.value)}
+                                        className="w-36"
+                                        data-testid="input-date-from"
+                                    />
+                                    <span className="text-slate-400">→</span>
+                                    <Input
+                                        type="date"
+                                        value={dateTo}
+                                        onChange={(e) => setDateTo(e.target.value)}
+                                        className="w-36"
+                                        data-testid="input-date-to"
+                                    />
+                                </div>
 
-                            {/* Project Filter */}
-                            {canFilterByUser && (
+                                {/* Project Filter */}
                                 <Select value={selectedProject} onValueChange={setSelectedProject}>
                                     <SelectTrigger className="w-[180px]" data-testid="filter-project">
                                         <SelectValue placeholder="Tất cả dự án" />
@@ -348,82 +352,82 @@ export default function ActivityPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
-                            )}
 
-                            {/* Actor Filter */}
-                            {canFilterByUser && (
-                                <Select value={selectedActor} onValueChange={setSelectedActor}>
-                                    <SelectTrigger className="w-[180px]" data-testid="filter-actor">
-                                        <SelectValue placeholder="Tất cả nhân sự" />
+                                {/* Actor Filter */}
+                                {canFilterByUser && (
+                                    <Select value={selectedActor} onValueChange={setSelectedActor}>
+                                        <SelectTrigger className="w-[180px]" data-testid="filter-actor">
+                                            <SelectValue placeholder="Tất cả nhân sự" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">Tất cả nhân sự</SelectItem>
+                                            {users.map((u) => (
+                                                <SelectItem key={u.id} value={u.id}>
+                                                    {u.full_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+
+                                {/* Activity Type Filter */}
+                                <Select value={selectedType} onValueChange={setSelectedType}>
+                                    <SelectTrigger className="w-[180px]" data-testid="activity-filter-type">
+                                        <SelectValue placeholder="Tất cả loại" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="ALL">Tất cả nhân sự</SelectItem>
-                                        {users.map((u) => (
-                                            <SelectItem key={u.id} value={u.id}>
-                                                {u.full_name}
+                                        <SelectItem value="ALL">Tất cả loại</SelectItem>
+                                        {Object.entries(ACTIVITY_TYPES).map(([code, config]) => (
+                                            <SelectItem key={code} value={code}>
+                                                {config.label}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                            )}
+                            </div>
+                        </CardContent>
+                    </Card >
 
-                            {/* Activity Type Filter */}
-                            <Select value={selectedType} onValueChange={setSelectedType}>
-                                <SelectTrigger className="w-[180px]" data-testid="activity-filter-type">
-                                    <SelectValue placeholder="Tất cả loại" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả loại</SelectItem>
-                                    {Object.entries(ACTIVITY_TYPES).map(([code, config]) => (
-                                        <SelectItem key={code} value={code}>
-                                            {config.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </CardContent>
-                </Card >
-
-                {/* Activity List */}
-                {
-                    loading ? (
-                        <div className="space-y-6" data-testid="activity-loading">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="space-y-3">
-                                    <Skeleton className="h-4 w-48 mx-auto" />
-                                    <div className="space-y-2">
-                                        <Skeleton className="h-20 w-full" />
-                                        <Skeleton className="h-20 w-full" />
+                    {/* Activity List */}
+                    {
+                        loading ? (
+                            <div className="space-y-6" data-testid="activity-loading">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="space-y-3">
+                                        <Skeleton className="h-4 w-48 mx-auto" />
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-20 w-full" />
+                                            <Skeleton className="h-20 w-full" />
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : Object.keys(activitiesByDate).length > 0 ? (
-                        <div className="space-y-8" data-testid="activity-list">
-                            {Object.entries(activitiesByDate)
-                                .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-                                .map(([date, events]) => (
-                                    <DateSection key={date} date={date} events={events} />
                                 ))}
-                        </div>
-                    ) : (
-                        <Card className="border-none shadow-sm" data-testid="activity-empty">
-                            <CardContent className="py-16 text-center">
-                                <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4 text-4xl">
-                                    📭
-                                </div>
-                                <h3 className="text-xl font-bold text-slate-900 mb-2">
-                                    Không có hoạt động nào
-                                </h3>
-                                <p className="text-slate-500">
-                                    Trong khoảng thời gian đã chọn
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )
-                }
-            </div >
-        </AppLayout >
+                            </div>
+                        ) : Object.keys(activitiesByDate).length > 0 ? (
+                            <div className="space-y-8" data-testid="activity-list">
+                                {Object.entries(activitiesByDate)
+                                    .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                                    .map(([date, events]) => (
+                                        <DateSection key={date} date={date} events={events} />
+                                    ))}
+                            </div>
+                        ) : (
+                            <Card className="border-none shadow-sm" data-testid="activity-empty">
+                                <CardContent className="py-16 text-center">
+                                    <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4 text-4xl">
+                                        📭
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-900 mb-2">
+                                        Không có hoạt động nào
+                                    </h3>
+                                    <p className="text-slate-500">
+                                        Trong khoảng thời gian đã chọn
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )
+                    }
+                </div>
+            </PermissionGuard>
+        </AppLayout>
     );
 }

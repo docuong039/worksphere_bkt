@@ -78,14 +78,19 @@ export default function Navbar() {
                             <Button variant="ghost" size="icon" className="text-slate-500" data-testid="navbar-notifications-btn">
                                 <Bell size={20} />
                                 {unreadCount > 0 && (
-                                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                                    <span
+                                        className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"
+                                        data-testid="navbar-unread-dot"
+                                    ></span>
                                 )}
                             </Button>
                         </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-80 p-0" data-testid="notifications-dropdown">
                         <DropdownMenuLabel className="p-4 border-b border-slate-100 flex items-center justify-between">
-                            <span className="font-black text-slate-900">Thông báo {unreadCount > 0 && `(${unreadCount})`}</span>
+                            <span className="font-black text-slate-900" data-testid="notification-header-text">
+                                Thông báo {unreadCount > 0 && <span data-testid="notification-unread-count">({unreadCount})</span>}
+                            </span>
                             <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold text-blue-600 uppercase tracking-widest px-2" onClick={() => setNotifications(n => n.map(x => ({ ...x, is_read: true })))}>
                                 Đánh dấu tất cả
                             </Button>
@@ -105,6 +110,7 @@ export default function Navbar() {
                                             !notif.is_read && "bg-blue-50/30"
                                         )}
                                         onClick={() => markAsRead(notif.id)}
+                                        data-testid={`notification-item-${notif.id}`}
                                     >
                                         <div className={cn(
                                             "h-10 w-10 shrink-0 rounded-full flex items-center justify-center font-bold text-xs uppercase",
