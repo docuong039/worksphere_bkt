@@ -51,8 +51,12 @@ export const useAuthStore = create<AuthState>()(
                 // SYS_ADMIN has all permissions
                 if (user.role === 'SYS_ADMIN') return true;
 
-                const permissions = user.permissions || ROLE_PERMISSIONS[user.role] || [];
-                return permissions.includes(permission);
+                // Merge permissions from user object (if any) and current role presets
+                const basePermissions = ROLE_PERMISSIONS[user.role] || [];
+                const userPermissions = user.permissions || [];
+                const allPermissions = Array.from(new Set([...basePermissions, ...userPermissions]));
+
+                return allPermissions.includes(permission as any);
             }
         }),
         {

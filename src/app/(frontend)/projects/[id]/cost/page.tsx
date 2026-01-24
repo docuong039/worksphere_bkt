@@ -112,195 +112,180 @@ export default function ProjectCostPage({ params }: { params: Promise<{ id: stri
 
     if (!canViewCost) {
         return (
-            <AppLayout>
-                <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4" data-testid="access-denied">
-                    <div className="bg-red-50 p-4 rounded-full">
-                        <DollarSign className="h-12 w-12 text-red-500" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-slate-900">Truy cập bị từ chối</h2>
-                    <p className="text-slate-500 max-w-md text-center">
-                        Bạn không có quyền xem thông tin chi phí của dự án này. Vui lòng liên hệ quản trị viên nếu bạn tin rằng đây là một sai sót.
-                    </p>
-                    <Button asChild variant="outline">
-                        <Link href={`/projects/${projectId}/overview`}>Quay lại dự án</Link>
-                    </Button>
+            <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4" data-testid="access-denied">
+                <div className="bg-red-50 p-4 rounded-full">
+                    <DollarSign className="h-12 w-12 text-red-500" />
                 </div>
-            </AppLayout>
+                <h2 className="text-2xl font-bold text-slate-900">Truy cập bị từ chối</h2>
+                <p className="text-slate-500 max-w-md text-center">
+                    Bạn không có quyền xem thông tin chi phí của dự án này. Vui lòng liên hệ quản trị viên nếu bạn tin rằng đây là một sai sót.
+                </p>
+                <Button asChild variant="outline">
+                    <Link href={`/projects/${projectId}/overview`}>Quay lại dự án</Link>
+                </Button>
+            </div>
         );
     }
 
     return (
-        <AppLayout>
-            <div className="space-y-6 animate-in fade-in duration-700" data-testid="project-cost-page">
-                {/* Header */}
+        <div className="space-y-6 animate-in fade-in duration-700 pb-10" data-testid="project-cost-page">
+            {/* Header - now using shared layout */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <Button variant="ghost" asChild className="-ml-4 mb-4 text-slate-500">
-                        <Link href={`/projects/${projectId}/overview`}>
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Quay lại dự án
-                        </Link>
+                    <h2 className="text-xl font-black tracking-tight text-slate-800" data-testid="project-cost-page-title">
+                        <DollarSign className="inline-block mr-2 h-5 w-5 text-emerald-600" />
+                        Theo dõi Chi phí
+                    </h2>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Select value={timeRange} onValueChange={setTimeRange}>
+                        <SelectTrigger className="w-[140px] h-9" data-testid="project-cost-select-time-range">
+                            <SelectValue placeholder="Thời gian" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="week">Tuần này</SelectItem>
+                            <SelectItem value="month">Tháng này</SelectItem>
+                            <SelectItem value="quarter">Quý này</SelectItem>
+                            <SelectItem value="year">Năm nay</SelectItem>
+                            <SelectItem value="all">Toàn bộ</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="sm" onClick={fetchData} data-testid="project-cost-btn-refresh" className="h-9">
+                        <RefreshCw className="h-4 w-4" />
                     </Button>
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="project-cost-page-title">
-                                <DollarSign className="inline-block mr-3 h-8 w-8 text-emerald-600" />
-                                Chi phí Dự án
-                            </h1>
-                            <p className="text-slate-500 mt-1 font-medium">
-                                Phân tích chi phí nhân sự theo dự án (US-CEO-02-02)
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <Select value={timeRange} onValueChange={setTimeRange}>
-                                <SelectTrigger className="w-[140px]" data-testid="project-cost-select-time-range">
-                                    <SelectValue placeholder="Thời gian" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="week">Tuần này</SelectItem>
-                                    <SelectItem value="month">Tháng này</SelectItem>
-                                    <SelectItem value="quarter">Quý này</SelectItem>
-                                    <SelectItem value="year">Năm nay</SelectItem>
-                                    <SelectItem value="all">Toàn bộ</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Button variant="outline" onClick={fetchData} data-testid="project-cost-btn-refresh">
-                                <RefreshCw className="h-4 w-4" />
-                            </Button>
-                        </div>
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="space-y-4" data-testid="project-cost-loading-skeleton">
+                    <Skeleton className="h-32 w-full" />
+                    <div className="grid grid-cols-3 gap-4">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
                     </div>
                 </div>
-
-                {loading ? (
-                    <div className="space-y-4" data-testid="project-cost-loading-skeleton">
-                        <Skeleton className="h-32 w-full" />
-                        <div className="grid grid-cols-3 gap-4">
-                            <Skeleton className="h-24 w-full" />
-                            <Skeleton className="h-24 w-full" />
-                            <Skeleton className="h-24 w-full" />
-                        </div>
-                    </div>
-                ) : stats && (
-                    <>
-                        {/* Main Stats */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Card className="border-none shadow-sm bg-gradient-to-br from-emerald-50 to-teal-50 md:col-span-1" data-testid="stat-total-cost">
-                                <CardContent className="p-6">
-                                    <div className="flex items-center justify-between">
-                                        <div className="h-14 w-14 rounded-xl bg-emerald-100 flex items-center justify-center">
-                                            <DollarSign className="h-7 w-7 text-emerald-600" />
-                                        </div>
-                                        <Badge className={stats.cost_trend >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}>
-                                            {stats.cost_trend >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-                                            {Math.abs(stats.cost_trend)}%
-                                        </Badge>
-                                    </div>
-                                    <div className="mt-4">
-                                        <p className="text-sm text-slate-500 font-medium">Tổng chi phí</p>
-                                        <p className="text-3xl font-bold text-slate-900">{formatCurrency(stats.total_cost)}</p>
-                                        <p className="text-sm text-slate-400 mt-1">từ {stats.total_hours} giờ làm việc</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border-none shadow-sm" data-testid="stat-budget">
-                                <CardContent className="p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                                            <PieChart className="h-6 w-6 text-blue-600" />
-                                        </div>
-                                        <span className="text-2xl font-bold text-blue-600">{stats.budget_used_percent.toFixed(0)}%</span>
-                                    </div>
-                                    <p className="text-sm text-slate-500 font-medium">Ngân sách đã dùng</p>
-                                    <div className="mt-2 h-3 bg-slate-200 rounded-full overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full ${stats.budget_used_percent > 90 ? 'bg-red-500' : stats.budget_used_percent > 70 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                            style={{ width: `${stats.budget_used_percent}%` }}
-                                        />
-                                    </div>
-                                    <p className="text-xs text-slate-400 mt-2">
-                                        {formatCurrency(stats.total_cost)} / {formatCurrency(stats.budget)}
-                                    </p>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border-none shadow-sm" data-testid="stat-team">
-                                <CardContent className="p-6">
-                                    <div className="grid grid-cols-2 gap-4 h-full">
-                                        <div>
-                                            <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center mb-2">
-                                                <Users className="h-5 w-5 text-purple-600" />
-                                            </div>
-                                            <p className="text-xs text-slate-500">Thành viên</p>
-                                            <p className="text-xl font-bold">{stats.team_size}</p>
-                                        </div>
-                                        <div>
-                                            <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center mb-2">
-                                                <Clock className="h-5 w-5 text-amber-600" />
-                                            </div>
-                                            <p className="text-xs text-slate-500">Hourly Rate TB</p>
-                                            <p className="text-xl font-bold">{formatCurrency(stats.avg_hourly_rate)}</p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Member Costs */}
-                        <Card className="border-none shadow-sm" data-testid="member-costs-card">
-                            <CardHeader className="border-b border-slate-100">
-                                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                                    <BarChart3 className="h-5 w-5 text-blue-600" />
-                                    Chi phí theo thành viên
-                                </CardTitle>
-                                <CardDescription>Phân bổ chi phí nhân sự trong dự án</CardDescription>
-                            </CardHeader>
+            ) : stats && (
+                <>
+                    {/* Main Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card className="border-none shadow-sm bg-gradient-to-br from-emerald-50 to-teal-50 md:col-span-1" data-testid="stat-total-cost">
                             <CardContent className="p-6">
-                                <div className="space-y-4" data-testid="member-costs-list">
-                                    {memberCosts.map((member, index) => (
-                                        <div
-                                            key={member.user_id}
-                                            className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-xl hover:bg-slate-100/50 transition-colors"
-                                            data-testid={`member-cost-${member.user_id}`}
-                                        >
-                                            <div className="w-8 text-center">
-                                                <span className={`text-lg font-bold ${index < 3 ? 'text-amber-500' : 'text-slate-400'}`}>
-                                                    #{index + 1}
-                                                </span>
-                                            </div>
-                                            <Avatar className="h-10 w-10">
-                                                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-bold text-sm">
-                                                    {member.user_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-slate-900">{member.user_name}</p>
-                                                <p className="text-xs text-slate-500">{member.position}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-sm text-slate-500">{member.hours_logged}h × {formatCurrency(member.hourly_rate)}</p>
-                                            </div>
-                                            <div className="w-32">
-                                                <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
-                                                        style={{ width: `${member.cost_percent}%` }}
-                                                    />
-                                                </div>
-                                                <p className="text-xs text-slate-400 mt-1 text-right">{member.cost_percent.toFixed(1)}%</p>
-                                            </div>
-                                            <div className="w-28 text-right">
-                                                <p className="font-bold text-emerald-600" data-testid={`member-cost-value-${member.user_id}`}>
-                                                    {formatCurrency(member.total_cost)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="flex items-center justify-between">
+                                    <div className="h-14 w-14 rounded-xl bg-emerald-100 flex items-center justify-center">
+                                        <DollarSign className="h-7 w-7 text-emerald-600" />
+                                    </div>
+                                    <Badge className={stats.cost_trend >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}>
+                                        {stats.cost_trend >= 0 ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                                        {Math.abs(stats.cost_trend)}%
+                                    </Badge>
+                                </div>
+                                <div className="mt-4">
+                                    <p className="text-sm text-slate-500 font-medium">Tổng chi phí</p>
+                                    <p className="text-3xl font-bold text-slate-900">{formatCurrency(stats.total_cost)}</p>
+                                    <p className="text-sm text-slate-400 mt-1">từ {stats.total_hours} giờ làm việc</p>
                                 </div>
                             </CardContent>
                         </Card>
-                    </>
-                )}
-            </div>
-        </AppLayout>
+
+                        <Card className="border-none shadow-sm" data-testid="stat-budget">
+                            <CardContent className="p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                                        <PieChart className="h-6 w-6 text-blue-600" />
+                                    </div>
+                                    <span className="text-2xl font-bold text-blue-600">{stats.budget_used_percent.toFixed(0)}%</span>
+                                </div>
+                                <p className="text-sm text-slate-500 font-medium">Ngân sách đã dùng</p>
+                                <div className="mt-2 h-3 bg-slate-200 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full ${stats.budget_used_percent > 90 ? 'bg-red-500' : stats.budget_used_percent > 70 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                        style={{ width: `${stats.budget_used_percent}%` }}
+                                    />
+                                </div>
+                                <p className="text-xs text-slate-400 mt-2">
+                                    {formatCurrency(stats.total_cost)} / {formatCurrency(stats.budget)}
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-none shadow-sm" data-testid="stat-team">
+                            <CardContent className="p-6">
+                                <div className="grid grid-cols-2 gap-4 h-full">
+                                    <div>
+                                        <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center mb-2">
+                                            <Users className="h-5 w-5 text-purple-600" />
+                                        </div>
+                                        <p className="text-xs text-slate-500">Thành viên</p>
+                                        <p className="text-xl font-bold">{stats.team_size}</p>
+                                    </div>
+                                    <div>
+                                        <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center mb-2">
+                                            <Clock className="h-5 w-5 text-amber-600" />
+                                        </div>
+                                        <p className="text-xs text-slate-500">Hourly Rate TB</p>
+                                        <p className="text-xl font-bold">{formatCurrency(stats.avg_hourly_rate)}</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Member Costs */}
+                    <Card className="border-none shadow-sm" data-testid="member-costs-card">
+                        <CardHeader className="border-b border-slate-100">
+                            <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                <BarChart3 className="h-5 w-5 text-blue-600" />
+                                Chi phí theo thành viên
+                            </CardTitle>
+                            <CardDescription>Phân bổ chi phí nhân sự trong dự án</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <div className="space-y-4" data-testid="member-costs-list">
+                                {memberCosts.map((member, index) => (
+                                    <div
+                                        key={member.user_id}
+                                        className="flex items-center gap-4 p-4 bg-slate-50/50 rounded-xl hover:bg-slate-100/50 transition-colors"
+                                        data-testid={`member-cost-${member.user_id}`}
+                                    >
+                                        <div className="w-8 text-center">
+                                            <span className={`text-lg font-bold ${index < 3 ? 'text-amber-500' : 'text-slate-400'}`}>
+                                                #{index + 1}
+                                            </span>
+                                        </div>
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-bold text-sm">
+                                                {member.user_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-slate-900">{member.user_name}</p>
+                                            <p className="text-xs text-slate-500">{member.position}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm text-slate-500">{member.hours_logged}h × {formatCurrency(member.hourly_rate)}</p>
+                                        </div>
+                                        <div className="w-32">
+                                            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+                                                    style={{ width: `${member.cost_percent}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-xs text-slate-400 mt-1 text-right">{member.cost_percent.toFixed(1)}%</p>
+                                        </div>
+                                        <div className="w-28 text-right">
+                                            <p className="font-bold text-emerald-600" data-testid={`member-cost-value-${member.user_id}`}>
+                                                {formatCurrency(member.total_cost)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </>
+            )}
+        </div>
     );
 }

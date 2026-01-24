@@ -182,35 +182,27 @@ const RecycleBinItemCard = ({
                             variant="outline"
                             size="sm"
                             onClick={onRestore}
-                            disabled={item.is_locked}
-                            className={cn(
-                                "text-blue-600 hover:text-blue-700 hover:bg-blue-50",
-                                item.is_locked && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200"
-                            )}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             data-testid={`btn-restore-${item.id}`}
                         >
-                            {item.is_locked ? (
-                                <>
-                                    <RotateCcw size={14} className="mr-1" />
-                                    Đã bị khóa
-                                </>
-                            ) : (
-                                <>
-                                    <RotateCcw size={14} className="mr-1" />
-                                    Khôi phục
-                                </>
-                            )}
+                            <RotateCcw size={14} className="mr-1" />
+                            Khôi phục
                         </Button>
                         {canDestroy && (
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={onDelete}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                disabled={item.is_locked}
+                                className={cn(
+                                    "text-red-600 hover:text-red-700 hover:bg-red-50",
+                                    item.is_locked && "opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200"
+                                )}
+                                title={item.is_locked ? "Không thể xóa mục này vì đã có dữ liệu ràng buộc (Time Log)" : "Xóa vĩnh viễn"}
                                 data-testid={`btn-delete-${item.id}`}
                             >
                                 <Trash2 size={14} className="mr-1" />
-                                Xóa
+                                {item.is_locked ? "Bị khóa" : "Xóa"}
                             </Button>
                         )}
                     </div>

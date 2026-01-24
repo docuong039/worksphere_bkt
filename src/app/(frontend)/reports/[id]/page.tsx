@@ -197,7 +197,7 @@ export default function ReportDetailPage() {
         );
     }
 
-    const canReact = user?.role === 'CEO' || user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN';
+    const canReact = user?.role === 'CEO' || user?.role === 'ORG_ADMIN';
 
     return (
         <AppLayout>
@@ -353,9 +353,9 @@ export default function ReportDetailPage() {
                                     <Avatar className="h-10 w-10 shrink-0">
                                         <AvatarFallback className={cn(
                                             "font-bold",
-                                            comment.user.role === 'CEO' ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
+                                            comment.user?.role === 'CEO' ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
                                         )}>
-                                            {comment.user.full_name?.charAt(0)}
+                                            {comment.user?.full_name?.charAt(0) || 'U'}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1">
@@ -363,12 +363,12 @@ export default function ReportDetailPage() {
                                             <div className="flex items-center justify-between mb-1.5">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-bold text-sm text-slate-900" data-testid={`comment-author-${comment.id}`}>
-                                                        {comment.user.full_name}
+                                                        {comment.user?.full_name || 'Người dùng hệ thống'}
                                                     </span>
-                                                    {comment.user.role === 'CEO' && (
+                                                    {comment.user?.role === 'CEO' && (
                                                         <Badge className="bg-amber-100 text-amber-700 text-[10px] py-0 px-1.5 border-none">CEO</Badge>
                                                     )}
-                                                    {comment.user.role === 'PROJECT_MANAGER' && (
+                                                    {comment.user?.role === 'PROJECT_MANAGER' && (
                                                         <Badge className="bg-blue-100 text-blue-700 text-[10px] py-0 px-1.5 border-none">PM</Badge>
                                                     )}
                                                 </div>

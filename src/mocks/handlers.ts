@@ -863,10 +863,13 @@ export const handlers = [
 
         let filtered = [...mockRecycleBin];
 
-        // BA Rule: Ownership Policy (docs/EMP/thung-rac.md)
-        // EMP only sees items they deleted themselves.
+        // Scoping Logic
         if (role === 'EMPLOYEE') {
+            // EMP only sees items they deleted themselves (docs/EMP/thung-rac.md)
             filtered = filtered.filter(item => item.deleted_by.id === userId);
+        } else if (role === 'PROJECT_MANAGER') {
+            // PM only see items within their projects (docs/PM/thung-rac.md)
+            filtered = filtered.filter(item => item.project !== null);
         }
 
         if (type && type !== 'ALL') {
@@ -979,10 +982,20 @@ export const handlers = [
                     { code: 'LIKE', count: 2 },
                     { code: 'CLAP', count: 1 }
                 ],
-                comments: comments.map(c => ({
-                    ...c,
-                    author: mockUsers.find(u => u.id === c.author_user_id)
-                }))
+                comments: comments.map(c => {
+                    const author = mockUsers.find(u => u.id === c.author_user_id);
+                    const roleEntry = mockUserRoles.find(r => r.user_id === c.author_user_id);
+                    return {
+                        id: c.id,
+                        content: (c as any).comment_text || (c as any).content,
+                        created_at: c.created_at,
+                        user: author ? {
+                            id: author.id,
+                            full_name: author.full_name,
+                            role: roleEntry?.role_code || 'EMPLOYEE'
+                        } : null
+                    };
+                })
             }
         });
     }),

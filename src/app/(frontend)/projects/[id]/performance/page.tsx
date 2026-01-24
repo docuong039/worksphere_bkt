@@ -116,187 +116,174 @@ export default function PerformancePage({ params }: { params: Promise<{ id: stri
     };
 
     return (
-        <AppLayout>
-            <div className="space-y-6 animate-in fade-in duration-700" data-testid="performance-page">
-                {/* Header */}
+        <div className="space-y-6 animate-in fade-in duration-700 pb-10" data-testid="performance-page">
+            {/* Header - now using shared layout */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <Button variant="ghost" asChild className="-ml-4 mb-4 text-slate-500">
-                        <Link href={`/projects/${projectId}/overview`}>
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Quay lại {projectName}
-                        </Link>
-                    </Button>
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="project-performance-page-title">
-                                <BarChart3 className="inline-block mr-3 h-8 w-8 text-blue-600" />
-                                Hiệu suất Team
-                            </h1>
-                            <p className="text-slate-500 mt-1 font-medium">
-                                Phân tích productivity của team (US-MNG-03-03/04)
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <Select value={timeRange} onValueChange={setTimeRange}>
-                                <SelectTrigger className="w-[140px]" data-testid="project-performance-select-time-range">
-                                    <SelectValue placeholder="Thời gian" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="week">Tuần này</SelectItem>
-                                    <SelectItem value="month">Tháng này</SelectItem>
-                                    <SelectItem value="quarter">Quý này</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Button variant="outline" onClick={fetchData} data-testid="project-performance-btn-refresh">
-                                <RefreshCw className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
+                    <h2 className="text-xl font-black tracking-tight text-slate-800" data-testid="project-performance-page-title">
+                        <BarChart3 className="inline-block mr-2 h-5 w-5 text-blue-600" />
+                        Hiệu suất Team
+                    </h2>
                 </div>
+                <div className="flex items-center gap-3">
+                    <Select value={timeRange} onValueChange={setTimeRange}>
+                        <SelectTrigger className="w-[140px] h-9" data-testid="project-performance-select-time-range">
+                            <SelectValue placeholder="Thời gian" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="week">Tuần này</SelectItem>
+                            <SelectItem value="month">Tháng này</SelectItem>
+                            <SelectItem value="quarter">Quý này</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="sm" onClick={fetchData} data-testid="project-performance-btn-refresh" className="h-9">
+                        <RefreshCw className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
 
-                {loading ? (
-                    <div className="space-y-4" data-testid="project-performance-loading-skeleton">
-                        <Skeleton className="h-32 w-full" />
-                        <Skeleton className="h-96 w-full" />
+            {loading ? (
+                <div className="space-y-4" data-testid="project-performance-loading-skeleton">
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-96 w-full" />
+                </div>
+            ) : summary && (
+                <>
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <Card className="border-none shadow-sm" data-testid="stat-tasks">
+                            <CardContent className="p-4">
+                                <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
+                                    <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <p className="text-xs text-slate-500">Tasks hoàn thành</p>
+                                <p className="text-xl font-bold">{summary.completed_tasks}/{summary.total_tasks}</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-none shadow-sm" data-testid="stat-completion">
+                            <CardContent className="p-4">
+                                <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-2">
+                                    <Target className="h-5 w-5 text-emerald-600" />
+                                </div>
+                                <p className="text-xs text-slate-500">Completion Rate TB</p>
+                                <p className="text-xl font-bold text-emerald-600">{summary.avg_completion_rate}%</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-none shadow-sm" data-testid="stat-ontime">
+                            <CardContent className="p-4">
+                                <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center mb-2">
+                                    <Clock className="h-5 w-5 text-purple-600" />
+                                </div>
+                                <p className="text-xs text-slate-500">On-time Rate TB</p>
+                                <p className="text-xl font-bold text-purple-600">{summary.avg_on_time_rate}%</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-none shadow-sm" data-testid="stat-hours">
+                            <CardContent className="p-4">
+                                <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center mb-2">
+                                    <Calendar className="h-5 w-5 text-amber-600" />
+                                </div>
+                                <p className="text-xs text-slate-500">Tổng giờ</p>
+                                <p className="text-xl font-bold">{summary.total_hours}h</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-none shadow-sm bg-gradient-to-br from-amber-50 to-orange-50" data-testid="stat-top">
+                            <CardContent className="p-4">
+                                <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center mb-2">
+                                    <Award className="h-5 w-5 text-amber-600" />
+                                </div>
+                                <p className="text-xs text-slate-500">Top Performer</p>
+                                <p className="text-sm font-bold truncate">
+                                    {members.find(m => m.user_id === summary.top_performer_id)?.full_name}
+                                </p>
+                            </CardContent>
+                        </Card>
                     </div>
-                ) : summary && (
-                    <>
-                        {/* Summary Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            <Card className="border-none shadow-sm" data-testid="stat-tasks">
-                                <CardContent className="p-4">
-                                    <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
-                                        <CheckCircle2 className="h-5 w-5 text-blue-600" />
-                                    </div>
-                                    <p className="text-xs text-slate-500">Tasks hoàn thành</p>
-                                    <p className="text-xl font-bold">{summary.completed_tasks}/{summary.total_tasks}</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="border-none shadow-sm" data-testid="stat-completion">
-                                <CardContent className="p-4">
-                                    <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-2">
-                                        <Target className="h-5 w-5 text-emerald-600" />
-                                    </div>
-                                    <p className="text-xs text-slate-500">Completion Rate TB</p>
-                                    <p className="text-xl font-bold text-emerald-600">{summary.avg_completion_rate}%</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="border-none shadow-sm" data-testid="stat-ontime">
-                                <CardContent className="p-4">
-                                    <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center mb-2">
-                                        <Clock className="h-5 w-5 text-purple-600" />
-                                    </div>
-                                    <p className="text-xs text-slate-500">On-time Rate TB</p>
-                                    <p className="text-xl font-bold text-purple-600">{summary.avg_on_time_rate}%</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="border-none shadow-sm" data-testid="stat-hours">
-                                <CardContent className="p-4">
-                                    <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center mb-2">
-                                        <Calendar className="h-5 w-5 text-amber-600" />
-                                    </div>
-                                    <p className="text-xs text-slate-500">Tổng giờ</p>
-                                    <p className="text-xl font-bold">{summary.total_hours}h</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="border-none shadow-sm bg-gradient-to-br from-amber-50 to-orange-50" data-testid="stat-top">
-                                <CardContent className="p-4">
-                                    <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center mb-2">
-                                        <Award className="h-5 w-5 text-amber-600" />
-                                    </div>
-                                    <p className="text-xs text-slate-500">Top Performer</p>
-                                    <p className="text-sm font-bold truncate">
-                                        {members.find(m => m.user_id === summary.top_performer_id)?.full_name}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </div>
 
-                        {/* Performance Table */}
-                        <Card className="border-none shadow-sm" data-testid="performance-card">
-                            <CardHeader className="border-b border-slate-100">
-                                <CardTitle className="text-lg font-bold">Bảng xếp hạng</CardTitle>
-                                <CardDescription>Hiệu suất làm việc của từng thành viên</CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-6">
-                                <div className="space-y-4" data-testid="performance-list">
-                                    {members.sort((a, b) => a.rank - b.rank).map(member => (
-                                        <div
-                                            key={member.user_id}
-                                            className={`p-4 rounded-xl border transition-colors ${member.rank <= 3 ? 'bg-gradient-to-r from-amber-50/50 to-transparent border-amber-200' : 'bg-slate-50/50 border-slate-200'}`}
-                                            data-testid={`member-${member.user_id}`}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-center w-12">
-                                                    {getRankBadge(member.rank)}
+                    {/* Performance Table */}
+                    <Card className="border-none shadow-sm" data-testid="performance-card">
+                        <CardHeader className="border-b border-slate-100">
+                            <CardTitle className="text-lg font-bold">Bảng xếp hạng</CardTitle>
+                            <CardDescription>Hiệu suất làm việc của từng thành viên</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <div className="space-y-4" data-testid="performance-list">
+                                {members.sort((a, b) => a.rank - b.rank).map(member => (
+                                    <div
+                                        key={member.user_id}
+                                        className={`p-4 rounded-xl border transition-colors ${member.rank <= 3 ? 'bg-gradient-to-r from-amber-50/50 to-transparent border-amber-200' : 'bg-slate-50/50 border-slate-200'}`}
+                                        data-testid={`member-${member.user_id}`}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-center w-12">
+                                                {getRankBadge(member.rank)}
+                                            </div>
+                                            <Avatar className="h-12 w-12">
+                                                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-bold">
+                                                    {member.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-bold text-slate-900">{member.full_name}</p>
+                                                    {getTrendIcon(member.trend)}
                                                 </div>
-                                                <Avatar className="h-12 w-12">
-                                                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-bold">
-                                                        {member.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="font-bold text-slate-900">{member.full_name}</p>
-                                                        {getTrendIcon(member.trend)}
-                                                    </div>
-                                                    <p className="text-xs text-slate-500">{member.position}</p>
+                                                <p className="text-xs text-slate-500">{member.position}</p>
+                                            </div>
+                                            <div className="grid grid-cols-4 gap-6 text-center">
+                                                <div>
+                                                    <p className="text-xs text-slate-400">Tasks</p>
+                                                    <p className="font-bold">{member.tasks_completed}/{member.tasks_total}</p>
                                                 </div>
-                                                <div className="grid grid-cols-4 gap-6 text-center">
-                                                    <div>
-                                                        <p className="text-xs text-slate-400">Tasks</p>
-                                                        <p className="font-bold">{member.tasks_completed}/{member.tasks_total}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-slate-400">Complete</p>
-                                                        <p className={`font-bold ${member.completion_rate >= 80 ? 'text-emerald-600' : member.completion_rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                                                            {member.completion_rate}%
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-slate-400">On-time</p>
-                                                        <p className={`font-bold ${member.on_time_rate >= 80 ? 'text-emerald-600' : member.on_time_rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                                                            {member.on_time_rate}%
-                                                        </p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-slate-400">Giờ</p>
-                                                        <p className="font-bold">{member.hours_logged}h</p>
-                                                    </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-400">Complete</p>
+                                                    <p className={`font-bold ${member.completion_rate >= 80 ? 'text-emerald-600' : member.completion_rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                                                        {member.completion_rate}%
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-400">On-time</p>
+                                                    <p className={`font-bold ${member.on_time_rate >= 80 ? 'text-emerald-600' : member.on_time_rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                                                        {member.on_time_rate}%
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-400">Giờ</p>
+                                                    <p className="font-bold">{member.hours_logged}h</p>
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Alerts */}
+                    {members.some(m => m.completion_rate < 70 || m.on_time_rate < 70) && (
+                        <Card className="border-none shadow-sm bg-gradient-to-r from-amber-50 to-orange-50" data-testid="alerts-card">
+                            <CardContent className="p-6">
+                                <div className="flex items-start gap-4">
+                                    <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                                        <AlertTriangle className="h-5 w-5 text-amber-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-amber-800 mb-2">Cần chú ý</h3>
+                                        <ul className="text-sm text-amber-700 space-y-1">
+                                            {members.filter(m => m.completion_rate < 70).map(m => (
+                                                <li key={`comp-${m.user_id}`}>• {m.full_name} có completion rate thấp ({m.completion_rate}%)</li>
+                                            ))}
+                                            {members.filter(m => m.on_time_rate < 70).map(m => (
+                                                <li key={`time-${m.user_id}`}>• {m.full_name} có on-time rate thấp ({m.on_time_rate}%)</li>
+                                            ))}
+                                        </ul>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
-
-                        {/* Alerts */}
-                        {members.some(m => m.completion_rate < 70 || m.on_time_rate < 70) && (
-                            <Card className="border-none shadow-sm bg-gradient-to-r from-amber-50 to-orange-50" data-testid="alerts-card">
-                                <CardContent className="p-6">
-                                    <div className="flex items-start gap-4">
-                                        <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                                            <AlertTriangle className="h-5 w-5 text-amber-600" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-amber-800 mb-2">Cần chú ý</h3>
-                                            <ul className="text-sm text-amber-700 space-y-1">
-                                                {members.filter(m => m.completion_rate < 70).map(m => (
-                                                    <li key={`comp-${m.user_id}`}>• {m.full_name} có completion rate thấp ({m.completion_rate}%)</li>
-                                                ))}
-                                                {members.filter(m => m.on_time_rate < 70).map(m => (
-                                                    <li key={`time-${m.user_id}`}>• {m.full_name} có on-time rate thấp ({m.on_time_rate}%)</li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </>
-                )}
-            </div>
-        </AppLayout>
+                    )}
+                </>
+            )}
+        </div>
     );
 }

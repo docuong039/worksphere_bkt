@@ -262,7 +262,7 @@ export default function ReportsPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-    const isManager = hasPermission(PERMISSIONS.REPORT_APPROVE);
+    const isManager = user?.role === 'PROJECT_MANAGER' || user?.role === 'CEO' || user?.role === 'ORG_ADMIN';
     const canCreate = hasPermission(PERMISSIONS.REPORT_CREATE);
 
     // Fetch reports

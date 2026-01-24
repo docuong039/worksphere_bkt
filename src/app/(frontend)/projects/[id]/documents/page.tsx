@@ -52,82 +52,75 @@ export default function DocumentsPage({ params }: { params: Promise<{ id: string
     const filteredDocs = MOCK_DOCS.filter(doc => doc.name.toLowerCase().includes(search.toLowerCase()));
 
     return (
-        <AppLayout>
-            <div className="max-w-7xl mx-auto pb-20 animate-in fade-in duration-700">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                    <div className="space-y-2">
-                        <Button variant="ghost" asChild className="-ml-4 text-slate-500 hover:text-slate-900 mb-2">
-                            <Link href={`/projects/${id}/overview`}>
-                                <ChevronLeft className="mr-2 h-4 w-4" /> Quay lại Dự án
-                            </Link>
-                        </Button>
-                        <div className="flex items-center gap-3">
-                            <FolderOpen className="h-8 w-8 text-blue-600" />
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Tài liệu Dự án</h1>
-                        </div>
-                    </div>
-                    <Button className="bg-blue-600 hover:bg-blue-700 font-bold h-11 px-6 shadow-lg shadow-blue-100">
-                        <Upload className="mr-2 h-4 w-4" /> Tải lên tài liệu
-                    </Button>
+        <div className="max-w-7xl mx-auto pb-20 animate-in fade-in duration-700">
+            {/* Header - now using shared layout */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                <div className="space-y-2">
+                    <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                        <FolderOpen className="h-6 w-6 text-blue-600" />
+                        Tài liệu Dự án
+                    </h2>
                 </div>
-
-                <Card className="border-none shadow-sm bg-white mb-6">
-                    <CardContent className="p-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
-                                placeholder="Tìm kiếm tài liệu..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-9 h-11 bg-slate-50 border-none rounded-xl"
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {filteredDocs.map(doc => (
-                        <Card key={doc.id} className="border-none shadow-sm bg-white hover:shadow-md transition-shadow group overflow-hidden">
-                            <CardContent className="p-6">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-blue-50 transition-colors">
-                                        <FileIcon type={doc.type} />
-                                    </div>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
-                                                <MoreVertical size={16} />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem className="font-bold flex items-center gap-2">
-                                                <Download size={14} /> Tải xuống
-                                            </DropdownMenuItem>
-                                            {user?.role === 'PROJECT_MANAGER' && (
-                                                <DropdownMenuItem className="text-rose-600 font-bold flex items-center gap-2">
-                                                    <Trash2 size={14} /> Xóa
-                                                </DropdownMenuItem>
-                                            )}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                                <h3 className="text-sm font-black text-slate-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors" title={doc.name}>
-                                    {doc.name}
-                                </h3>
-                                <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest mt-auto pt-4 border-t border-slate-50">
-                                    <span>{doc.size}</span>
-                                    <span>{doc.date}</span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                    <button className="flex flex-col items-center justify-center p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all text-slate-400 hover:text-blue-500 group">
-                        <Plus className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
-                        <span className="text-xs font-black uppercase tracking-widest">Thêm tài liệu</span>
-                    </button>
-                </div>
+                <Button className="bg-blue-600 hover:bg-blue-700 font-bold h-10 px-6 shadow-lg shadow-blue-100" size="sm">
+                    <Upload className="mr-2 h-4 w-4" /> Tải lên tài liệu
+                </Button>
             </div>
-        </AppLayout>
+
+            <Card className="border-none shadow-sm bg-white mb-6">
+                <CardContent className="p-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                            placeholder="Tìm kiếm tài liệu..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-9 h-11 bg-slate-50 border-none rounded-xl"
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {filteredDocs.map(doc => (
+                    <Card key={doc.id} className="border-none shadow-sm bg-white hover:shadow-md transition-shadow group overflow-hidden">
+                        <CardContent className="p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-blue-50 transition-colors">
+                                    <FileIcon type={doc.type} />
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
+                                            <MoreVertical size={16} />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem className="font-bold flex items-center gap-2">
+                                            <Download size={14} /> Tải xuống
+                                        </DropdownMenuItem>
+                                        {user?.role === 'PROJECT_MANAGER' && (
+                                            <DropdownMenuItem className="text-rose-600 font-bold flex items-center gap-2">
+                                                <Trash2 size={14} /> Xóa
+                                            </DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                            <h3 className="text-sm font-black text-slate-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors" title={doc.name}>
+                                {doc.name}
+                            </h3>
+                            <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest mt-auto pt-4 border-t border-slate-50">
+                                <span>{doc.size}</span>
+                                <span>{doc.date}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+                <button className="flex flex-col items-center justify-center p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all text-slate-400 hover:text-blue-500 group">
+                    <Plus className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-black uppercase tracking-widest">Thêm tài liệu</span>
+                </button>
+            </div>
+        </div>
     );
 }
-

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +37,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-    ArrowLeft,
     FolderGit2,
     Plus,
     ExternalLink,
@@ -54,8 +52,8 @@ import {
     Copy,
     AlertTriangle,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
+import { cn } from '@/lib/utils';
 
 type ResourceType = 'GIT' | 'DEPLOY' | 'DOC' | 'API' | 'OTHER';
 
@@ -74,38 +72,7 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [resources, setResources] = useState<ProjectResource[]>([]);
-    const [projectName, setProjectName] = useState('');
     const [typeFilter, setTypeFilter] = useState<ResourceType | 'ALL'>('ALL');
-
-    // Permission check
-    // Permission check: STRICT 100% DOCS (Resource is MNG only)
-    const canManage = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
-
-    // Authorization: Only Managers/Admins can access. EMP/CEO denied.
-    const isAuthorized = canManage;
-
-    if (!user) return null;
-
-    if (!isAuthorized) {
-        return (
-            <AppLayout>
-                <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4 animate-in fade-in zoom-in duration-300">
-                    <div className="p-4 bg-rose-100 text-rose-600 rounded-full shadow-sm">
-                        <AlertTriangle size={48} />
-                    </div>
-                    <h2 className="text-2xl font-black text-slate-900">Truy cập bị từ chối</h2>
-                    <p className="text-slate-500 max-w-md font-medium">
-                        Theo quy định phân quyền, chỉ Quản lý dự án mới được truy cập Tài nguyên kỹ thuật (MNG-05).
-                    </p>
-                    <Button variant="outline" onClick={() => window.history.back()} className="font-bold">
-                        Quay lại trang trước
-                    </Button>
-                </div>
-            </AppLayout>
-        );
-    }
-
-    // Dialog
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingResource, setEditingResource] = useState<ProjectResource | null>(null);
     const [formData, setFormData] = useState({
@@ -116,33 +83,36 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const canManage = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
+
     useEffect(() => {
-        fetchResources();
-    }, [projectId]);
+        const fetchResources = async () => {
+            setLoading(true);
+            try {
+                // Mock data
+                setResources([
+                    { id: '1', type: 'GIT', name: 'Frontend Repository', url: 'https://github.com/worksphere/frontend', description: 'Next.js application', created_by: 'PM', created_at: '2026-01-01' },
+                    { id: '2', type: 'DEPLOY', name: 'Staging Environment', url: 'https://staging.worksphere.io', description: 'Staging server for testing', created_by: 'Dev', created_at: '2026-01-05' },
+                    { id: '3', type: 'API', name: 'API Docs', url: 'https://api.worksphere.io/docs', description: 'Swagger documentation', created_by: 'Architect', created_at: '2026-01-10' },
+                ]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        if (user) fetchResources();
+    }, [projectId, user]);
 
-    const fetchResources = async () => {
-        setLoading(true);
-        try {
-            setProjectName('Worksphere Platform');
-
-            // Mock data - US-MNG-05-01/02/03/04
-            const mockResources: ProjectResource[] = [
-                { id: 'r1', type: 'GIT', name: 'Frontend Repository', url: 'https://github.com/company/worksphere-fe', description: 'Main frontend codebase', created_by: 'Admin', created_at: '2024-01-15' },
-                { id: 'r2', type: 'GIT', name: 'Backend Repository', url: 'https://github.com/company/worksphere-be', description: 'Backend API codebase', created_by: 'Admin', created_at: '2024-01-15' },
-                { id: 'r3', type: 'DEPLOY', name: 'Production', url: 'https://app.worksphere.com', description: 'Production deployment', created_by: 'DevOps', created_at: '2024-02-01' },
-                { id: 'r4', type: 'DEPLOY', name: 'Staging', url: 'https://staging.worksphere.com', description: 'Staging environment', created_by: 'DevOps', created_at: '2024-02-01' },
-                { id: 'r5', type: 'DOC', name: 'API Documentation', url: 'https://docs.worksphere.com/api', description: 'Swagger API docs', created_by: 'Dev Lead', created_at: '2024-03-10' },
-                { id: 'r6', type: 'DOC', name: 'Design System', url: 'https://figma.com/file/xyz', description: 'Figma design files', created_by: 'Designer', created_at: '2024-01-20' },
-                { id: 'r7', type: 'API', name: 'REST API Base', url: 'https://api.worksphere.com/v1', description: 'API base URL', created_by: 'Dev Lead', created_at: '2024-02-15' },
-            ];
-
-            setResources(mockResources);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (!canManage) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4 animate-in fade-in zoom-in duration-300">
+                <div className="p-4 bg-rose-100 text-rose-600 rounded-full shadow-sm">
+                    <AlertTriangle size={48} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-900">Truy cập bị từ chối</h2>
+                <p className="text-slate-500 max-w-md font-medium">Chỉ Quản lý dự án mới được truy cập Tài nguyên kỹ thuật.</p>
+            </div>
+        );
+    }
 
     const openCreateDialog = () => {
         setEditingResource(null);
@@ -152,12 +122,7 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
 
     const openEditDialog = (resource: ProjectResource) => {
         setEditingResource(resource);
-        setFormData({
-            type: resource.type,
-            name: resource.name,
-            url: resource.url,
-            description: resource.description,
-        });
+        setFormData({ type: resource.type, name: resource.name, url: resource.url, description: resource.description });
         setDialogOpen(true);
     };
 
@@ -166,33 +131,14 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
         setIsSubmitting(true);
         try {
             if (editingResource) {
-                setResources(resources.map(r =>
-                    r.id === editingResource.id
-                        ? { ...r, ...formData }
-                        : r
-                ));
+                setResources(resources.map(r => r.id === editingResource.id ? { ...r, ...formData } : r));
             } else {
-                const newResource: ProjectResource = {
-                    id: `r${Date.now()}`,
-                    ...formData,
-                    created_by: user?.full_name || 'User',
-                    created_at: new Date().toISOString().split('T')[0],
-                };
-                setResources([...resources, newResource]);
+                setResources([...resources, { id: `r${Date.now()}`, ...formData, created_by: user?.full_name || 'User', created_at: new Date().toISOString().split('T')[0] }]);
             }
             setDialogOpen(false);
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const handleDelete = (resourceId: string) => {
-        if (!confirm('Bạn có chắc muốn xóa resource này?')) return;
-        setResources(resources.filter(r => r.id !== resourceId));
-    };
-
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
     };
 
     const getTypeIcon = (type: ResourceType) => {
@@ -205,301 +151,143 @@ export default function ProjectResourcesPage({ params }: { params: Promise<{ id:
         }
     };
 
-    const getTypeBadge = (type: ResourceType) => {
-        switch (type) {
-            case 'GIT': return <Badge className="bg-orange-100 text-orange-700">GIT</Badge>;
-            case 'DEPLOY': return <Badge className="bg-blue-100 text-blue-700">Deploy</Badge>;
-            case 'DOC': return <Badge className="bg-purple-100 text-purple-700">Document</Badge>;
-            case 'API': return <Badge className="bg-emerald-100 text-emerald-700">API</Badge>;
-            default: return <Badge variant="outline">{type}</Badge>;
-        }
-    };
-
-    const filteredResources = resources.filter(r =>
-        typeFilter === 'ALL' || r.type === typeFilter
-    );
-
-    const stats = {
-        git: resources.filter(r => r.type === 'GIT').length,
-        deploy: resources.filter(r => r.type === 'DEPLOY').length,
-        doc: resources.filter(r => r.type === 'DOC').length,
-        api: resources.filter(r => r.type === 'API').length,
-    };
+    const filteredResources = resources.filter(r => typeFilter === 'ALL' || r.type === typeFilter);
 
     return (
-        <AppLayout>
-            <div className="space-y-6 animate-in fade-in duration-700" data-testid="project-resources-page">
-                {/* Header */}
+        <div className="space-y-6 animate-in fade-in duration-700 pb-20" data-testid="project-resources-container">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <Button variant="ghost" asChild className="-ml-4 mb-4 text-slate-500">
-                        <Link href={`/projects/${projectId}/overview`}>
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Quay lại {projectName}
-                        </Link>
-                    </Button>
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="project-resources-page-title">
-                                <FolderGit2 className="inline-block mr-3 h-8 w-8 text-blue-600" />
-                                Tài nguyên Dự án
-                            </h1>
-                            <p className="text-slate-500 mt-1 font-medium">
-                                Quản lý Git, Deploy, Documents (US-MNG-05-01/02/03/04)
-                            </p>
-                        </div>
-                        {canManage && (
-                            <Button
-                                className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
-                                onClick={openCreateDialog}
-                                data-testid="btn-add-resource"
-                            >
-                                <Plus className="mr-2 h-4 w-4" /> Thêm Resource
-                            </Button>
-                        )}
-                    </div>
+                    <h2 className="text-xl font-black tracking-tight text-slate-800 flex items-center gap-2" data-testid="project-resources-title">
+                        <FolderGit2 className="h-6 w-6 text-indigo-600" /> Tài nguyên Dự án
+                    </h2>
                 </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-4 gap-4">
-                    <Card
-                        className={`border-none shadow-sm cursor-pointer transition-all ${typeFilter === 'GIT' ? 'ring-2 ring-orange-500' : ''}`}
-                        onClick={() => setTypeFilter(typeFilter === 'GIT' ? 'ALL' : 'GIT')}
-                        data-testid="stat-git"
-                    >
-                        <CardContent className="p-4 flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                                <GitBranch className="h-5 w-5 text-orange-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500">Git Repos</p>
-                                <p className="text-xl font-bold">{stats.git}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card
-                        className={`border-none shadow-sm cursor-pointer transition-all ${typeFilter === 'DEPLOY' ? 'ring-2 ring-blue-500' : ''}`}
-                        onClick={() => setTypeFilter(typeFilter === 'DEPLOY' ? 'ALL' : 'DEPLOY')}
-                        data-testid="stat-deploy"
-                    >
-                        <CardContent className="p-4 flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                                <Globe className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500">Deployments</p>
-                                <p className="text-xl font-bold">{stats.deploy}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card
-                        className={`border-none shadow-sm cursor-pointer transition-all ${typeFilter === 'DOC' ? 'ring-2 ring-purple-500' : ''}`}
-                        onClick={() => setTypeFilter(typeFilter === 'DOC' ? 'ALL' : 'DOC')}
-                        data-testid="stat-doc"
-                    >
-                        <CardContent className="p-4 flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                                <FileText className="h-5 w-5 text-purple-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500">Documents</p>
-                                <p className="text-xl font-bold">{stats.doc}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card
-                        className={`border-none shadow-sm cursor-pointer transition-all ${typeFilter === 'API' ? 'ring-2 ring-emerald-500' : ''}`}
-                        onClick={() => setTypeFilter(typeFilter === 'API' ? 'ALL' : 'API')}
-                        data-testid="stat-api"
-                    >
-                        <CardContent className="p-4 flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                                <Package className="h-5 w-5 text-emerald-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-slate-500">APIs</p>
-                                <p className="text-xl font-bold">{stats.api}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Resources Table */}
-                <Card className="border-none shadow-sm" data-testid="resources-card">
-                    <CardHeader className="border-b border-slate-100">
-                        <CardTitle className="text-lg font-bold">Danh sách Resources</CardTitle>
-                        <CardDescription>
-                            {typeFilter !== 'ALL' && (
-                                <Button variant="ghost" size="sm" onClick={() => setTypeFilter('ALL')} className="ml-2">
-                                    Xóa filter
-                                </Button>
-                            )}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        {loading ? (
-                            <div className="p-6 space-y-4" data-testid="project-resources-loading-skeleton">
-                                {[1, 2, 3, 4].map(i => (
-                                    <Skeleton key={i} className="h-14 w-full" />
-                                ))}
-                            </div>
-                        ) : filteredResources.length > 0 ? (
-                            <Table data-testid="resources-table">
-                                <TableHeader>
-                                    <TableRow className="bg-slate-50/50">
-                                        <TableHead className="font-bold">Tên</TableHead>
-                                        <TableHead className="font-bold">Loại</TableHead>
-                                        <TableHead className="font-bold">URL</TableHead>
-                                        {canManage && <TableHead className="text-right font-bold">Thao tác</TableHead>}
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredResources.map(resource => (
-                                        <TableRow key={resource.id} data-testid={`resource-row-${resource.id}`}>
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                                                        {getTypeIcon(resource.type)}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium" data-testid={`resource-name-${resource.id}`}>
-                                                            {resource.name}
-                                                        </p>
-                                                        <p className="text-xs text-slate-400">{resource.description}</p>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>{getTypeBadge(resource.type)}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <code className="text-xs bg-slate-100 px-2 py-1 rounded max-w-[200px] truncate">
-                                                        {resource.url}
-                                                    </code>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6"
-                                                        onClick={() => copyToClipboard(resource.url)}
-                                                        data-testid={`btn-copy-${resource.id}`}
-                                                    >
-                                                        <Copy className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                            {canManage && (
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" data-testid={`resource-actions-${resource.id}`}>
-                                                                <MoreVertical className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem asChild>
-                                                                <a href={resource.url} target="_blank" rel="noopener noreferrer" data-testid={`btn-open-${resource.id}`}>
-                                                                    <ExternalLink className="mr-2 h-4 w-4" /> Mở
-                                                                </a>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => openEditDialog(resource)} data-testid={`btn-edit-${resource.id}`}>
-                                                                <Edit2 className="mr-2 h-4 w-4" /> Sửa
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => handleDelete(resource.id)} className="text-red-600" data-testid={`btn-delete-${resource.id}`}>
-                                                                <Trash2 className="mr-2 h-4 w-4" /> Xóa
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            )}
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        ) : (
-                            <div className="p-12 text-center" data-testid="project-resources-empty-state">
-                                <FolderGit2 className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                                <p className="text-slate-500 font-medium">Chưa có resource nào</p>
-                                {canManage && (
-                                    <Button className="mt-4" onClick={openCreateDialog} data-testid="btn-add-first">
-                                        <Plus className="mr-2 h-4 w-4" /> Thêm Resource đầu tiên
-                                    </Button>
-                                )}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {/* Add/Edit Dialog */}
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogContent className="sm:max-w-md" data-testid="resource-dialog">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-bold">
-                                {editingResource ? 'Chỉnh sửa Resource' : 'Thêm Resource mới'}
-                            </DialogTitle>
-                            <DialogDescription>
-                                Nhập thông tin resource cho dự án
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Loại *</label>
-                                <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as ResourceType })}>
-                                    <SelectTrigger data-testid="select-type">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="GIT">Git Repository</SelectItem>
-                                        <SelectItem value="DEPLOY">Deployment URL</SelectItem>
-                                        <SelectItem value="DOC">Documentation</SelectItem>
-                                        <SelectItem value="API">API Endpoint</SelectItem>
-                                        <SelectItem value="OTHER">Khác</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Tên *</label>
-                                <Input
-                                    placeholder="vd: Frontend Repository"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    data-testid="project-resources-input-name"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">URL *</label>
-                                <Input
-                                    placeholder="https://..."
-                                    value={formData.url}
-                                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                                    data-testid="input-url"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Mô tả</label>
-                                <Textarea
-                                    placeholder="Mô tả ngắn về resource"
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    rows={2}
-                                    data-testid="project-resources-input-description"
-                                />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setDialogOpen(false)} data-testid="project-resources-btn-cancel">
-                                Hủy
-                            </Button>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={isSubmitting || !formData.name.trim() || !formData.url.trim()}
-                                className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="project-resources-btn-submit"
-                            >
-                                {isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                {editingResource ? 'Cập nhật' : 'Thêm mới'}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                <Button onClick={openCreateDialog} className="bg-indigo-600 hover:bg-indigo-700 font-bold h-9 shadow-lg shadow-indigo-100" size="sm" data-testid="btn-add-resource">
+                    <Plus className="mr-2 h-4 w-4" /> Thêm Resource
+                </Button>
             </div>
-        </AppLayout >
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="resource-type-filters">
+                {(['GIT', 'DEPLOY', 'DOC', 'API'] as ResourceType[]).map(type => (
+                    <Card
+                        key={type}
+                        className={cn("border-none shadow-sm cursor-pointer transition-all", typeFilter === type ? "ring-2 ring-indigo-500" : "")}
+                        onClick={() => setTypeFilter(typeFilter === type ? 'ALL' : type)}
+                        data-testid={`resource-filter-${type.toLowerCase()}`}
+                    >
+                        <CardContent className="p-4 flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                                {getTypeIcon(type)}
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{type}</p>
+                                <p className="text-xl font-black text-slate-900" data-testid={`resource-count-${type.toLowerCase()}`}>{resources.filter(r => r.type === type).length}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <Card className="border-none shadow-sm bg-white overflow-hidden" data-testid="resources-list-card">
+                <CardHeader className="border-b border-slate-50">
+                    <CardTitle className="text-base font-bold">Danh sách Resources</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {loading ? (
+                        <div className="p-6 space-y-4" data-testid="resources-loading-skeleton">
+                            {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                        </div>
+                    ) : (
+                        <Table data-testid="resources-table">
+                            <TableHeader>
+                                <TableRow className="bg-slate-50/50">
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">Resource</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loại</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400">URL</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Thao tác</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredResources.map(resource => (
+                                    <TableRow key={resource.id} className="hover:bg-slate-50 transition-colors" data-testid={`resource-row-${resource.id}`}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center">
+                                                    {getTypeIcon(resource.type)}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-slate-900" data-testid={`resource-name-${resource.id}`}>{resource.name}</span>
+                                                    <span className="text-[10px] text-slate-400 font-medium">{resource.description}</span>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary" className="text-[10px] font-black uppercase" data-testid={`resource-type-${resource.id}`}>{resource.type}</Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <code className="text-[10px] bg-slate-100 px-2 py-1 rounded max-w-[150px] truncate" data-testid={`resource-url-${resource.id}`}>{resource.url}</code>
+                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => navigator.clipboard.writeText(resource.url)} data-testid={`btn-copy-${resource.id}`}>
+                                                    <Copy size={12} />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" data-testid={`resource-actions-${resource.id}`}><MoreVertical size={14} /></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem asChild><a href={resource.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" /> Mở link</a></DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => openEditDialog(resource)} data-testid={`btn-edit-${resource.id}`}><Edit2 className="mr-2 h-4 w-4" /> Sửa</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => { }} className="text-rose-600" data-testid={`btn-delete-${resource.id}`}><Trash2 className="mr-2 h-4 w-4" /> Xóa</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogContent data-testid="resource-dialog">
+                    <DialogHeader>
+                        <DialogTitle>{editingResource ? 'Sửa Resource' : 'Thêm Resource'}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-500">Loại</label>
+                            <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as ResourceType })}>
+                                <SelectTrigger data-testid="input-resource-type"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="GIT">Git Repository</SelectItem>
+                                    <SelectItem value="DEPLOY">Deployment</SelectItem>
+                                    <SelectItem value="DOC">Document</SelectItem>
+                                    <SelectItem value="API">API</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-500">Tên</label>
+                            <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} data-testid="input-resource-name" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-500">URL</label>
+                            <Input value={formData.url} onChange={e => setFormData({ ...formData, url: e.target.value })} data-testid="input-resource-url" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-500">Mô tả</label>
+                            <Textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} data-testid="input-resource-desc" />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setDialogOpen(false)} data-testid="btn-cancel">Hủy</Button>
+                        <Button className="bg-indigo-600 hover:bg-indigo-700 font-bold" onClick={handleSubmit} disabled={isSubmitting} data-testid="btn-submit">Lưu thay đổi</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 }

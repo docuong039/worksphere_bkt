@@ -8,6 +8,8 @@ export const mockRecycleBin = [
         deleted_by: { id: 'user-pm', full_name: 'Hoàng Ngọc Sơn' },
         project: { id: 'prj-1', name: 'Hệ thống Quản trị WorkSphere 2.0' },
         days_remaining: 25,
+        is_locked: true,
+        details: 'Đã có 4h Log Time phát sinh'
     },
     {
         id: 'rb-2',
