@@ -19,7 +19,10 @@ export interface Task {
         created_by: string;
         creator_name?: string;
         order_index?: number;
+        has_logs?: boolean;
+        logged_minutes?: number;
     }[];
+    total_logged_minutes?: number;
     comments?: {
         id: string;
         content: string;
@@ -35,7 +38,16 @@ export interface Task {
         created_at: string;
         creator_name?: string;
     }[];
+    tags?: { id: string; name: string; color?: string }[];
+    assignee_ids?: string[];
+    tag_ids?: string[];
     is_locked?: boolean;
+    capabilities?: {
+        can_update: boolean;
+        can_delete: boolean;
+        can_log_time: boolean;
+        allowed_fields: string[];
+    };
 }
 
 export interface HistoryItem {

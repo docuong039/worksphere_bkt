@@ -349,7 +349,7 @@ export default function QualityPage({
               className="h-9 font-bold"
               asChild
             >
-              <Link href={`/projects/${id}/tasks?type=BUG`}>
+              <Link href={`/projects/${id}?type=BUG`}>
                 Xem tất cả <ExternalLink size={14} className="ml-2" />
               </Link>
             </Button>

@@ -14,9 +14,10 @@ export const mockTasks = [
         created_by: 'user-pm',
         updated_at: '2025-01-20T10:00:00Z',
         assignees: [
-            { id: 'user-emp-dev1', full_name: 'Phạm Minh Thu' },
+            { id: 'user-emp-dev1', full_name: 'Pham Minh Thu' },
             { id: 'user-emp', full_name: 'Nguyễn Thị Lan Anh' }
-        ]
+        ],
+        is_locked: true
     },
     {
         id: 'task-2',
@@ -91,6 +92,40 @@ export const mockTasks = [
         assignees: [
             { id: 'user-emp-dev1', full_name: 'Phạm Minh Thu' }
         ]
+    },
+    {
+        id: 'task-6',
+        org_id: 'org-1',
+        project_id: 'prj-1',
+        title: 'Task ĐÃ XONG (Có Subtask)',
+        description: 'Kiểm tra logic: Không được log vào task chính khi có subtask.',
+        status_code: 'DONE',
+        priority_code: 'MEDIUM',
+        type_code: 'TASK',
+        start_date: '2025-01-20',
+        due_date: '2025-01-22',
+        created_at: '2025-01-20T08:00:00Z',
+        created_by: 'user-pm',
+        assignees: [
+            { id: 'user-emp', full_name: 'Nguyễn Thị Lan Anh' }
+        ]
+    },
+    {
+        id: 'task-7',
+        org_id: 'org-1',
+        project_id: 'prj-1',
+        title: 'Task ĐÃ XONG (Không có Subtask)',
+        description: 'Kiểm tra logic: Được phép log trực tiếp vào task chính.',
+        status_code: 'DONE',
+        priority_code: 'LOW',
+        type_code: 'TASK',
+        start_date: '2025-01-21',
+        due_date: '2025-01-23',
+        created_at: '2025-01-21T09:00:00Z',
+        created_by: 'user-pm',
+        assignees: [
+            { id: 'user-emp', full_name: 'Nguyễn Thị Lan Anh' }
+        ]
     }
 ];
 
@@ -113,6 +148,41 @@ export const mockSubtasks = [
         id: 'sub-3',
         task_id: 'task-1',
         title: 'Viết các bộ xử lý API (Handlers)',
+        status_code: 'DONE',
+        created_by: 'user-emp',
+    },
+    {
+        id: 'sub-5',
+        task_id: 'task-1',
+        title: 'Xây dựng giao diện trang Dashboard',
+        status_code: 'DONE',
+        created_by: 'user-emp',
+    },
+    {
+        id: 'sub-6',
+        task_id: 'task-1',
+        title: 'Tích hợp Auth Store vào Sidebar',
+        status_code: 'DONE',
+        created_by: 'user-emp',
+    },
+    {
+        id: 'sub-7',
+        task_id: 'task-1',
+        title: 'Viết unit test cho các API Handlers',
+        status_code: 'TODO',
+        created_by: 'user-emp',
+    },
+    {
+        id: 'sub-8',
+        task_id: 'task-1',
+        title: 'Cấu hình CI/CD trên Github Actions',
+        status_code: 'IN_PROGRESS',
+        created_by: 'user-emp-dev1',
+    },
+    {
+        id: 'sub-9',
+        task_id: 'task-1',
+        title: 'Tối ưu hóa performance load data',
         status_code: 'TODO',
         created_by: 'user-emp',
     },
@@ -122,5 +192,19 @@ export const mockSubtasks = [
         title: 'Phác thảo ý tưởng Key Visual',
         status_code: 'DONE',
         created_by: 'user-emp-designer',
+    },
+    {
+        id: 'sub-10',
+        task_id: 'task-6',
+        title: 'Subtask đã xong của task-6',
+        status_code: 'DONE',
+        created_by: 'user-emp',
+    },
+    {
+        id: 'sub-11',
+        task_id: 'task-6',
+        title: 'Subtask đang làm của task-6',
+        status_code: 'TODO',
+        created_by: 'user-emp',
     }
 ];

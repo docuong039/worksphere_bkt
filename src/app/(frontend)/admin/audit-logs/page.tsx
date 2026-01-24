@@ -58,6 +58,8 @@ import {
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
 
 interface AuditLog {
     id: string;
@@ -180,7 +182,7 @@ const AuditLogItem = ({ log, onViewDetail }: { log: AuditLog; onViewDetail: () =
 
 // Main Page Component
 export default function AdminAuditLogsPage() {
-    const { user } = useAuthStore();
+    const { user, hasPermission } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [total, setTotal] = useState(0);
@@ -277,246 +279,248 @@ export default function AdminAuditLogsPage() {
 
     return (
         <AppLayout>
-            <div className="space-y-6 animate-in fade-in duration-700" data-testid="audit-logs-container">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="audit-logs-title">
-                            <FileText className="inline-block mr-2 h-8 w-8 text-blue-600" />
-                            Nhật ký Kiểm tra
-                        </h1>
-                        <p className="text-slate-500 mt-1 font-medium">
-                            Theo dõi tất cả hành động trong hệ thống.
+            <PermissionGuard permission={PERMISSIONS.SYS_AUDIT_READ} showFullPageError>
+                <div className="space-y-6 animate-in fade-in duration-700" data-testid="audit-logs-container">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="audit-logs-title">
+                                <FileText className="inline-block mr-2 h-8 w-8 text-blue-600" />
+                                Nhật ký Kiểm tra
+                            </h1>
+                            <p className="text-slate-500 mt-1 font-medium">
+                                Theo dõi tất cả hành động trong hệ thống.
+                            </p>
+                        </div>
+
+                        <Button variant="outline" data-testid="btn-export">
+                            <Download className="mr-2 h-4 w-4" />
+                            Xuất dữ liệu
+                        </Button>
+                    </div>
+
+                    {/* Filters */}
+                    <Card className="border-none shadow-sm" data-testid="audit-logs-filters">
+                        <CardContent className="p-4 space-y-4">
+                            <div className="flex flex-wrap items-center gap-4">
+                                {/* Date Range */}
+                                <div className="flex items-center gap-2">
+                                    <Calendar size={16} className="text-slate-400" />
+                                    <Input
+                                        type="date"
+                                        value={dateFrom}
+                                        onChange={(e) => setDateFrom(e.target.value)}
+                                        className="w-36"
+                                        data-testid="input-date-from"
+                                    />
+                                    <span className="text-slate-400">→</span>
+                                    <Input
+                                        type="date"
+                                        value={dateTo}
+                                        onChange={(e) => setDateTo(e.target.value)}
+                                        className="w-36"
+                                        data-testid="input-date-to"
+                                    />
+                                </div>
+
+                                <Select value={filterAction} onValueChange={setFilterAction}>
+                                    <SelectTrigger className="w-[140px]" data-testid="filter-action">
+                                        <SelectValue placeholder="Hành động" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">Tất cả</SelectItem>
+                                        <SelectItem value="CREATE">Tạo mới</SelectItem>
+                                        <SelectItem value="UPDATE">Cập nhật</SelectItem>
+                                        <SelectItem value="DELETE">Xóa</SelectItem>
+                                        <SelectItem value="LOGIN">Đăng nhập</SelectItem>
+                                        <SelectItem value="IMPERSONATE">Impersonate</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <Select value={filterEntity} onValueChange={setFilterEntity}>
+                                    <SelectTrigger className="w-[140px]" data-testid="filter-entity">
+                                        <SelectValue placeholder="Đối tượng" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">Tất cả</SelectItem>
+                                        <SelectItem value="USER">Người dùng</SelectItem>
+                                        <SelectItem value="PROJECT">Dự án</SelectItem>
+                                        <SelectItem value="TASK">Công việc</SelectItem>
+                                        <SelectItem value="ORGANIZATION">Tổ chức</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                {user?.role === 'SYS_ADMIN' && (
+                                    <Select value={filterOrg} onValueChange={setFilterOrg}>
+                                        <SelectTrigger className="w-[180px]" data-testid="filter-org">
+                                            <SelectValue placeholder="Tổ chức" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">Tất cả tổ chức</SelectItem>
+                                            {orgs.map(o => (
+                                                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+
+                                <Input
+                                    placeholder="Email người thực hiện..."
+                                    value={filterActor}
+                                    onChange={(e) => setFilterActor(e.target.value)}
+                                    className="w-[200px]"
+                                    data-testid="filter-actor"
+                                />
+
+                                <Button onClick={handleSearch} data-testid="admin-audit-btn-search">
+                                    <Search className="mr-2 h-4 w-4" />
+                                    Tìm kiếm
+                                </Button>
+                            </div>
+
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <Checkbox
+                                    checked={impersonationOnly}
+                                    onCheckedChange={(c) => setImpersonationOnly(!!c)}
+                                    data-testid="checkbox-impersonation"
+                                />
+                                <span className="text-sm text-slate-600">
+                                    <Shield size={14} className="inline mr-1 text-red-500" />
+                                    Chỉ xem phiên hỗ trợ (Impersonate)
+                                </span>
+                            </label>
+                        </CardContent>
+                    </Card>
+
+                    {/* Results Count */}
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-slate-500">
+                            Tìm thấy <span className="font-bold text-slate-900">{total}</span> bản ghi
                         </p>
                     </div>
 
-                    <Button variant="outline" data-testid="btn-export">
-                        <Download className="mr-2 h-4 w-4" />
-                        Xuất dữ liệu
-                    </Button>
-                </div>
-
-                {/* Filters */}
-                <Card className="border-none shadow-sm" data-testid="audit-logs-filters">
-                    <CardContent className="p-4 space-y-4">
-                        <div className="flex flex-wrap items-center gap-4">
-                            {/* Date Range */}
-                            <div className="flex items-center gap-2">
-                                <Calendar size={16} className="text-slate-400" />
-                                <Input
-                                    type="date"
-                                    value={dateFrom}
-                                    onChange={(e) => setDateFrom(e.target.value)}
-                                    className="w-36"
-                                    data-testid="input-date-from"
+                    {/* Logs List */}
+                    {loading ? (
+                        <div className="space-y-3" data-testid="audit-logs-loading">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <Skeleton key={i} className="h-24 w-full rounded-xl" />
+                            ))}
+                        </div>
+                    ) : logs.length > 0 ? (
+                        <div className="space-y-3" data-testid="audit-logs-list">
+                            {logs.map((log) => (
+                                <AuditLogItem
+                                    key={log.id}
+                                    log={log}
+                                    onViewDetail={() => openDetail(log)}
                                 />
-                                <span className="text-slate-400">→</span>
-                                <Input
-                                    type="date"
-                                    value={dateTo}
-                                    onChange={(e) => setDateTo(e.target.value)}
-                                    className="w-36"
-                                    data-testid="input-date-to"
-                                />
-                            </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <Card className="border-none shadow-sm" data-testid="audit-logs-empty">
+                            <CardContent className="py-16 text-center">
+                                <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                                    <FileText className="h-8 w-8 text-slate-300" />
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2">
+                                    Không tìm thấy bản ghi
+                                </h3>
+                                <p className="text-slate-500">
+                                    Thử thay đổi bộ lọc hoặc mở rộng khoảng thời gian.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
 
-                            <Select value={filterAction} onValueChange={setFilterAction}>
-                                <SelectTrigger className="w-[140px]" data-testid="filter-action">
-                                    <SelectValue placeholder="Hành động" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả</SelectItem>
-                                    <SelectItem value="CREATE">Tạo mới</SelectItem>
-                                    <SelectItem value="UPDATE">Cập nhật</SelectItem>
-                                    <SelectItem value="DELETE">Xóa</SelectItem>
-                                    <SelectItem value="LOGIN">Đăng nhập</SelectItem>
-                                    <SelectItem value="IMPERSONATE">Impersonate</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            <Select value={filterEntity} onValueChange={setFilterEntity}>
-                                <SelectTrigger className="w-[140px]" data-testid="filter-entity">
-                                    <SelectValue placeholder="Đối tượng" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả</SelectItem>
-                                    <SelectItem value="USER">Người dùng</SelectItem>
-                                    <SelectItem value="PROJECT">Dự án</SelectItem>
-                                    <SelectItem value="TASK">Công việc</SelectItem>
-                                    <SelectItem value="ORGANIZATION">Tổ chức</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            {user?.role === 'SYS_ADMIN' && (
-                                <Select value={filterOrg} onValueChange={setFilterOrg}>
-                                    <SelectTrigger className="w-[180px]" data-testid="filter-org">
-                                        <SelectValue placeholder="Tổ chức" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ALL">Tất cả tổ chức</SelectItem>
-                                        {orgs.map(o => (
-                                            <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-
-                            <Input
-                                placeholder="Email người thực hiện..."
-                                value={filterActor}
-                                onChange={(e) => setFilterActor(e.target.value)}
-                                className="w-[200px]"
-                                data-testid="filter-actor"
-                            />
-
-                            <Button onClick={handleSearch} data-testid="admin-audit-btn-search">
-                                <Search className="mr-2 h-4 w-4" />
-                                Tìm kiếm
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-4" data-testid="pagination">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                data-testid="btn-prev"
+                            >
+                                <ChevronLeft size={16} />
+                            </Button>
+                            <span className="text-sm text-slate-600">
+                                Trang {page} / {totalPages}
+                            </span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                data-testid="btn-next"
+                            >
+                                <ChevronRight size={16} />
                             </Button>
                         </div>
+                    )}
 
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <Checkbox
-                                checked={impersonationOnly}
-                                onCheckedChange={(c) => setImpersonationOnly(!!c)}
-                                data-testid="checkbox-impersonation"
-                            />
-                            <span className="text-sm text-slate-600">
-                                <Shield size={14} className="inline mr-1 text-red-500" />
-                                Chỉ xem phiên hỗ trợ (Impersonate)
-                            </span>
-                        </label>
-                    </CardContent>
-                </Card>
+                    {/* Detail Dialog */}
+                    <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+                        <DialogContent className="sm:max-w-2xl" data-testid="dialog-log-detail">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-blue-600" />
+                                    Chi tiết Audit Log
+                                </DialogTitle>
+                            </DialogHeader>
 
-                {/* Results Count */}
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-slate-500">
-                        Tìm thấy <span className="font-bold text-slate-900">{total}</span> bản ghi
-                    </p>
+                            {selectedLog && (
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span className="text-slate-500">Thời gian:</span>
+                                            <p className="font-medium">
+                                                {new Date(selectedLog.occurred_at).toLocaleString('vi-VN')}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-500">Hành động:</span>
+                                            <p className="font-medium">{selectedLog.action}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-500">Đối tượng:</span>
+                                            <p className="font-medium">{selectedLog.entity_type}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-500">ID:</span>
+                                            <p className="font-mono text-xs">{selectedLog.entity_id || '-'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-slate-50 rounded-lg space-y-2">
+                                        <h4 className="font-bold text-slate-700">Người thực hiện</h4>
+                                        <p>{selectedLog.actor?.full_name} ({selectedLog.actor?.email})</p>
+                                        <p className="text-xs text-slate-500">IP: {selectedLog.ip_address || 'N/A'}</p>
+                                    </div>
+
+                                    {selectedLog.before_data && (
+                                        <div>
+                                            <h4 className="font-bold text-slate-700 mb-2">Trước (before_data):</h4>
+                                            <pre className="p-3 bg-slate-100 rounded text-xs overflow-auto max-h-40">
+                                                {JSON.stringify(selectedLog.before_data, null, 2)}
+                                            </pre>
+                                        </div>
+                                    )}
+
+                                    {selectedLog.after_data && (
+                                        <div>
+                                            <h4 className="font-bold text-slate-700 mb-2">Sau (after_data):</h4>
+                                            <pre className="p-3 bg-slate-100 rounded text-xs overflow-auto max-h-40">
+                                                {JSON.stringify(selectedLog.after_data, null, 2)}
+                                            </pre>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </DialogContent>
+                    </Dialog>
                 </div>
-
-                {/* Logs List */}
-                {loading ? (
-                    <div className="space-y-3" data-testid="audit-logs-loading">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                            <Skeleton key={i} className="h-24 w-full rounded-xl" />
-                        ))}
-                    </div>
-                ) : logs.length > 0 ? (
-                    <div className="space-y-3" data-testid="audit-logs-list">
-                        {logs.map((log) => (
-                            <AuditLogItem
-                                key={log.id}
-                                log={log}
-                                onViewDetail={() => openDetail(log)}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <Card className="border-none shadow-sm" data-testid="audit-logs-empty">
-                        <CardContent className="py-16 text-center">
-                            <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                                <FileText className="h-8 w-8 text-slate-300" />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">
-                                Không tìm thấy bản ghi
-                            </h3>
-                            <p className="text-slate-500">
-                                Thử thay đổi bộ lọc hoặc mở rộng khoảng thời gian.
-                            </p>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-4" data-testid="pagination">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
-                            disabled={page === 1}
-                            data-testid="btn-prev"
-                        >
-                            <ChevronLeft size={16} />
-                        </Button>
-                        <span className="text-sm text-slate-600">
-                            Trang {page} / {totalPages}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                            disabled={page === totalPages}
-                            data-testid="btn-next"
-                        >
-                            <ChevronRight size={16} />
-                        </Button>
-                    </div>
-                )}
-
-                {/* Detail Dialog */}
-                <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-                    <DialogContent className="sm:max-w-2xl" data-testid="dialog-log-detail">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-blue-600" />
-                                Chi tiết Audit Log
-                            </DialogTitle>
-                        </DialogHeader>
-
-                        {selectedLog && (
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <span className="text-slate-500">Thời gian:</span>
-                                        <p className="font-medium">
-                                            {new Date(selectedLog.occurred_at).toLocaleString('vi-VN')}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-500">Hành động:</span>
-                                        <p className="font-medium">{selectedLog.action}</p>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-500">Đối tượng:</span>
-                                        <p className="font-medium">{selectedLog.entity_type}</p>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-500">ID:</span>
-                                        <p className="font-mono text-xs">{selectedLog.entity_id || '-'}</p>
-                                    </div>
-                                </div>
-
-                                <div className="p-4 bg-slate-50 rounded-lg space-y-2">
-                                    <h4 className="font-bold text-slate-700">Người thực hiện</h4>
-                                    <p>{selectedLog.actor?.full_name} ({selectedLog.actor?.email})</p>
-                                    <p className="text-xs text-slate-500">IP: {selectedLog.ip_address || 'N/A'}</p>
-                                </div>
-
-                                {selectedLog.before_data && (
-                                    <div>
-                                        <h4 className="font-bold text-slate-700 mb-2">Trước (before_data):</h4>
-                                        <pre className="p-3 bg-slate-100 rounded text-xs overflow-auto max-h-40">
-                                            {JSON.stringify(selectedLog.before_data, null, 2)}
-                                        </pre>
-                                    </div>
-                                )}
-
-                                {selectedLog.after_data && (
-                                    <div>
-                                        <h4 className="font-bold text-slate-700 mb-2">Sau (after_data):</h4>
-                                        <pre className="p-3 bg-slate-100 rounded text-xs overflow-auto max-h-40">
-                                            {JSON.stringify(selectedLog.after_data, null, 2)}
-                                        </pre>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </DialogContent>
-                </Dialog>
-            </div>
+            </PermissionGuard>
         </AppLayout>
     );
 }

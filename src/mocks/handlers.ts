@@ -9,6 +9,7 @@ import { mockTimeLogs } from './data/timelogs';
 import { mockCompensations, mockJobLevels } from './data/hr';
 import { mockOrganizations } from './data/organizations';
 import { mockRecycleBin } from './data/recycle-bin';
+import { ROLE_PERMISSIONS, AppRole } from '@/lib/permissions';
 
 
 export const handlers = [
@@ -21,14 +22,16 @@ export const handlers = [
             return HttpResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        const role = mockUserRoles.find(r => r.user_id === user.id);
+        const roleEntry = mockUserRoles.find(r => r.user_id === user.id);
+        const role_code = (roleEntry?.role_code || 'EMPLOYEE') as AppRole;
 
         return HttpResponse.json({
             success: true,
             user: {
                 ...user,
-                role: role?.role_code || 'EMPLOYEE',
-                org_id: role?.org_id
+                role: role_code,
+                org_id: roleEntry?.org_id,
+                permissions: ROLE_PERMISSIONS[role_code] || []
             },
             token: 'mock-jwt-token-for-' + user.id
         });
@@ -38,7 +41,8 @@ export const handlers = [
     http.get('/api/users/me', ({ request }) => {
         const userId = request.headers.get('x-user-id') || 'user-emp';
         const user = mockUsers.find(u => u.id === userId);
-        const userRole = mockUserRoles.find(r => r.user_id === userId);
+        const roleEntry = mockUserRoles.find(r => r.user_id === userId);
+        const role_code = (roleEntry?.role_code || 'EMPLOYEE') as AppRole;
 
         if (!user) {
             return HttpResponse.json({ error: 'User not found' }, { status: 404 });
@@ -49,7 +53,8 @@ export const handlers = [
             data: {
                 ...user,
                 avatar_url: null,
-                roles: [userRole?.role_code || 'EMPLOYEE'],
+                role: role_code,
+                permissions: ROLE_PERMISSIONS[role_code] || [],
                 profile: {
                     phone: '0987654321',
                     address: 'Tầng 12, Tòa nhà Keangnam, Mễ Trì, Hà Nội',
@@ -361,24 +366,48 @@ export const handlers = [
     }),
 
     // Task Detail Handlers
-    http.get('/api/tasks/:id', ({ params }) => {
+    http.get('/api/tasks/:id', ({ params, request }) => {
         const task = mockTasks.find(t => t.id === params.id);
         const subtasks = mockSubtasks.filter(s => s.task_id === params.id);
+        const logs = mockTimeLogs.filter(l => l.task_id === params.id);
+
+        const totalMinutes = logs.reduce((sum, l) => sum + l.minutes, 0);
 
         if (!task) return HttpResponse.json({ error: 'Task not found' }, { status: 404 });
+
+        const role = (request.headers.get('x-user-role') || 'EMPLOYEE').toUpperCase();
+        const userId = request.headers.get('x-user-id');
+        const isPM = role === 'PROJECT_MANAGER' || role === 'ORG_ADMIN' || role === 'SYS_ADMIN';
+        const isOwner = task.created_by === userId;
+        const isLocked = (task as any).is_locked || false;
 
         return HttpResponse.json({
             ...task,
             project: { id: 'prj-1', name: 'Worksphere Platform', code: 'WSP' },
             assignees: task.assignees.map(a => ({ user: a })),
-            subtasks: subtasks.map(s => ({
-                ...s,
-                status: s.status_code,
-                creator_name: 'Nguyễn Thị Lan Anh'
-            })),
+            total_logged_minutes: totalMinutes,
+            subtasks: subtasks.map(s => {
+                const subtaskMinutes = mockTimeLogs
+                    .filter(l => l.subtask_id === s.id)
+                    .reduce((sum, l) => sum + l.minutes, 0);
+                return {
+                    ...s,
+                    status: s.status_code,
+                    creator_name: 'Nguyễn Thị Lan Anh',
+                    has_logs: subtaskMinutes > 0,
+                    logged_minutes: subtaskMinutes
+                };
+            }),
             comments: [
                 { id: 'c1', author_name: 'Hoàng Ngọc Sơn', content: 'Cần hoàn thành mốc này gấp nhé!', created_at: new Date().toISOString() }
-            ]
+            ],
+            // Enterprise Capability Pattern (from phan-quyen.md) - Aligned with US-EMP/US-MNG
+            capabilities: {
+                can_update: (isPM || isOwner) && !isLocked,
+                can_delete: (isPM) && !isLocked,
+                can_log_time: task.status_code === 'DONE' && !isLocked,
+                allowed_fields: isPM ? ['*'] : (isOwner ? ['description', 'status_code', 'comment'] : ['comment'])
+            }
         });
     }),
 
@@ -452,12 +481,34 @@ export const handlers = [
 
     // Time Log Handlers
     http.get('/api/tasks/done-for-timelog', () => {
+        const doneTasks = mockTasks.filter(t => t.status_code === 'DONE');
+        const doneSubtasks = mockSubtasks.filter(s => s.status_code === 'DONE');
+
+        const options = [
+            ...doneTasks.map(t => ({
+                id: t.id,
+                title: t.title,
+                project_id: t.project_id || 'prj-1',
+                project_name: 'Worksphere Platform',
+                type: 'TASK',
+                has_subtasks: mockSubtasks.some(s => s.task_id === t.id)
+            })),
+            ...doneSubtasks.map(s => {
+                const parentTask = mockTasks.find(t => t.id === s.task_id);
+                return {
+                    id: s.id,
+                    title: s.title,
+                    project_id: parentTask?.project_id || 'prj-1',
+                    project_name: 'Worksphere Platform',
+                    type: 'SUBTASK',
+                    parent_task_id: s.task_id
+                };
+            })
+        ];
+
         return HttpResponse.json({
             success: true,
-            data: [
-                { id: 'task-3', title: 'Fix bug Login UI', project_name: 'Worksphere Platform', type: 'TASK' },
-                { id: 'sub-1', title: 'Cài đặt MSW', project_name: 'Worksphere Platform', type: 'SUBTASK', parent_task_id: 'task-1' }
-            ]
+            data: options
         });
     }),
 
@@ -474,18 +525,25 @@ export const handlers = [
         return HttpResponse.json({
             success: true,
             data: [
-                { id: 'h1', actor_name: 'Nguyễn Thị Lan Anh', action: 'Đã tạo subtask', summary: 'Cài đặt MSW', created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-                { id: 'h2', actor_name: 'Hoàng Ngọc Sơn', action: 'Đã thay đổi hạn chót', summary: 'Hạn chót mới: 2025-01-30', created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-                { id: 'h3', actor_name: 'Nguyễn Thị Lan Anh', action: 'Đã bình luận', summary: 'Em đang xử lý task này ạ.', created_at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
+                { id: 'h1', user_name: 'Nguyễn Thị Lan Anh', action_text: 'đã tạo công việc con "Cài đặt MSW"', created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
+                { id: 'h2', user_name: 'Hoàng Ngọc Sơn', action_text: 'đã thay đổi hạn hoàn thành thành 2025-01-30', created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
+                { id: 'h3', user_name: 'Nguyễn Thị Lan Anh', action_text: 'đã thêm bình luận mới', created_at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
             ]
         });
     }),
 
     http.get('/api/reports', ({ request }) => {
         const url = new URL(request.url);
-        const search = url.searchParams.get('search');
+        const searchQuery = url.searchParams.get('search');
+        const role = request.headers.get('x-user-role');
+        const userId = request.headers.get('x-user-id');
 
         let reports = [...mockReports];
+
+        // Scoping Logic: EMP only see own reports
+        if (role === 'EMPLOYEE') {
+            reports = reports.filter(r => r.submitted_by === userId);
+        }
 
         // Enrich the reports
         const enrichedReports = reports.map(r => {
@@ -500,17 +558,48 @@ export const handlers = [
             };
         });
 
-        if (search) {
+        if (searchQuery) {
             return HttpResponse.json({
                 success: true,
                 data: enrichedReports.filter(r =>
-                    r.title.toLowerCase().includes(search.toLowerCase()) ||
-                    r.submitted_by.full_name.toLowerCase().includes(search.toLowerCase())
+                    r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    r.submitted_by.full_name.toLowerCase().includes(searchQuery.toLowerCase())
                 )
             });
         }
 
         return HttpResponse.json({ success: true, data: enrichedReports });
+    }),
+
+    http.post('/api/reports', async ({ request }) => {
+        const userId = request.headers.get('x-user-id');
+        const body = await request.json() as any;
+
+        // BA Rule: One Report per Period per User
+        const hasDuplicate = mockReports.find(r =>
+            r.submitted_by === userId &&
+            r.period_type === body.period_type &&
+            r.period_start === body.period_start &&
+            r.period_end === body.period_end &&
+            r.status !== 'DRAFT' // Drafts don't count towards uniqueness for submission
+        );
+
+        if (hasDuplicate && body.status === 'SUBMITTED') {
+            return HttpResponse.json({
+                success: false,
+                message: `Bạn đã có một báo cáo cho kỳ này (${body.period_start} đến ${body.period_end}). Vui lòng kiểm tra lại.`
+            }, { status: 400 });
+        }
+
+        const newReport = {
+            id: Math.random().toString(36).substr(2, 9),
+            ...body,
+            submitted_by: userId,
+            created_at: new Date().toISOString()
+        };
+
+        // In a real mock, we would push, but here we just return success
+        return HttpResponse.json({ success: true, data: newReport });
     }),
 
     http.get('/api/time-logs', ({ request }) => {
@@ -539,6 +628,29 @@ export const handlers = [
         });
 
         return HttpResponse.json({ success: true, data: enrichedLogs });
+    }),
+
+    http.post('/api/time-logs', async ({ request }) => {
+        const body = await request.json() as any;
+        const userId = request.headers.get('x-user-id');
+
+        // Mocking Activity Event & Notification generation
+        console.log(`[MOCK ACTIVITY] User ${userId} logged ${body.minutes}m into task ${body.task_id}`);
+        console.log(`[MOCK NOTIFICATION] Notifying PM of project related to task ${body.task_id}`);
+
+        return HttpResponse.json({
+            success: true,
+            data: { id: Math.random().toString(36).substr(2, 9), ...body, owner_user_id: userId, created_at: new Date().toISOString() }
+        });
+    }),
+
+    http.put('/api/time-logs/:id', async ({ params, request }) => {
+        const body = await request.json() as any;
+        return HttpResponse.json({ success: true, data: { id: params.id, ...body } });
+    }),
+
+    http.delete('/api/time-logs/:id', () => {
+        return HttpResponse.json({ success: true });
     }),
 
     // Admin Users Handlers
@@ -761,6 +873,37 @@ export const handlers = [
     // Time Logs - Delete
     http.delete('/api/time-logs/:id', () => {
         return HttpResponse.json({ success: true });
+    }),
+
+    // Reports - Create
+    http.post('/api/reports', async ({ request }) => {
+        const body = await request.json() as any;
+        const userId = request.headers.get('x-user-id');
+
+        // Rule: One Report per Period per User
+        const alreadyExists = mockReports.find(r =>
+            r.submitted_by === userId &&
+            r.period_type === body.period_type &&
+            r.period_start === body.period_start &&
+            r.period_end === body.period_end
+        );
+
+        if (alreadyExists && body.status !== 'DRAFT') {
+            return HttpResponse.json({
+                success: false,
+                message: `Bạn đã gửi báo cáo cho kỳ ${body.period_start} đến ${body.period_end} rồi. Mỗi kỳ chỉ được phép gửi một báo cáo duy nhất.`
+            }, { status: 400 });
+        }
+
+        return HttpResponse.json({
+            success: true,
+            data: {
+                id: Math.random().toString(36).substr(2, 9),
+                ...body,
+                submitted_by: userId,
+                created_at: new Date().toISOString()
+            }
+        });
     }),
 
     // Reports - Get Detail

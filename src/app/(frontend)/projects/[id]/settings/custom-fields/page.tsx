@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
+import { PERMISSIONS } from '@/lib/permissions';
 
 interface CustomField {
     id: string;
@@ -69,12 +70,11 @@ interface CustomField {
 
 export default function CustomFieldsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: projectId } = use(params);
-    const { user } = useAuthStore();
+    const { user, hasPermission } = useAuthStore();
     const [fields, setFields] = useState<CustomField[]>([]);
     const [loading, setLoading] = useState(true);
     const [projectName, setProjectName] = useState('');
-
-    const isAuthorized = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN' || user?.role === 'CEO';
+    const isAuthorized = hasPermission(PERMISSIONS.PROJECT_UPDATE);
 
     // Dialog states
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -99,30 +99,10 @@ export default function CustomFieldsPage({ params }: { params: Promise<{ id: str
             // Mock data based on Database Design - project_custom_fields table
             const mockFields: CustomField[] = [
                 {
-                    id: 'cf1', field_name: 'Story Points', field_type: 'NUMBER',
-                    is_required: false, default_value: '0', options: [], sort_order: 1,
+                    id: 'cf1', field_name: 'Ghi chú thêm', field_type: 'TEXT',
+                    is_required: false, default_value: '', options: [], sort_order: 1,
                     created_at: '2024-01-10'
-                },
-                {
-                    id: 'cf2', field_name: 'Sprint', field_type: 'DROPDOWN',
-                    is_required: true, default_value: null, options: ['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Backlog'],
-                    sort_order: 2, created_at: '2024-01-10'
-                },
-                {
-                    id: 'cf3', field_name: 'Reviewed', field_type: 'CHECKBOX',
-                    is_required: false, default_value: 'false', options: [], sort_order: 3,
-                    created_at: '2024-02-01'
-                },
-                {
-                    id: 'cf4', field_name: 'Release Date', field_type: 'DATE',
-                    is_required: false, default_value: null, options: [], sort_order: 4,
-                    created_at: '2024-02-15'
-                },
-                {
-                    id: 'cf5', field_name: 'Notes', field_type: 'TEXT',
-                    is_required: false, default_value: '', options: [], sort_order: 5,
-                    created_at: '2024-03-01'
-                },
+                }
             ];
             setFields(mockFields);
         } catch (error) {

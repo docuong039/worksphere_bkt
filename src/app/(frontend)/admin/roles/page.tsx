@@ -47,6 +47,8 @@ import {
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
 
 interface Role {
     id: string;
@@ -142,7 +144,7 @@ const RoleCard = ({
 
 // Main Page Component
 export default function AdminRolesPage() {
-    const { user } = useAuthStore();
+    const { user, hasPermission } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [roles, setRoles] = useState<Role[]>([]);
     const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -330,203 +332,205 @@ export default function AdminRolesPage() {
 
     return (
         <AppLayout>
-            <div className="space-y-6 animate-in fade-in duration-700" data-testid="admin-roles-container">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-roles-title">
-                            <Shield className="inline-block mr-2 h-8 w-8 text-blue-600" />
-                            Quản lý Vai trò
-                        </h1>
-                        <p className="text-slate-500 mt-1 font-medium">
-                            Định nghĩa vai trò và phân quyền (Permissions) trong hệ thống.
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        {user?.role === 'SYS_ADMIN' && (
-                            <Select value={filterOrg} onValueChange={setFilterOrg}>
-                                <SelectTrigger className="w-[200px]" data-testid="filter-org">
-                                    <SelectValue placeholder="Chọn phạm vi" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="MASTER">Vai trò Gốc (Mặc định)</SelectItem>
-                                    <SelectItem value="ALL">Tất cả Vai trò Tổ chức</SelectItem>
-                                    {orgs.map(o => (
-                                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        )}
-                        <Button
-                            className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
-                            onClick={handleCreate}
-                            data-testid="btn-create-role"
-                        >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Tạo Vai trò mới
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Roles List */}
-                {
-                    loading ? (
-                        <div className="grid gap-4" data-testid="roles-loading">
-                            {[1, 2, 3].map((i) => (
-                                <Skeleton key={i} className="h-28 w-full rounded-xl" />
-                            ))}
+            <PermissionGuard permission={PERMISSIONS.ROLE_PERM_READ} showFullPageError>
+                <div className="space-y-6 animate-in fade-in duration-700" data-testid="admin-roles-container">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-roles-title">
+                                <Shield className="inline-block mr-2 h-8 w-8 text-blue-600" />
+                                Quản lý Vai trò
+                            </h1>
+                            <p className="text-slate-500 mt-1 font-medium">
+                                Định nghĩa vai trò và phân quyền (Permissions) trong hệ thống.
+                            </p>
                         </div>
-                    ) : roles.length > 0 ? (
-                        <div className="grid gap-4" data-testid="roles-list">
-                            {roles.map((role) => (
-                                <RoleCard
-                                    key={role.id}
-                                    role={role}
-                                    onView={() => handleView(role)}
-                                    onEdit={() => handleEdit(role)}
-                                    onDelete={() => handleDelete(role.id)}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <Card className="border-none shadow-sm" data-testid="roles-empty">
-                            <CardContent className="py-16 text-center">
-                                <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                                    <Shield className="h-8 w-8 text-slate-300" />
-                                </div>
-                                <h3 className="text-xl font-bold text-slate-900 mb-2">
-                                    Chưa có vai trò nào
-                                </h3>
-                                <p className="text-slate-500">
-                                    Tạo vai trò đầu tiên cho tổ chức.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )
-                }
 
-                {/* Detail Dialog */}
-                <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-                    <DialogContent className="sm:max-w-lg" data-testid="dialog-role-detail">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <Shield className="h-5 w-5 text-blue-600" />
-                                {selectedRole?.name}
-                            </DialogTitle>
-                        </DialogHeader>
-
-                        {selectedRole && (
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <span className="text-slate-500">Mã (Code):</span>
-                                        <p className="font-mono font-medium">{selectedRole.code}</p>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-500">Loại:</span>
-                                        <p>{selectedRole.is_system ? 'Vai trò Hệ thống' : 'Vai trò Tùy chỉnh'}</p>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 className="font-bold text-slate-700 mb-2">Quyền hạn ({selectedRole.permissions.length})</h4>
-                                    <div className="flex flex-wrap gap-1 max-h-40 overflow-auto">
-                                        {selectedRole.permissions.map(p => (
-                                            <Badge key={p} variant="secondary" className="text-xs">
-                                                {p}
-                                            </Badge>
+                        <div className="flex items-center gap-3">
+                            {user?.role === 'SYS_ADMIN' && (
+                                <Select value={filterOrg} onValueChange={setFilterOrg}>
+                                    <SelectTrigger className="w-[200px]" data-testid="filter-org">
+                                        <SelectValue placeholder="Chọn phạm vi" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="MASTER">Vai trò Gốc (Mặc định)</SelectItem>
+                                        <SelectItem value="ALL">Tất cả Vai trò Tổ chức</SelectItem>
+                                        {orgs.map(o => (
+                                            <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
                                         ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                            <Button
+                                className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
+                                onClick={handleCreate}
+                                data-testid="btn-create-role"
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Tạo Vai trò mới
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Roles List */}
+                    {
+                        loading ? (
+                            <div className="grid gap-4" data-testid="roles-loading">
+                                {[1, 2, 3].map((i) => (
+                                    <Skeleton key={i} className="h-28 w-full rounded-xl" />
+                                ))}
+                            </div>
+                        ) : roles.length > 0 ? (
+                            <div className="grid gap-4" data-testid="roles-list">
+                                {roles.map((role) => (
+                                    <RoleCard
+                                        key={role.id}
+                                        role={role}
+                                        onView={() => handleView(role)}
+                                        onEdit={() => handleEdit(role)}
+                                        onDelete={() => handleDelete(role.id)}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <Card className="border-none shadow-sm" data-testid="roles-empty">
+                                <CardContent className="py-16 text-center">
+                                    <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                                        <Shield className="h-8 w-8 text-slate-300" />
                                     </div>
-                                </div>
-                            </div>
-                        )}
-                    </DialogContent>
-                </Dialog>
+                                    <h3 className="text-xl font-bold text-slate-900 mb-2">
+                                        Chưa có vai trò nào
+                                    </h3>
+                                    <p className="text-slate-500">
+                                        Tạo vai trò đầu tiên cho tổ chức.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )
+                    }
 
-                {/* Create/Edit Dialog */}
-                <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                    <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-auto" data-testid="dialog-role-edit">
-                        <DialogHeader>
-                            <DialogTitle>
-                                {editMode === 'create' ? 'Tạo vai trò mới' : 'Chỉnh sửa vai trò'}
-                            </DialogTitle>
-                        </DialogHeader>
+                    {/* Detail Dialog */}
+                    <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+                        <DialogContent className="sm:max-w-lg" data-testid="dialog-role-detail">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Shield className="h-5 w-5 text-blue-600" />
+                                    {selectedRole?.name}
+                                </DialogTitle>
+                            </DialogHeader>
 
-                        <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold">Tên Vai trò</label>
-                                    <Input
-                                        value={editName}
-                                        onChange={(e) => setEditName(e.target.value)}
-                                        placeholder="Lập trình viên Cao cấp"
-                                        data-testid="input-role-name"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold">Mã (Code)</label>
-                                    <Input
-                                        value={editCode}
-                                        onChange={(e) => setEditCode(e.target.value.toUpperCase())}
-                                        placeholder="SENIOR_DEV"
-                                        disabled={editMode === 'edit'}
-                                        data-testid="input-role-code"
-                                    />
-                                </div>
-                            </div>
+                            {selectedRole && (
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span className="text-slate-500">Mã (Code):</span>
+                                            <p className="font-mono font-medium">{selectedRole.code}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-500">Loại:</span>
+                                            <p>{selectedRole.is_system ? 'Vai trò Hệ thống' : 'Vai trò Tùy chỉnh'}</p>
+                                        </div>
+                                    </div>
 
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold">Mô tả</label>
-                                <Input
-                                    value={editDescription}
-                                    onChange={(e) => setEditDescription(e.target.value)}
-                                    placeholder="Nhân viên senior với quyền đặc biệt..."
-                                    data-testid="input-role-description"
-                                />
-                            </div>
-
-                            <div className="space-y-4">
-                                <h4 className="font-bold text-slate-700">Quyền hạn (Permissions)</h4>
-                                {groupedPermissions.map(cat => (
-                                    <div key={cat.key} className="space-y-2">
-                                        <p className="text-sm font-medium text-slate-500">{cat.label}</p>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {cat.perms.map(perm => (
-                                                <label
-                                                    key={perm.code}
-                                                    className="flex items-center gap-2 cursor-pointer text-sm"
-                                                >
-                                                    <Checkbox
-                                                        checked={editPermissions.includes(perm.code)}
-                                                        onCheckedChange={() => togglePermission(perm.code)}
-                                                    />
-                                                    {perm.name}
-                                                </label>
+                                    <div>
+                                        <h4 className="font-bold text-slate-700 mb-2">Quyền hạn ({selectedRole.permissions.length})</h4>
+                                        <div className="flex flex-wrap gap-1 max-h-40 overflow-auto">
+                                            {selectedRole.permissions.map(p => (
+                                                <Badge key={p} variant="secondary" className="text-xs">
+                                                    {p}
+                                                </Badge>
                                             ))}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
+                                </div>
+                            )}
+                        </DialogContent>
+                    </Dialog>
 
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button variant="outline">Hủy</Button>
-                            </DialogClose>
-                            <Button
-                                disabled={saving}
-                                className="bg-blue-600 hover:bg-blue-700"
-                                onClick={handleSave}
-                                data-testid="btn-save-role"
-                            >
-                                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                                Lưu
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </div >
-        </AppLayout >
+                    {/* Create/Edit Dialog */}
+                    <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-auto" data-testid="dialog-role-edit">
+                            <DialogHeader>
+                                <DialogTitle>
+                                    {editMode === 'create' ? 'Tạo vai trò mới' : 'Chỉnh sửa vai trò'}
+                                </DialogTitle>
+                            </DialogHeader>
+
+                            <div className="space-y-4 py-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold">Tên Vai trò</label>
+                                        <Input
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            placeholder="Lập trình viên Cao cấp"
+                                            data-testid="input-role-name"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold">Mã (Code)</label>
+                                        <Input
+                                            value={editCode}
+                                            onChange={(e) => setEditCode(e.target.value.toUpperCase())}
+                                            placeholder="SENIOR_DEV"
+                                            disabled={editMode === 'edit'}
+                                            data-testid="input-role-code"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold">Mô tả</label>
+                                    <Input
+                                        value={editDescription}
+                                        onChange={(e) => setEditDescription(e.target.value)}
+                                        placeholder="Nhân viên senior với quyền đặc biệt..."
+                                        data-testid="input-role-description"
+                                    />
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h4 className="font-bold text-slate-700">Quyền hạn (Permissions)</h4>
+                                    {groupedPermissions.map(cat => (
+                                        <div key={cat.key} className="space-y-2">
+                                            <p className="text-sm font-medium text-slate-500">{cat.label}</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {cat.perms.map(perm => (
+                                                    <label
+                                                        key={perm.code}
+                                                        className="flex items-center gap-2 cursor-pointer text-sm"
+                                                    >
+                                                        <Checkbox
+                                                            checked={editPermissions.includes(perm.code)}
+                                                            onCheckedChange={() => togglePermission(perm.code)}
+                                                        />
+                                                        {perm.name}
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button variant="outline">Hủy</Button>
+                                </DialogClose>
+                                <Button
+                                    disabled={saving}
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                    onClick={handleSave}
+                                    data-testid="btn-save-role"
+                                >
+                                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                                    Lưu
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </PermissionGuard>
+        </AppLayout>
     );
 }

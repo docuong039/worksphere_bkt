@@ -362,7 +362,7 @@ export default function ProjectOverviewPage({
               className="rounded-lg font-bold text-sm h-full px-6 data-[state=active]:bg-white data-[state=active]:shadow-sm"
               asChild
             >
-              <Link href={`/projects/${id}/tasks`}>Công việc</Link>
+              <Link href={`/projects/${id}`}>Công việc</Link>
             </TabsTrigger>
             <TabsTrigger
               value="gantt"

@@ -47,6 +47,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -83,7 +85,7 @@ const PriorityBadge = ({ priority }: { priority: string }) => {
     );
 };
 
-const StatusBadge = ({ status, onStatusChange, readonly = false }: { status: string, onStatusChange?: (s: string) => void, readonly?: boolean }) => {
+const StatusBadge = ({ status, onStatusChange, readonly = false, isPmOrAbove = false }: { status: string, onStatusChange?: (s: string) => void, readonly?: boolean, isPmOrAbove?: boolean }) => {
     const config: any = {
         TODO: { color: 'bg-slate-100 text-slate-500', label: 'CHỜ XỬ LÝ' },
         IN_PROGRESS: { color: 'bg-blue-600 text-white', label: 'ĐANG LÀM' },
@@ -94,7 +96,7 @@ const StatusBadge = ({ status, onStatusChange, readonly = false }: { status: str
 
     if (readonly || !onStatusChange) {
         return (
-            <Badge className={cn("border-none px-2 py-0.5 font-bold text-[10px]", color)}>
+            <Badge className={cn("border-none px-2 py-0.5 font-bold text-[10px]", color)} data-testid="status-badge-readonly">
                 {label}
             </Badge>
         );
@@ -103,34 +105,47 @@ const StatusBadge = ({ status, onStatusChange, readonly = false }: { status: str
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Badge className={cn("border-none px-2 py-0.5 font-bold text-[10px] cursor-pointer hover:opacity-80 transition-opacity", color)}>
+                <Badge
+                    className={cn("border-none px-2 py-0.5 font-bold text-[10px] cursor-pointer hover:opacity-80 transition-opacity", color)}
+                    data-testid="status-badge-trigger"
+                >
                     {label}
                 </Badge>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[120px]">
-                {Object.entries(config).map(([key, cfg]: [string, any]) => (
-                    <DropdownMenuItem
-                        key={key}
-                        className="text-[10px] font-bold"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onStatusChange(key);
-                        }}
-                    >
-                        <div className={cn("w-2 h-2 rounded-full mr-2", cfg.color.split(' ')[0])}></div>
-                        {cfg.label}
-                    </DropdownMenuItem>
-                ))}
+                {Object.entries(config).map(([key, cfg]: [string, any]) => {
+                    const isDisabled = key === 'DONE' && !isPmOrAbove;
+                    return (
+                        <DropdownMenuItem
+                            key={key}
+                            className={cn("text-[10px] font-bold", isDisabled && "opacity-50 cursor-not-allowed")}
+                            disabled={isDisabled}
+                            onClick={(e) => {
+                                if (isDisabled) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onStatusChange(key);
+                            }}
+                            data-testid={`status-option-${key.toLowerCase()}`}
+                        >
+                            <div className={cn("w-2 h-2 rounded-full mr-2", cfg.color.split(' ')[0])}></div>
+                            {cfg.label} {isDisabled && "(PM Duyệt)"}
+                        </DropdownMenuItem>
+                    );
+                })}
             </DropdownMenuContent>
         </DropdownMenu>
     );
 };
 
 const TaskCard = ({ task, onStatusUpdate }: { task: Task, onStatusUpdate: (id: string, s: string) => void }) => {
+    const { user, hasPermission } = useAuthStore();
     const progress = task.subtasks_count > 0
         ? Math.round((task.subtasks_done / task.subtasks_count) * 100)
         : (task.status === 'DONE' ? 100 : 0);
+
+    const isPmOrAbove = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
+    const canUpdateStatus = hasPermission(PERMISSIONS.TASK_UPDATE);
 
     return (
         <Card
@@ -144,10 +159,12 @@ const TaskCard = ({ task, onStatusUpdate }: { task: Task, onStatusUpdate: (id: s
                             <StatusBadge
                                 status={task.status}
                                 onStatusChange={(s) => onStatusUpdate(task.id, s)}
+                                readonly={!canUpdateStatus}
+                                isPmOrAbove={isPmOrAbove}
                             />
                             <PriorityBadge priority={task.priority} />
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{task.project.code}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest" data-testid={`task-project-code-${task.id}`}>{task.project.code}</span>
                     </div>
 
                     <Link href={`/tasks/${task.id}`}>
@@ -205,7 +222,7 @@ const TaskCard = ({ task, onStatusUpdate }: { task: Task, onStatusUpdate: (id: s
 };
 
 export default function TasksPage() {
-    const { user } = useAuthStore();
+    const { user, hasPermission } = useAuthStore();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -237,6 +254,14 @@ export default function TasksPage() {
     };
 
     const handleStatusUpdate = async (taskId: string, newStatus: string) => {
+        const isPmOrAbove = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
+
+        // BA Rule Check: EMP cannot move to DONE
+        if (newStatus === 'DONE' && !isPmOrAbove) {
+            alert("Chỉ Quản lý dự án mới có quyền phê duyệt trạng thái HOÀN THÀNH cho công việc chính.");
+            return;
+        }
+
         // Optimistic update
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
 
@@ -271,245 +296,295 @@ export default function TasksPage() {
 
     return (
         <AppLayout>
-            <div className="space-y-8 animate-in fade-in duration-700" data-testid="tasks-page-container">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="tasks-page-title">
-                            Công việc của tôi
-                        </h1>
-                        <p className="text-slate-500 mt-1 font-medium">
-                            Theo dõi các nhiệm vụ và duy trì hiệu suất làm việc.
-                        </p>
-                    </div>
-                    {user?.role === 'PROJECT_MANAGER' && (
-                        <Button className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200" data-testid="create-task-button" asChild>
-                            <Link href="/tasks/new">
-                                <Plus className="mr-2 h-4 w-4" /> Tạo công việc
-                            </Link>
-                        </Button>
-                    )}
-                </div>
-
-                {/* Filters Bar */}
-                <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-                    <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-                        <div className="relative group w-full sm:w-80">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                            <Input
-                                placeholder="Tìm kiếm công việc..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && fetchTasks()}
-                                className="pl-10 h-10 bg-slate-50 border-transparent focus:bg-white focus:ring-1 focus:ring-blue-500 transition-all rounded-lg"
-                                data-testid="task-search-input"
-                            />
+            <PermissionGuard permission={PERMISSIONS.MY_TASK_ALL} showFullPageError>
+                <div className="space-y-8 animate-in fade-in duration-700" data-testid="tasks-page-container">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="tasks-page-title">
+                                Công việc của tôi
+                            </h1>
+                            <p className="text-slate-500 mt-1 font-medium">
+                                Theo dõi các nhiệm vụ và duy trì hiệu suất làm việc.
+                            </p>
                         </div>
-                        <div className="flex gap-2">
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[140px] h-10 border-slate-200" data-testid="status-filter-trigger">
-                                    <SelectValue placeholder="Trạng thái" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả</SelectItem>
-                                    <SelectItem value="TODO">Chờ xử lý</SelectItem>
-                                    <SelectItem value="IN_PROGRESS">Đang làm</SelectItem>
-                                    <SelectItem value="DONE">Hoàn thành</SelectItem>
-                                    <SelectItem value="BLOCKED">Bị chặn</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                                <SelectTrigger className="w-[140px] h-10 border-slate-200" data-testid="priority-filter-trigger">
-                                    <SelectValue placeholder="Độ ưu tiên" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả</SelectItem>
-                                    <SelectItem value="LOW">Thấp</SelectItem>
-                                    <SelectItem value="MEDIUM">Trung bình</SelectItem>
-                                    <SelectItem value="HIGH">Cao</SelectItem>
-                                    <SelectItem value="URGENT">Khẩn cấp</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        {hasPermission(PERMISSIONS.TASK_CREATE) && (
+                            <Button className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200" data-testid="create-task-button" asChild>
+                                <Link href="/tasks/new">
+                                    <Plus className="mr-2 h-4 w-4" /> Tạo công việc
+                                </Link>
+                            </Button>
+                        )}
                     </div>
 
-                    {/* Active Filters */}
-                    {(statusFilter !== 'ALL' || priorityFilter !== 'ALL' || searchQuery) && (
-                        <div className="flex items-center gap-2 flex-wrap" data-testid="active-filters">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mr-2">Đang lọc:</span>
-                            {searchQuery && (
-                                <Badge variant="secondary" className="bg-blue-50 text-blue-700 gap-1 pr-1 border-blue-100">
-                                    "{searchQuery}"
-                                    <X size={12} className="cursor-pointer" onClick={() => setSearchQuery('')} />
-                                </Badge>
-                            )}
-                            {statusFilter !== 'ALL' && (
-                                <Badge variant="secondary" className="bg-blue-50 text-blue-700 gap-1 pr-1 border-blue-100">
-                                    Trạng thái: {statusFilter}
-                                    <X size={12} className="cursor-pointer" onClick={() => setStatusFilter('ALL')} />
-                                </Badge>
-                            )}
-                            {priorityFilter !== 'ALL' && (
-                                <Badge variant="secondary" className="bg-blue-50 text-blue-700 gap-1 pr-1 border-blue-100">
-                                    Ưu tiên: {priorityFilter}
-                                    <X size={12} className="cursor-pointer" onClick={() => setPriorityFilter('ALL')} />
-                                </Badge>
-                            )}
+                    {/* Filters Bar */}
+                    <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                            <div className="relative group w-full sm:w-80">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+                                <Input
+                                    placeholder="Tìm kiếm công việc..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && fetchTasks()}
+                                    className="pl-10 h-10 bg-slate-50 border-transparent focus:bg-white focus:ring-1 focus:ring-blue-500 transition-all rounded-lg"
+                                    data-testid="task-search-input"
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-[140px] h-10 border-slate-200" data-testid="status-filter-trigger">
+                                        <SelectValue placeholder="Trạng thái" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">Tất cả</SelectItem>
+                                        <SelectItem value="TODO">Chờ xử lý</SelectItem>
+                                        <SelectItem value="IN_PROGRESS">Đang làm</SelectItem>
+                                        <SelectItem value="DONE">Hoàn thành</SelectItem>
+                                        <SelectItem value="BLOCKED">Bị chặn</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                                    <SelectTrigger className="w-[140px] h-10 border-slate-200" data-testid="priority-filter-trigger">
+                                        <SelectValue placeholder="Độ ưu tiên" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">Tất cả</SelectItem>
+                                        <SelectItem value="LOW">Thấp</SelectItem>
+                                        <SelectItem value="MEDIUM">Trung bình</SelectItem>
+                                        <SelectItem value="HIGH">Cao</SelectItem>
+                                        <SelectItem value="URGENT">Khẩn cấp</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* Active Filters */}
+                        {(statusFilter !== 'ALL' || priorityFilter !== 'ALL' || searchQuery) && (
+                            <div className="flex items-center gap-2 flex-wrap" data-testid="active-filters">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mr-2">Đang lọc:</span>
+                                {searchQuery && (
+                                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 gap-1 pr-1 border-blue-100">
+                                        "{searchQuery}"
+                                        <X size={12} className="cursor-pointer" onClick={() => setSearchQuery('')} />
+                                    </Badge>
+                                )}
+                                {statusFilter !== 'ALL' && (
+                                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 gap-1 pr-1 border-blue-100">
+                                        Trạng thái: {statusFilter}
+                                        <X size={12} className="cursor-pointer" onClick={() => setStatusFilter('ALL')} />
+                                    </Badge>
+                                )}
+                                {priorityFilter !== 'ALL' && (
+                                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 gap-1 pr-1 border-blue-100">
+                                        Ưu tiên: {priorityFilter}
+                                        <X size={12} className="cursor-pointer" onClick={() => setPriorityFilter('ALL')} />
+                                    </Badge>
+                                )}
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-[10px] font-black uppercase text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        setStatusFilter('ALL');
+                                        setPriorityFilter('ALL');
+                                    }}
+                                >
+                                    Xóa tất cả
+                                </Button>
+                            </div>
+                        )}
+
+                        <div className="flex items-center gap-2 border-l border-slate-100 pl-4 h-8 self-end lg:self-center">
                             <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-[10px] font-black uppercase text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                                onClick={() => {
-                                    setSearchQuery('');
-                                    setStatusFilter('ALL');
-                                    setPriorityFilter('ALL');
-                                }}
+                                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setViewMode('grid')}
+                                data-testid="btn-view-grid"
                             >
-                                Xóa tất cả
+                                <LayoutGrid size={16} />
+                            </Button>
+                            <Button
+                                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setViewMode('list')}
+                                data-testid="btn-view-list"
+                            >
+                                <List size={16} />
                             </Button>
                         </div>
-                    )}
-
-                    <div className="flex items-center gap-2 border-l border-slate-100 pl-4 h-8 self-end lg:self-center">
-                        <Button
-                            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setViewMode('grid')}
-                            data-testid="btn-view-grid"
-                        >
-                            <LayoutGrid size={16} />
-                        </Button>
-                        <Button
-                            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setViewMode('list')}
-                            data-testid="btn-view-list"
-                        >
-                            <List size={16} />
-                        </Button>
                     </div>
-                </div>
 
-                {/* Tasks Content */}
-                {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                            <Card key={i} className="border border-slate-100 shadow-sm h-48">
-                                <CardContent className="p-5 space-y-4">
-                                    <div className="flex gap-2">
-                                        <Skeleton className="h-4 w-12" />
-                                        <Skeleton className="h-4 w-12" />
-                                    </div>
-                                    <Skeleton className="h-6 w-full" />
-                                    <Skeleton className="h-6 w-2/3" />
-                                    <div className="flex justify-between pt-2">
-                                        <Skeleton className="h-4 w-24" />
-                                        <Skeleton className="h-6 w-6 rounded-full" />
+                    {/* Tasks Content */}
+                    {loading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                                <Card key={i} className="border border-slate-100 shadow-sm h-48">
+                                    <CardContent className="p-5 space-y-4">
+                                        <div className="flex gap-2">
+                                            <Skeleton className="h-4 w-12" />
+                                            <Skeleton className="h-4 w-12" />
+                                        </div>
+                                        <Skeleton className="h-6 w-full" />
+                                        <Skeleton className="h-6 w-2/3" />
+                                        <div className="flex justify-between pt-2">
+                                            <Skeleton className="h-4 w-24" />
+                                            <Skeleton className="h-6 w-6 rounded-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : filteredTasks.length > 0 ? (
+                        viewMode === 'grid' ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" data-testid="tasks-grid">
+                                {filteredTasks.map((task) => (
+                                    <TaskCard
+                                        key={task.id}
+                                        task={task}
+                                        onStatusUpdate={handleStatusUpdate}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <Card className="border-none shadow-sm overflow-hidden bg-white">
+                                <CardContent className="p-0">
+                                    <div className="divide-y divide-slate-100" data-testid="tasks-list">
+                                        {filteredTasks.map((task) => (
+                                            <div
+                                                key={task.id}
+                                                className="p-4 hover:bg-slate-50 flex items-center gap-6 transition-colors group border-b border-slate-100 last:border-0"
+                                                data-testid={`task-row-${task.id}`}
+                                            >
+                                                <div
+                                                    className={cn(
+                                                        "w-5 h-5 rounded border flex items-center justify-center transition-colors",
+                                                        task.status === 'DONE'
+                                                            ? "bg-emerald-500 border-emerald-500 text-white"
+                                                            : "border-slate-300 text-transparent group-hover:border-blue-500",
+                                                        (user?.role === 'EMPLOYEE' && task.status !== 'DONE') ? "cursor-pointer" :
+                                                            (user?.role === 'EMPLOYEE' && task.status === 'DONE') ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                                                    )}
+                                                    onClick={() => {
+                                                        const isPmOrAbove = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
+                                                        if (task.status === 'DONE' && !isPmOrAbove) return;
+
+                                                        const nextStatus = task.status === 'DONE' ? 'TODO' : 'DONE';
+                                                        handleStatusUpdate(task.id, nextStatus);
+                                                    }}
+                                                    data-testid={`task-row-checkbox-${task.id}`}
+                                                >
+                                                    <CheckSquare size={12} />
+                                                </div>
+                                                <Link href={`/tasks/${task.id}`} className="flex-1 min-w-0">
+                                                    <h4 className={cn(
+                                                        "font-bold text-slate-900 truncate",
+                                                        task.status === 'DONE' && "text-slate-400 line-through"
+                                                    )}>{task.title}</h4>
+                                                    <div className="flex items-center gap-3 mt-1.5">
+                                                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{task.project.code}</span>
+                                                        <PriorityBadge priority={task.priority} />
+                                                    </div>
+                                                </Link>
+                                                <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-500">
+                                                    <div className="flex items-center gap-1.5 w-32">
+                                                        <Calendar size={14} className="text-slate-400" />
+                                                        {task.due_date ? new Date(task.due_date).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }) : 'N/A'}
+                                                    </div>
+                                                    <div className="w-24">
+                                                        <StatusBadge
+                                                            status={task.status}
+                                                            onStatusChange={(s) => handleStatusUpdate(task.id, s)}
+                                                            readonly={!hasPermission(PERMISSIONS.TASK_UPDATE)}
+                                                            isPmOrAbove={user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN'}
+                                                        />
+                                                    </div>
+                                                    <div className="flex -space-x-2 w-16">
+                                                        {task.assignees.map((a, i) => (
+                                                            <div key={i} title={a.full_name} className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 ring-1 ring-slate-100">
+                                                                {a.full_name.charAt(0)}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className={cn(
+                                                            "h-8 w-8 text-slate-400 hover:text-blue-600 transition-colors",
+                                                            task.status !== 'DONE' && "opacity-20 cursor-not-allowed"
+                                                        )}
+                                                        disabled={task.status !== 'DONE'}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            window.location.href = `/tasks/${task.id}?logTime=true`;
+                                                        }}
+                                                        title={task.status !== 'DONE' ? "Cần hoàn thành công việc trước khi Log Time" : "Ghi nhận thời gian"}
+                                                        data-testid={`task-row-log-time-${task.id}`}
+                                                    >
+                                                        <Clock size={16} />
+                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`task-row-actions-${task.id}`}>
+                                                                <MoreHorizontal size={20} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem asChild>
+                                                                <Link href={`/tasks/${task.id}`}>Xem chi tiết</Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                disabled={task.status !== 'DONE'}
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    window.location.href = `/tasks/${task.id}?logTime=true`;
+                                                                }}
+                                                                className={cn(task.status !== 'DONE' && "opacity-50 cursor-not-allowed")}
+                                                                data-testid={`task-row-log-time-dropdown-${task.id}`}
+                                                            >
+                                                                <Clock size={14} className="mr-2" /> Ghi nhận thời gian
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                className="text-rose-600"
+                                                                onClick={() => {
+                                                                    if (confirm('Bạn có chắc muốn xóa công việc này?')) {
+                                                                        // delete logic...
+                                                                    }
+                                                                }}
+                                                            >
+                                                                Xóa
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </CardContent>
                             </Card>
-                        ))}
-                    </div>
-                ) : filteredTasks.length > 0 ? (
-                    viewMode === 'grid' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" data-testid="tasks-grid">
-                            {filteredTasks.map((task) => (
-                                <TaskCard key={task.id} task={task} onStatusUpdate={handleStatusUpdate} />
-                            ))}
-                        </div>
+                        )
                     ) : (
-                        <Card className="border-none shadow-sm overflow-hidden bg-white">
-                            <CardContent className="p-0">
-                                <div className="divide-y divide-slate-100" data-testid="tasks-list">
-                                    {filteredTasks.map((task) => (
-                                        <div
-                                            key={task.id}
-                                            className="p-4 hover:bg-slate-50 flex items-center gap-6 transition-colors group border-b border-slate-100 last:border-0"
-                                        >
-                                            <div
-                                                className={cn(
-                                                    "w-5 h-5 rounded border flex items-center justify-center cursor-pointer transition-colors",
-                                                    task.status === 'DONE'
-                                                        ? "bg-emerald-500 border-emerald-500 text-white"
-                                                        : "border-slate-300 text-transparent group-hover:border-blue-500"
-                                                )}
-                                                onClick={() => handleStatusUpdate(task.id, task.status === 'DONE' ? 'TODO' : 'DONE')}
-                                            >
-                                                <CheckSquare size={12} />
-                                            </div>
-                                            <Link href={`/tasks/${task.id}`} className="flex-1 min-w-0">
-                                                <h4 className={cn(
-                                                    "font-bold text-slate-900 truncate",
-                                                    task.status === 'DONE' && "text-slate-400 line-through"
-                                                )}>{task.title}</h4>
-                                                <div className="flex items-center gap-3 mt-1.5">
-                                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{task.project.code}</span>
-                                                    <PriorityBadge priority={task.priority} />
-                                                </div>
-                                            </Link>
-                                            <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-500">
-                                                <div className="flex items-center gap-1.5 w-32">
-                                                    <Calendar size={14} className="text-slate-400" />
-                                                    {task.due_date ? new Date(task.due_date).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' }) : 'N/A'}
-                                                </div>
-                                                <div className="w-24">
-                                                    <StatusBadge
-                                                        status={task.status}
-                                                        onStatusChange={(s) => handleStatusUpdate(task.id, s)}
-                                                    />
-                                                </div>
-                                                <div className="flex -space-x-2 w-16">
-                                                    {task.assignees.map((a, i) => (
-                                                        <div key={i} title={a.full_name} className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 ring-1 ring-slate-100">
-                                                            {a.full_name.charAt(0)}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <MoreHorizontal size={20} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href={`/tasks/${task.id}`}>Xem chi tiết</Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        className="text-rose-600"
-                                                        onClick={() => {
-                                                            if (confirm('Bạn có chắc muốn xóa công việc này?')) {
-                                                                // delete logic...
-                                                            }
-                                                        }}
-                                                    >
-                                                        Xóa
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-24 text-center bg-white rounded-3xl shadow-sm border border-slate-100 px-6" data-testid="tasks-empty-state">
-                        <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-6">
-                            <CheckSquare size={48} />
+                        <div className="flex flex-col items-center justify-center py-24 text-center bg-white rounded-3xl shadow-sm border border-slate-100 px-6" data-testid="tasks-empty-state">
+                            <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-6">
+                                <CheckSquare size={48} />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900">Không tìm thấy công việc</h3>
+                            <p className="text-slate-500 mt-2 max-w-xs font-medium">
+                                {searchQuery || statusFilter !== 'ALL' || priorityFilter !== 'ALL'
+                                    ? "Không tìm thấy công việc phù hợp với bộ lọc."
+                                    : "Bạn chưa được giao công việc nào. Tuyệt vời!"}
+                            </p>
                         </div>
-                        <h3 className="text-2xl font-black text-slate-900">Không tìm thấy công việc</h3>
-                        <p className="text-slate-500 mt-2 max-w-xs font-medium">
-                            {searchQuery || statusFilter !== 'ALL' || priorityFilter !== 'ALL'
-                                ? "Không tìm thấy công việc phù hợp với bộ lọc."
-                                : "Bạn chưa được giao công việc nào. Tuyệt vời!"}
-                        </p>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            </PermissionGuard>
         </AppLayout>
     );
 }

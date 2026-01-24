@@ -52,6 +52,8 @@ import {
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
 
 interface PersonalTask {
     id: string;
@@ -419,180 +421,182 @@ export default function PersonalBoardPage() {
 
     return (
         <AppLayout>
-            <div className="space-y-8 animate-in fade-in duration-700" data-testid="personal-board-container">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="personal-board-title">
-                            📌 Task Cá Nhân
-                        </h1>
-                        <p className="text-slate-500 mt-1 font-medium">
-                            Quản lý công việc riêng của bạn. Hoàn toàn riêng tư.
-                        </p>
-                    </div>
-                    <Button
-                        className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
-                        onClick={() => openNewTaskDialog('TODO')}
-                        data-testid="btn-add-task"
-                    >
-                        <Plus className="mr-2 h-4 w-4" /> Thêm Task
-                    </Button>
-                </div>
-
-                {/* Kanban Board */}
-                {loading ? (
-                    <div className="flex gap-6 overflow-x-auto pb-4" data-testid="kanban-loading">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="flex-1 min-w-[280px]">
-                                <Card className="border-none shadow-sm">
-                                    <CardHeader className="pb-2">
-                                        <Skeleton className="h-6 w-24" />
-                                    </CardHeader>
-                                    <CardContent className="space-y-2">
-                                        <Skeleton className="h-24 w-full" />
-                                        <Skeleton className="h-24 w-full" />
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        ))}
-                    </div>
-                ) : totalTasks > 0 ? (
-                    <div className="flex gap-6 overflow-x-auto pb-4" data-testid="kanban-board">
-                        {COLUMNS.map((column) => (
-                            <KanbanColumn
-                                key={column.id}
-                                column={column}
-                                tasks={tasks[column.id] || []}
-                                onAddTask={openNewTaskDialog}
-                                onEditTask={openEditDialog}
-                                onDeleteTask={handleDelete}
-                                onDrop={handleDrop}
-                                draggedTaskId={draggedTaskId}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <Card className="border-none shadow-sm" data-testid="kanban-empty">
-                        <CardContent className="py-16 text-center">
-                            <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4 text-4xl">
-                                📌
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">
-                                Chưa có task cá nhân nào
-                            </h3>
-                            <p className="text-slate-500 mb-6">
-                                Tạo task đầu tiên để theo dõi công việc riêng!
+            <PermissionGuard permission={PERMISSIONS.MY_TASK_ALL} showFullPageError>
+                <div className="space-y-8 animate-in fade-in duration-700" data-testid="personal-board-container">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="personal-board-title">
+                                📌 Task Cá Nhân
+                            </h1>
+                            <p className="text-slate-500 mt-1 font-medium">
+                                Quản lý công việc riêng của bạn. Hoàn toàn riêng tư.
                             </p>
-                            <Button
-                                className="bg-blue-600 hover:bg-blue-700"
-                                onClick={() => openNewTaskDialog('TODO')}
-                                data-testid="btn-add-task-empty"
-                            >
-                                <Plus className="mr-2 h-4 w-4" /> Tạo Task
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Task Dialog */}
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="sm:max-w-md" data-testid="dialog-task">
-                        <DialogHeader>
-                            <DialogTitle>
-                                {editingTask ? 'Chỉnh sửa Task' : 'Thêm Task Cá Nhân'}
-                            </DialogTitle>
-                        </DialogHeader>
-
-                        <div className="space-y-4 py-4">
-                            {/* Title */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">
-                                    Tiêu đề <span className="text-red-500">*</span>
-                                </label>
-                                <Input
-                                    placeholder="Tên công việc..."
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    className={formErrors.title ? 'border-red-300' : ''}
-                                    data-testid="personal-board-input-title"
-                                />
-                                {formErrors.title && (
-                                    <p className="text-sm text-red-600">{formErrors.title}</p>
-                                )}
-                            </div>
-
-                            {/* Description */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">
-                                    Mô tả
-                                </label>
-                                <Textarea
-                                    placeholder="Chi tiết công việc..."
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    rows={3}
-                                    data-testid="personal-board-input-description"
-                                />
-                            </div>
-
-                            {/* Priority */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">
-                                    Độ ưu tiên
-                                </label>
-                                <Select value={priorityCode} onValueChange={setPriorityCode}>
-                                    <SelectTrigger data-testid="select-priority">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {PRIORITIES.map((p) => (
-                                            <SelectItem key={p.code} value={p.code}>
-                                                {p.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Due Date */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">
-                                    Hạn chót
-                                </label>
-                                <Input
-                                    type="date"
-                                    value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
-                                    data-testid="input-due-date"
-                                />
-                            </div>
                         </div>
+                        <Button
+                            className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
+                            onClick={() => openNewTaskDialog('TODO')}
+                            data-testid="btn-add-task"
+                        >
+                            <Plus className="mr-2 h-4 w-4" /> Thêm Task
+                        </Button>
+                    </div>
 
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button variant="outline" data-testid="personal-board-btn-cancel">
-                                    Hủy
+                    {/* Kanban Board */}
+                    {loading ? (
+                        <div className="flex gap-6 overflow-x-auto pb-4" data-testid="kanban-loading">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="flex-1 min-w-[280px]">
+                                    <Card className="border-none shadow-sm">
+                                        <CardHeader className="pb-2">
+                                            <Skeleton className="h-6 w-24" />
+                                        </CardHeader>
+                                        <CardContent className="space-y-2">
+                                            <Skeleton className="h-24 w-full" />
+                                            <Skeleton className="h-24 w-full" />
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            ))}
+                        </div>
+                    ) : totalTasks > 0 ? (
+                        <div className="flex gap-6 overflow-x-auto pb-4" data-testid="kanban-board">
+                            {COLUMNS.map((column) => (
+                                <KanbanColumn
+                                    key={column.id}
+                                    column={column}
+                                    tasks={tasks[column.id] || []}
+                                    onAddTask={openNewTaskDialog}
+                                    onEditTask={openEditDialog}
+                                    onDeleteTask={handleDelete}
+                                    onDrop={handleDrop}
+                                    draggedTaskId={draggedTaskId}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <Card className="border-none shadow-sm" data-testid="kanban-empty">
+                            <CardContent className="py-16 text-center">
+                                <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4 text-4xl">
+                                    📌
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2">
+                                    Chưa có task cá nhân nào
+                                </h3>
+                                <p className="text-slate-500 mb-6">
+                                    Tạo task đầu tiên để theo dõi công việc riêng!
+                                </p>
+                                <Button
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                    onClick={() => openNewTaskDialog('TODO')}
+                                    data-testid="btn-add-task-empty"
+                                >
+                                    <Plus className="mr-2 h-4 w-4" /> Tạo Task
                                 </Button>
-                            </DialogClose>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={isSubmitting}
-                                className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="personal-board-btn-submit"
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Đang lưu...
-                                    </>
-                                ) : (
-                                    'Lưu'
-                                )}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Task Dialog */}
+                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <DialogContent className="sm:max-w-md" data-testid="dialog-task">
+                            <DialogHeader>
+                                <DialogTitle>
+                                    {editingTask ? 'Chỉnh sửa Task' : 'Thêm Task Cá Nhân'}
+                                </DialogTitle>
+                            </DialogHeader>
+
+                            <div className="space-y-4 py-4">
+                                {/* Title */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Tiêu đề <span className="text-red-500">*</span>
+                                    </label>
+                                    <Input
+                                        placeholder="Tên công việc..."
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        className={formErrors.title ? 'border-red-300' : ''}
+                                        data-testid="personal-board-input-title"
+                                    />
+                                    {formErrors.title && (
+                                        <p className="text-sm text-red-600">{formErrors.title}</p>
+                                    )}
+                                </div>
+
+                                {/* Description */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Mô tả
+                                    </label>
+                                    <Textarea
+                                        placeholder="Chi tiết công việc..."
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        rows={3}
+                                        data-testid="personal-board-input-description"
+                                    />
+                                </div>
+
+                                {/* Priority */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Độ ưu tiên
+                                    </label>
+                                    <Select value={priorityCode} onValueChange={setPriorityCode}>
+                                        <SelectTrigger data-testid="select-priority">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {PRIORITIES.map((p) => (
+                                                <SelectItem key={p.code} value={p.code}>
+                                                    {p.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Due Date */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Hạn chót
+                                    </label>
+                                    <Input
+                                        type="date"
+                                        value={dueDate}
+                                        onChange={(e) => setDueDate(e.target.value)}
+                                        data-testid="input-due-date"
+                                    />
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button variant="outline" data-testid="personal-board-btn-cancel">
+                                        Hủy
+                                    </Button>
+                                </DialogClose>
+                                <Button
+                                    onClick={handleSubmit}
+                                    disabled={isSubmitting}
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                    data-testid="personal-board-btn-submit"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Đang lưu...
+                                        </>
+                                    ) : (
+                                        'Lưu'
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </PermissionGuard>
         </AppLayout>
     );
 }

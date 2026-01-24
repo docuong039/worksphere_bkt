@@ -22,8 +22,10 @@ import {
     ChevronUp,
     ChevronDown,
     Lock,
-    FileText
+    FileText,
+    Timer
 } from 'lucide-react';
+import { PERMISSIONS } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,7 +57,7 @@ import {
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
-    const { user } = useAuthStore();
+    const { user, hasPermission } = useAuthStore();
     const {
         currentTask: task,
         loading,
@@ -94,10 +96,15 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     const [selectedSubtaskId, setSelectedSubtaskId] = useState<string>('TASK_DIRECT');
     const [isSubmittingTime, setIsSubmittingTime] = useState(false);
 
-    // Field Permissions states
-    const [fieldPermissions, setFieldPermissions] = useState<string[]>([]);
+    // Context & Permissions
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [tempDescription, setTempDescription] = useState('');
+
+    // Capability shortcuts
+    const canUpdate = task?.capabilities?.can_update;
+    const canDelete = task?.capabilities?.can_delete;
+    const canLogTime = task?.capabilities?.can_log_time;
+    const allowedFields = task?.capabilities?.allowed_fields || [];
 
     // Edit/Delete Task States
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -105,31 +112,52 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     const [editDescription, setEditDescription] = useState('');
     const [editStatus, setEditStatus] = useState('');
     const [editPriority, setEditPriority] = useState('');
+    const [editTypeCode, setEditTypeCode] = useState('');
+    const [editStartDate, setEditStartDate] = useState('');
     const [editDueDate, setEditDueDate] = useState('');
+    const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [availableMembers, setAvailableMembers] = useState<any[]>([]);
+    const [availableTags, setAvailableTags] = useState<any[]>([]);
     const [isUpdatingTask, setIsUpdatingTask] = useState(false);
     const [isDeletingTask, setIsDeletingTask] = useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
-    const isPM = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN';
-
     // Effects
     useEffect(() => {
-        if (user) fetchTaskDetail(id, user.id);
+        if (user) {
+            fetchTaskDetail(id, user.id);
+        }
     }, [id, user, fetchTaskDetail]);
 
     useEffect(() => {
-        const fetchPerms = async () => {
+        const fetchEditOptions = async () => {
             if (!task?.project?.id || !user) return;
             try {
-                const res = await fetch(`/api/projects/${task.project.id}/field-permissions`, {
+                // Fetch team members for assignments
+                const membersRes = await fetch(`/api/projects/${task.project.id}/members`, {
                     headers: { 'x-user-id': user.id }
                 });
-                const data = await res.json();
-                setFieldPermissions(data.permissions?.[user.id] || []);
+                const membersData = await membersRes.json();
+                setAvailableMembers(membersData.data || []);
+
+                // Fetch tags for tagging
+                const tagsRes = await fetch('/api/tags', {
+                    headers: { 'x-user-id': user.id }
+                });
+                const tagsData = await tagsRes.json();
+                setAvailableTags(tagsData.data || []);
             } catch (error) { console.error(error); }
         };
-        if (task) fetchPerms();
+        if (task) fetchEditOptions();
     }, [task, user]);
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('logTime') === 'true' && task?.status_code === 'DONE') {
+            setIsLogTimeDialogOpen(true);
+        }
+    }, [task]);
 
     // Handlers
     const handleAddCommentAction = async () => {
@@ -142,6 +170,17 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
     const handleSubtaskSubmitAction = async () => {
         if (!subtaskTitle.trim() || !task || !user || task.is_locked) return;
+
+        // BA Rule: Subtask due date cannot exceed main task due date
+        if (subtaskDueDate && task.due_date) {
+            const subDate = new Date(subtaskDueDate);
+            const mainDate = new Date(task.due_date);
+            if (subDate > mainDate) {
+                alert(`QUY TẮC: Hạn chót của công việc con (${subDate.toLocaleDateString('vi-VN')}) không được vượt quá hạn chót của công việc chính (${mainDate.toLocaleDateString('vi-VN')}).`);
+                return;
+            }
+        }
+
         setIsSubmittingSubtask(true);
         if (editingSubtask) {
             await updateSubtask(editingSubtask.id, user.id, { title: subtaskTitle, end_date: subtaskDueDate });
@@ -156,8 +195,12 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         const totalMinutes = parseInt(logHours) * 60 + parseInt(logMinutes);
         if (totalMinutes <= 0 || !task || !user || task.is_locked) return;
 
-        // BA Rule US-EMP-02-01: Must be DONE
+        // BA Rule: NO direct log if task has subtasks
         if (selectedSubtaskId === 'TASK_DIRECT') {
+            if (task.subtasks && task.subtasks.length > 0) {
+                alert("QUY TẮC: Công việc này có danh sách việc con. Bạn BẮT BUỘC phải chọn cụ thể một Subtask để ghi nhận thời gian.");
+                return;
+            }
             if (task.status_code !== 'DONE') {
                 alert("Bạn chỉ có thể log time trực tiếp vào công việc chính khi nó đã ở trạng thái HOÀN THÀNH (DONE).");
                 return;
@@ -168,6 +211,32 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 alert("Bạn chỉ có thể log time vào công việc con khi nó đã được đánh dấu là HOÀN THÀNH.");
                 return;
             }
+        }
+
+        // BA Rule: Period Locking Check (Rule 3)
+        try {
+            if (task?.project?.id) {
+                const locksRes = await fetch(`/api/projects/${task.project.id}/locks`, {
+                    headers: { 'x-user-id': user.id }
+                });
+                const locksData = await locksRes.json();
+                const locks = locksData.locks || [];
+
+                const isLocked = locks.some((l: any) => {
+                    if (!l.is_locked) return false;
+                    const start = new Date(l.period_start);
+                    const end = new Date(l.period_end);
+                    const work = new Date(logDate);
+                    return work >= start && work <= end;
+                });
+
+                if (isLocked) {
+                    alert("QUY TẮC: Kỳ làm việc này đã bị khóa (Period Locked), bạn không thể ghi nhận thời gian vào khoảng này. Vui lòng liên hệ PM.");
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error("Lock check failed", e);
         }
 
         setIsSubmittingTime(true);
@@ -185,13 +254,33 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         setIsSubmittingTime(false);
     };
 
+    const handleDurationSmartChange = (val: string) => {
+        // Quick regex to find numbers followed by h or m
+        const hMatch = val.match(/(\d+)\s*h/i);
+        const mMatch = val.match(/(\d+)\s*m/i);
+        const pureNumber = val.match(/^(\d+)$/);
+        const decimal = val.match(/^(\d*\.?\d+)\s*h$/i);
+
+        if (hMatch || mMatch) {
+            if (hMatch) setLogHours(hMatch[1]);
+            if (mMatch) setLogMinutes(mMatch[1]);
+        } else if (pureNumber) {
+            setLogMinutes(pureNumber[1]);
+            setLogHours('0');
+        } else if (decimal) {
+            const h = parseFloat(decimal[1]);
+            setLogHours(Math.floor(h).toString());
+            setLogMinutes(Math.round((h % 1) * 60).toString());
+        }
+    };
+
     const handleUpdateTaskAction = async () => {
         if (!editTitle.trim() || !task || !user || task.is_locked) return;
 
         // BA Rule: Only PM can move main task to DONE
         const isCurrentlyDone = task.status_code === 'DONE';
         const targetIsDone = editStatus === 'DONE';
-        if (targetIsDone && !isCurrentlyDone && !isPM) {
+        if (targetIsDone && !isCurrentlyDone && !(user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN')) {
             alert("Chỉ Quản lý mới có quyền chuyển trạng thái công việc chính sang DONE.");
             return;
         }
@@ -202,7 +291,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
             description: editDescription,
             priority_code: editPriority,
             status_code: editStatus,
-            due_date: editDueDate,
+            type_code: editTypeCode,
+            start_date: editStartDate || null,
+            due_date: editDueDate || null,
+            assignee_ids: selectedAssignees,
+            tag_ids: selectedTags
         });
         if (success) setIsEditDialogOpen(false);
         setIsUpdatingTask(false);
@@ -261,7 +354,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                         <Link href="/tasks"><ChevronLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />Quay lại Công việc</Link>
                     </Button>
                     <div className="flex gap-2">
-                        {isPM && (
+                        {(user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN') && (
                             <>
                                 <Button
                                     variant="outline"
@@ -274,7 +367,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                         setEditDescription(task.description || '');
                                         setEditPriority(task.priority_code);
                                         setEditStatus(task.status_code);
+                                        setEditTypeCode(task.type_code);
+                                        setEditStartDate(task.start_date ? task.start_date.split('T')[0] : '');
                                         setEditDueDate(task.due_date ? task.due_date.split('T')[0] : '');
+                                        setSelectedAssignees(task.assignees?.map(a => a.user.id) || []);
+                                        setSelectedTags(task.tags?.map(t => t.id) || []);
                                         setIsEditDialogOpen(true);
                                     }}
                                 >
@@ -304,6 +401,9 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                     "px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider",
                                     task.priority_code === 'URGENT' ? "bg-rose-500 text-white" : "bg-emerald-500 text-white"
                                 )} data-testid="task-priority-badge">{task.priority_code}</Badge>
+                                <Badge variant="outline" className="px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider border-slate-200 text-slate-600 bg-white">
+                                    {task.type_code}
+                                </Badge>
                                 {task.is_locked && <Badge className="px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider bg-slate-900 text-white flex gap-1 items-center"><Lock size={10} /> Đã khóa</Badge>}
                             </div>
                             <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight" data-testid="task-title-display">{task.title}</h1>
@@ -322,7 +422,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                 <Card className="border-none shadow-sm group/desc">
                                     <CardHeader className="pb-2 flex flex-row items-center justify-between">
                                         <CardTitle className="text-lg font-bold flex items-center gap-2"><Layers size={18} className="text-blue-600" />Mô tả công việc</CardTitle>
-                                        {(isPM || fieldPermissions.includes('description')) && !isEditingDescription && !task.is_locked && (
+                                        {(canUpdate || allowedFields.includes('description')) && !isEditingDescription && !task.is_locked && (
                                             <Button variant="ghost" size="sm" className="h-8 text-blue-600" onClick={() => { setTempDescription(task.description || ''); setIsEditingDescription(true); }}>Sửa</Button>
                                         )}
                                     </CardHeader>
@@ -339,25 +439,82 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between px-1">
                                         <h3 className="text-lg font-bold">Công việc con ({task.subtasks?.filter(s => s.status_code === 'DONE').length || 0}/{task.subtasks?.length || 0})</h3>
-                                        {!task.is_locked && <Button variant="ghost" size="sm" onClick={() => { setEditingSubtask(null); setSubtaskTitle(''); setSubtaskDueDate(''); setIsSubtaskDialogOpen(true); }} className="text-blue-600 font-bold"><Plus size={16} /> Thêm</Button>}
+                                        {!task.is_locked && hasPermission(PERMISSIONS.SUBTASK_CREATE) && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => { setEditingSubtask(null); setSubtaskTitle(''); setSubtaskDueDate(''); setIsSubtaskDialogOpen(true); }}
+                                                className="text-blue-600 font-bold"
+                                                data-testid="add-subtask-button"
+                                            >
+                                                <Plus size={16} /> Thêm Subtask
+                                            </Button>
+                                        )}
                                     </div>
                                     <div className="space-y-3">
-                                        {task.subtasks?.map((sub) => (
-                                            <div key={sub.id} className="group flex items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all">
-                                                <div className="flex items-center gap-3">
-                                                    <Checkbox checked={sub.status_code === 'DONE'} onCheckedChange={() => user && toggleSubtask(sub.id, user.id, sub.status_code)} disabled={task.is_locked} />
-                                                    <div className="flex flex-col"><span className={cn("text-sm font-bold", sub.status_code === 'DONE' && "line-through text-slate-400")}>{sub.title}</span><span className="text-[10px] text-slate-400 font-bold">{sub.creator_name}</span></div>
-                                                </div>
-                                                {!task.is_locked && (isPM || sub.created_by === user?.id) && (
-                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Button variant="ghost" size="icon" onClick={() => user && reorderSubtask(sub.id, user.id, 'UP')} className="h-7 w-7"><ChevronUp size={14} /></Button>
-                                                        <Button variant="ghost" size="icon" onClick={() => user && reorderSubtask(sub.id, user.id, 'DOWN')} className="h-7 w-7"><ChevronDown size={14} /></Button>
-                                                        <Button variant="ghost" size="icon" onClick={() => { setEditingSubtask(sub); setSubtaskTitle(sub.title); setSubtaskDueDate(sub.end_date || ''); setIsSubtaskDialogOpen(true); }} className="h-7 w-7 text-blue-600"><Pencil size={14} /></Button>
-                                                        <Button variant="ghost" size="icon" onClick={() => user && deleteSubtask(sub.id, user.id)} className="h-7 w-7 text-rose-600"><Trash2 size={14} /></Button>
+                                        {task.subtasks?.map((sub) => {
+                                            const isOwner = sub.created_by === user?.id;
+                                            return (
+                                                <div
+                                                    key={sub.id}
+                                                    className="group flex items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all"
+                                                    data-testid={`subtask-item-${sub.id}`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <Checkbox
+                                                            checked={sub.status_code === 'DONE'}
+                                                            onCheckedChange={() => user && toggleSubtask(sub.id, user.id, sub.status_code)}
+                                                            disabled={task.is_locked || (!isOwner && !(user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN'))}
+                                                            data-testid={`subtask-checkbox-${sub.id}`}
+                                                        />
+                                                        <div className="flex flex-col">
+                                                            <span className={cn("text-sm font-bold", sub.status_code === 'DONE' && "line-through text-slate-400")} data-testid={`subtask-title-${sub.id}`}>{sub.title}</span>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                                                                    <UserCircle size={10} /> {sub.creator_name || 'Hệ thống'}
+                                                                </span>
+                                                                {sub.end_date && (
+                                                                    <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                                                                        <Calendar size={10} /> Hạn: {new Date(sub.end_date).toLocaleDateString('vi-VN')}
+                                                                    </span>
+                                                                )}
+                                                                {sub.has_logs && (
+                                                                    <Badge variant="secondary" className="text-[8px] h-4 bg-emerald-50 text-emerald-600 border-none font-bold" data-testid={`subtask-log-badge-${sub.id}`}>
+                                                                        ĐÃ LOG: {Math.floor((sub.logged_minutes || 0) / 60)}h {(sub.logged_minutes || 0) % 60}m
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                )}
-                                            </div>
-                                        ))}
+                                                    {!task.is_locked && ((user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN') || isOwner) && (
+                                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Button variant="ghost" size="icon" onClick={() => user && reorderSubtask(sub.id, user.id, 'UP')} className="h-7 w-7" data-testid={`subtask-reorder-up-${sub.id}`}><ChevronUp size={14} /></Button>
+                                                            <Button variant="ghost" size="icon" onClick={() => user && reorderSubtask(sub.id, user.id, 'DOWN')} className="h-7 w-7" data-testid={`subtask-reorder-down-${sub.id}`}><ChevronDown size={14} /></Button>
+                                                            {sub.status_code === 'DONE' && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => { setSelectedSubtaskId(sub.id); setIsLogTimeDialogOpen(true); }}
+                                                                    className="h-7 w-7 text-emerald-600"
+                                                                    title="Nhấn để Log Time cho riêng đầu việc này"
+                                                                    data-testid={`subtask-log-time-${sub.id}`}
+                                                                >
+                                                                    <Clock size={14} />
+                                                                </Button>
+                                                            )}
+                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingSubtask(sub); setSubtaskTitle(sub.title); setSubtaskDueDate(sub.end_date || ''); setIsSubtaskDialogOpen(true); }} className="h-7 w-7 text-blue-600" data-testid={`subtask-edit-${sub.id}`}><Pencil size={14} /></Button>
+                                                            <Button variant="ghost" size="icon" onClick={() => {
+                                                                if (sub.has_logs) {
+                                                                    alert("KHÔNG THỂ XÓA: Công việc con này đã có dữ liệu Log Time. Bạn phải xóa hết Nhật ký thời gian của đầu việc này trước.");
+                                                                    return;
+                                                                }
+                                                                user && deleteSubtask(sub.id, user.id);
+                                                            }} className="h-7 w-7 text-rose-600" data-testid={`subtask-delete-${sub.id}`}><Trash2 size={14} /></Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </TabsContent>
@@ -366,11 +523,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                 <Card className="border-none shadow-sm bg-white p-6 space-y-6">
                                     <div className="space-y-6">
                                         {task.comments?.map((comment) => (
-                                            <div key={comment.id} className="flex gap-4">
+                                            <div key={comment.id} className="flex gap-4" data-testid={`comment-item-${comment.id}`}>
                                                 <Avatar className="h-8 w-8"><AvatarFallback className="bg-slate-900 text-white text-[10px]">{comment.creator_name?.charAt(0)}</AvatarFallback></Avatar>
                                                 <div className="flex-1 bg-slate-50 p-3 rounded-2xl rounded-tl-none border border-slate-100">
-                                                    <div className="flex items-center gap-2 mb-1"><span className="font-bold text-xs">{comment.creator_name}</span><span className="text-[10px] text-slate-400">{new Date(comment.created_at).toLocaleString()}</span></div>
-                                                    <div className="text-sm text-slate-600">{comment.content}</div>
+                                                    <div className="flex items-center gap-2 mb-1"><span className="font-bold text-xs" data-testid={`comment-author-${comment.id}`}>{comment.creator_name}</span><span className="text-[10px] text-slate-400">{new Date(comment.created_at).toLocaleString()}</span></div>
+                                                    <div className="text-sm text-slate-600" data-testid={`comment-content-${comment.id}`}>{comment.content}</div>
                                                 </div>
                                             </div>
                                         ))}
@@ -398,12 +555,16 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                     {task.attachments && task.attachments.length > 0 ? (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {task.attachments.map((file) => (
-                                                <div key={file.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                                                <div
+                                                    key={file.id}
+                                                    className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors"
+                                                    data-testid={`attachment-item-${file.id}`}
+                                                >
                                                     <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
                                                         <FileText size={20} />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-bold truncate">{file.name}</p>
+                                                        <p className="text-sm font-bold truncate" data-testid={`attachment-name-${file.id}`}>{file.name}</p>
                                                         <p className="text-[10px] text-slate-400">{file.creator_name} • {new Date(file.created_at).toLocaleDateString()}</p>
                                                     </div>
                                                 </div>
@@ -443,20 +604,85 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                             <CardContent className="space-y-6">
                                 <div className="space-y-2"><div className="flex justify-between text-[10px] font-bold uppercase text-slate-400 tracking-widest"><span>Trạng thái</span><span className="text-blue-600">{task.status_code}</span></div><div className="bg-slate-100 h-2 rounded-full"><div className="bg-blue-600 h-full" style={{ width: task.status_code === 'DONE' ? '100%' : '50%' }} /></div></div>
                                 <div className="grid grid-cols-2 gap-4 text-xs font-bold uppercase text-slate-400"><div><p className="mb-1 flex items-center gap-1"><Calendar size={12} /> Bắt đầu</p><p className="text-slate-900">{task.start_date || 'N/A'}</p></div><div><p className="mb-1 flex items-center gap-1"><Calendar size={12} /> Hết hạn</p><p className="text-slate-900">{task.due_date || 'N/A'}</p></div></div>
+
+                                <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-blue-600/10 p-2 rounded-xl">
+                                            <Timer size={18} className="text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tổng thời gian đã Log</p>
+                                            <p className="text-lg font-black text-slate-900 leading-none">
+                                                {Math.floor((task.total_logged_minutes || 0) / 60)}h {(task.total_logged_minutes || 0) % 60}m
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px] font-bold text-blue-600 border-blue-100 bg-white">Roll-up</Badge>
+                                </div>
+
+                                <Separator className="bg-slate-100" />
+
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                                        <UserCircle size={14} className="text-slate-400" /> Người thực hiện
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {task.assignees && task.assignees.length > 0 ? (
+                                            task.assignees.map((a, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg">
+                                                    <Avatar className="h-5 w-5">
+                                                        <AvatarFallback className="text-[8px] font-bold">{a.user.full_name?.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="text-xs font-bold text-slate-700">{a.user.full_name}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-xs text-slate-400 font-medium italic">Chưa giao cho ai</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                                        <Flag size={14} className="text-slate-400" /> Thẻ (Tags)
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {task.tags && task.tags.length > 0 ? (
+                                            task.tags.map((tag, idx) => (
+                                                <Badge key={idx} variant="outline" className="text-[9px] font-black uppercase bg-slate-50 border-slate-200">
+                                                    {tag.name}
+                                                </Badge>
+                                            ))
+                                        ) : (
+                                            <p className="text-xs text-slate-400 font-medium italic">Chưa có thẻ</p>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <Button
                                     className={cn(
                                         "w-full font-bold h-12 rounded-xl shadow-lg transition-all",
-                                        (task.is_locked || (task.status_code !== 'DONE' && (!task.subtasks || task.subtasks.length === 0)))
+                                        (task.is_locked || task.status_code !== 'DONE')
                                             ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
-                                            : "bg-slate-900 text-white hover:bg-slate-800"
+                                            : "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200"
                                     )}
-                                    onClick={() => setIsLogTimeDialogOpen(true)}
-                                    disabled={task.is_locked}
-                                    title={task.is_locked ? "Dữ liệu thời gian đã bị khóa" : (task.status_code === 'DONE' ? "Ghi nhận thời gian" : "Chỉ được log thời gian khi công việc hoặc công việc con hoàn thành")}
-                                    data-testid="btn-open-log-time"
+                                    onClick={() => {
+                                        if (task.status_code !== 'DONE') return;
+                                        // Auto-select first done subtask if available, otherwise reset
+                                        const firstDoneSub = task.subtasks?.find(s => s.status_code === 'DONE');
+                                        if (task.subtasks && task.subtasks.length > 0) {
+                                            setSelectedSubtaskId(firstDoneSub?.id || 'PLEASE_SELECT');
+                                        } else {
+                                            setSelectedSubtaskId('TASK_DIRECT');
+                                        }
+                                        setIsLogTimeDialogOpen(true);
+                                    }}
+                                    disabled={task.is_locked || task.status_code !== 'DONE'}
+                                    title={task.is_locked ? "Dữ liệu thời gian đã bị khóa" : (task.status_code !== 'DONE' ? "Chỉ được log thời gian khi công việc HOÀN THÀNH (DONE)" : "Ghi nhận công sức")}
+                                    data-testid="main-log-time-button"
                                 >
                                     <Clock className="mr-2" size={16} />
-                                    {task.is_locked ? 'LOG TIME ĐÃ KHÓA' : (task.status_code !== 'DONE' && (!task.subtasks || task.subtasks.length === 0) ? 'CHỜ HOÀN THÀNH' : 'Ghi nhận thời gian')}
+                                    {task.is_locked ? 'LOG TIME ĐÃ KHÓA' : (task.status_code !== 'DONE' ? 'CHỜ HOÀN THÀNH' : 'Ghi nhận thời gian')}
                                 </Button>
                             </CardContent>
                         </Card>
@@ -466,9 +692,44 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 {/* Dialogs */}
                 <Dialog open={isSubtaskDialogOpen} onOpenChange={setIsSubtaskDialogOpen}>
                     <DialogContent>
-                        <DialogHeader><DialogTitle>{editingSubtask ? 'Sửa Subtask' : 'Thêm Subtask'}</DialogTitle></DialogHeader>
-                        <div className="space-y-4 py-4"><Input value={subtaskTitle} onChange={(e) => setSubtaskTitle(e.target.value)} placeholder="Tên công việc..." /><Input type="date" value={subtaskDueDate} onChange={(e) => setSubtaskDueDate(e.target.value)} /></div>
-                        <DialogFooter><DialogClose asChild><Button variant="outline">Hủy</Button></DialogClose><Button onClick={handleSubtaskSubmitAction} disabled={isSubmittingSubtask} className="bg-blue-600">Lưu</Button></DialogFooter>
+                        <DialogHeader>
+                            <DialogTitle>{editingSubtask ? 'Sửa công việc con' : 'Tạo kế hoạch cá nhân (Subtask)'}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500">Tiêu đề Subtask *</label>
+                                <Input
+                                    value={subtaskTitle}
+                                    onChange={(e) => setSubtaskTitle(e.target.value)}
+                                    placeholder="Bạn định làm gì cho đầu việc này?..."
+                                    className="border-slate-200 focus:ring-blue-500 rounded-xl"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500">Hạn hoàn thành</label>
+                                    <Input
+                                        type="date"
+                                        value={subtaskDueDate}
+                                        onChange={(e) => setSubtaskDueDate(e.target.value)}
+                                        className="border-slate-200 focus:ring-blue-500 rounded-xl"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500">Người thực hiện</label>
+                                    <div className="h-10 flex items-center px-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-600">
+                                        <UserCircle size={14} className="mr-2" /> {user?.full_name} (Chính bạn)
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-slate-400 italic font-medium">
+                                * Subtask là đơn vị thực thi nhỏ nhất, không có mô tả chi tiết hay độ ưu tiên riêng.
+                            </p>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="outline" className="rounded-xl font-bold">Hủy</Button></DialogClose>
+                            <Button onClick={handleSubtaskSubmitAction} disabled={isSubmittingSubtask} className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold px-8">Lưu</Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
 
@@ -476,13 +737,71 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                     <DialogContent>
                         <DialogHeader><DialogTitle>Ghi nhận thời gian</DialogTitle></DialogHeader>
                         <div className="space-y-4 py-4">
-                            <select className="w-full p-2 border rounded-md" value={selectedSubtaskId} onChange={(e) => setSelectedSubtaskId(e.target.value)}>
-                                <option value="TASK_DIRECT">Ghi trực tiếp vào Công việc chính</option>
-                                {task.subtasks?.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-                            </select>
-                            <div className="flex gap-4"><Input type="number" value={logHours} onChange={(e) => setLogHours(e.target.value)} placeholder="Giờ" /><Input type="number" value={logMinutes} onChange={(e) => setLogMinutes(e.target.value)} placeholder="Phút" /></div>
-                            <Input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)} />
-                            <Textarea value={logNote} onChange={(e) => setLogNote(e.target.value)} placeholder="Ghi chú..." />
+                            <p className="text-xs bg-amber-50 text-amber-700 p-3 rounded-lg border border-amber-100 font-medium">
+                                <b>Quy tắc Log Time:</b> Hệ thống yêu cầu công việc (hoặc công việc con) phải ở trạng thái HOÀN THÀNH mới có thể ghi nhận thời gian.
+                            </p>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500">Đối tượng ghi nhận *</label>
+                                <select
+                                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={selectedSubtaskId}
+                                    onChange={(e) => setSelectedSubtaskId(e.target.value)}
+                                >
+                                    <option value="PLEASE_SELECT" disabled hidden>
+                                        --- Vui lòng chọn một Subtask ---
+                                    </option>
+                                    <option value="TASK_DIRECT" disabled={task.subtasks && task.subtasks.length > 0} className={cn(task.subtasks && task.subtasks.length > 0 && "hidden")}>
+                                        Ghi trực tiếp vào Công việc chính
+                                    </option>
+                                    {task.subtasks?.map(s => (
+                                        <option key={s.id} value={s.id} disabled={s.status_code !== 'DONE'}>
+                                            {s.title} {s.status_code !== 'DONE' ? "(Chưa hoàn thành)" : ""}
+                                        </option>
+                                    ))}
+                                </select>
+                                {task.subtasks && task.subtasks.length > 0 && (
+                                    <p className="text-[10px] text-slate-400 italic font-medium px-1">
+                                        * Công việc này có Subtask, bạn phải log thời gian vào từng đầu việc con.
+                                    </p>
+                                )}
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500">Thời gian (VD: 1h 30m, 90m, 2h) *</label>
+                                <div className="flex gap-4">
+                                    <div className="flex-1 relative">
+                                        <Input
+                                            placeholder="Nhập nhanh: 1h 30m..."
+                                            onChange={(e) => handleDurationSmartChange(e.target.value)}
+                                            className="border-slate-200 focus:ring-blue-500 rounded-xl pl-9"
+                                            data-testid="smart-duration-input"
+                                        />
+                                        <Timer className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-slate-100 px-3 rounded-xl border border-slate-200">
+                                        <div className="text-xs font-black text-slate-900" data-testid="duration-preview">
+                                            {logHours}h {logMinutes}m
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <div className="flex-1 space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 ml-1">Giờ</label>
+                                        <Input type="number" value={logHours} onChange={(e) => setLogHours(e.target.value)} placeholder="0" className="rounded-xl h-9" data-testid="input-log-hours" />
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 ml-1">Phút</label>
+                                        <Input type="number" value={logMinutes} onChange={(e) => setLogMinutes(e.target.value)} placeholder="0" className="rounded-xl h-9" data-testid="input-log-minutes" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500">Ngày làm việc *</label>
+                                <Input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)} className="rounded-xl" data-testid="input-log-date" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500">Ghi chú công việc</label>
+                                <Textarea value={logNote} onChange={(e) => setLogNote(e.target.value)} placeholder="Bạn đã làm những gì trong thời gian này?..." className="min-h-[100px] rounded-xl" data-testid="input-log-note" />
+                            </div>
                         </div>
                         <DialogFooter><Button onClick={handleTimeSubmitAction} disabled={isSubmittingTime} className="bg-emerald-600 text-white">Lưu thời gian</Button></DialogFooter>
                     </DialogContent>
@@ -499,8 +818,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                 <Input
                                     value={editTitle}
                                     onChange={(e) => setEditTitle(e.target.value)}
-                                    disabled={!isPM && !fieldPermissions.includes('title')}
-                                    className={cn(!isPM && !fieldPermissions.includes('title') && "bg-slate-50 opacity-70")}
+                                    disabled={!canUpdate && !allowedFields.includes('title')}
+                                    className={cn(!canUpdate && !allowedFields.includes('title') && "bg-slate-50 opacity-70")}
                                 />
                             </div>
 
@@ -510,11 +829,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                     <select
                                         className={cn(
                                             "w-full p-2 border rounded-md text-sm font-medium",
-                                            (!isPM && !fieldPermissions.includes('status_code')) && "bg-slate-50 opacity-70"
+                                            (!canUpdate && !allowedFields.includes('status_code')) && "bg-slate-50 opacity-70"
                                         )}
                                         value={editStatus}
                                         onChange={(e) => setEditStatus(e.target.value)}
-                                        disabled={!isPM && !fieldPermissions.includes('status_code')}
+                                        disabled={!canUpdate && !allowedFields.includes('status_code')}
                                     >
                                         <option value="TODO">Cần làm (To Do)</option>
                                         <option value="IN_PROGRESS">Đang làm (In Progress)</option>
@@ -527,11 +846,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                     <select
                                         className={cn(
                                             "w-full p-2 border rounded-md text-sm font-medium",
-                                            (!isPM && !fieldPermissions.includes('priority_code')) && "bg-slate-50 opacity-70"
+                                            (!canUpdate && !allowedFields.includes('priority_code')) && "bg-slate-50 opacity-70"
                                         )}
                                         value={editPriority}
                                         onChange={(e) => setEditPriority(e.target.value)}
-                                        disabled={!isPM && !fieldPermissions.includes('priority_code')}
+                                        disabled={!canUpdate && !allowedFields.includes('priority_code')}
                                     >
                                         <option value="LOW">Thấp (Low)</option>
                                         <option value="MEDIUM">Trung bình (Medium)</option>
@@ -543,14 +862,102 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-slate-500">Ngày bắt đầu</label>
+                                    <Input
+                                        type="date"
+                                        value={editStartDate}
+                                        onChange={(e) => setEditStartDate(e.target.value)}
+                                        disabled={!canUpdate && !allowedFields.includes('start_date')}
+                                        className={cn(!canUpdate && !allowedFields.includes('start_date') && "bg-slate-50 opacity-70")}
+                                    />
+                                </div>
+                                <div className="space-y-2">
                                     <label className="text-xs font-bold uppercase text-slate-500">Hạn chót</label>
                                     <Input
                                         type="date"
                                         value={editDueDate}
                                         onChange={(e) => setEditDueDate(e.target.value)}
-                                        disabled={!isPM && !fieldPermissions.includes('due_date')}
-                                        className={cn(!isPM && !fieldPermissions.includes('due_date') && "bg-slate-50 opacity-70")}
+                                        disabled={!canUpdate && !allowedFields.includes('due_date')}
+                                        className={cn(!canUpdate && !allowedFields.includes('due_date') && "bg-slate-50 opacity-70")}
                                     />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500">Loại công việc</label>
+                                <select
+                                    className={cn(
+                                        "w-full p-2 border rounded-md text-sm font-medium",
+                                        (!canUpdate && !allowedFields.includes('type_code')) && "bg-slate-50 opacity-70"
+                                    )}
+                                    value={editTypeCode}
+                                    onChange={(e) => setEditTypeCode(e.target.value)}
+                                    disabled={!canUpdate && !allowedFields.includes('type_code')}
+                                >
+                                    <option value="TASK">Task</option>
+                                    <option value="BUG">Bug</option>
+                                    <option value="FEATURE">Feature</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500">Người thực hiện</label>
+                                <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-slate-50/50">
+                                    {availableMembers.map(member => (
+                                        <button
+                                            key={member.id}
+                                            type="button"
+                                            onClick={() => {
+                                                if (!canUpdate && !allowedFields.includes('assignees')) return;
+                                                setSelectedAssignees(prev =>
+                                                    prev.includes(member.id)
+                                                        ? prev.filter(id => id !== member.id)
+                                                        : [...prev, member.id]
+                                                );
+                                            }}
+                                            className={cn(
+                                                "flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-bold transition-all",
+                                                selectedAssignees.includes(member.id)
+                                                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                                    : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
+                                            )}
+                                            disabled={!canUpdate && !allowedFields.includes('assignees')}
+                                        >
+                                            <Avatar className="h-4 w-4">
+                                                <AvatarFallback className="text-[8px]">{member.full_name?.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            {member.full_name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-slate-500">Thẻ (Tags)</label>
+                                <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-slate-50/50">
+                                    {availableTags.map(tag => (
+                                        <button
+                                            key={tag.id}
+                                            type="button"
+                                            onClick={() => {
+                                                if (!canUpdate && !allowedFields.includes('tags')) return;
+                                                setSelectedTags(prev =>
+                                                    prev.includes(tag.id)
+                                                        ? prev.filter(id => id !== tag.id)
+                                                        : [...prev, tag.id]
+                                                );
+                                            }}
+                                            className={cn(
+                                                "px-2 py-1 rounded-full text-[10px] font-black border uppercase transition-all",
+                                                selectedTags.includes(tag.id)
+                                                    ? "bg-slate-900 text-white border-slate-900"
+                                                    : "bg-white text-slate-600 border-slate-200 hover:border-slate-800"
+                                            )}
+                                            disabled={!canUpdate && !allowedFields.includes('tags')}
+                                        >
+                                            {tag.name}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
@@ -559,8 +966,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                 <Textarea
                                     value={editDescription}
                                     onChange={(e) => setEditDescription(e.target.value)}
-                                    className={cn("min-h-[100px]", (!isPM && !fieldPermissions.includes('description')) && "bg-slate-50 opacity-70")}
-                                    disabled={!isPM && !fieldPermissions.includes('description')}
+                                    className={cn("min-h-[100px]", (!canUpdate && !allowedFields.includes('description')) && "bg-slate-50 opacity-70")}
+                                    disabled={!canUpdate && !allowedFields.includes('description')}
                                 />
                             </div>
                         </div>
@@ -592,6 +999,6 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                     </DialogContent>
                 </Dialog>
             </div>
-        </AppLayout>
+        </AppLayout >
     );
 }

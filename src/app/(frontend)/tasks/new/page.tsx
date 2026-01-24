@@ -43,6 +43,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
 
 interface Project {
     id: string;
@@ -84,7 +86,7 @@ const TYPES = [
 
 export default function CreateTaskPage() {
     const router = useRouter();
-    const { user } = useAuthStore();
+    const { user, hasPermission } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -251,298 +253,287 @@ export default function CreateTaskPage() {
         );
     };
 
-    const isPM = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN' || user?.role === 'CEO';
-
-    if (!isPM && !loading) {
-        return (
-            <AppLayout>
-                <div className="flex flex-col items-center justify-center py-32 text-center h-[70vh]">
-                    <AlertCircle size={48} className="text-amber-500 mb-6" />
-                    <h2 className="text-2xl font-black text-slate-900">Truy cập bị hạn chế</h2>
-                    <p className="text-slate-500 mt-2 max-w-xs font-medium">Bạn không có quyền tạo công việc mới. Vui lòng liên hệ Quản lý dự án.</p>
-                </div>
-            </AppLayout>
-        );
-    }
 
     return (
         <AppLayout>
-            <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-700" data-testid="create-task-container">
-                {/* Back Link */}
-                <Link
-                    href="/tasks"
-                    className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors"
-                    data-testid="link-back-tasks"
-                >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Quay lại danh sách Task
-                </Link>
+            <PermissionGuard permission={PERMISSIONS.TASK_CREATE} showFullPageError>
+                <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-700" data-testid="create-task-container">
+                    {/* Back Link */}
+                    <Link
+                        href="/tasks"
+                        className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors"
+                        data-testid="link-back-tasks"
+                    >
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Quay lại danh sách Task
+                    </Link>
 
-                {/* Header */}
-                <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="create-task-title">
-                        📝 Tạo Task Mới
-                    </h1>
-                    <p className="text-slate-500 mt-1 font-medium">
-                        Tạo và giao việc cho thành viên trong dự án.
-                    </p>
-                </div>
+                    {/* Header */}
+                    <div>
+                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="create-task-title">
+                            📝 Tạo Task Mới
+                        </h1>
+                        <p className="text-slate-500 mt-1 font-medium">
+                            Tạo và giao việc cho thành viên trong dự án.
+                        </p>
+                    </div>
 
-                {/* Form Card */}
-                <Card className="border-none shadow-lg" data-testid="create-task-form">
-                    <CardContent className="p-8 space-y-6">
-                        {/* Submit Error */}
-                        {formErrors.submit && (
-                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-start gap-3" data-testid="form-error">
-                                <AlertCircle size={20} className="mt-0.5" />
-                                <div>
-                                    <p className="font-semibold">Lỗi tạo task</p>
-                                    <p className="text-sm">{formErrors.submit}</p>
+                    {/* Form Card */}
+                    <Card className="border-none shadow-lg" data-testid="create-task-form">
+                        <CardContent className="p-8 space-y-6">
+                            {/* Submit Error */}
+                            {formErrors.submit && (
+                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-start gap-3" data-testid="form-error">
+                                    <AlertCircle size={20} className="mt-0.5" />
+                                    <div>
+                                        <p className="font-semibold">Lỗi tạo task</p>
+                                        <p className="text-sm">{formErrors.submit}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-
-                        {/* Project Select */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">
-                                Dự án <span className="text-red-500">*</span>
-                            </label>
-                            {loading ? (
-                                <Skeleton className="h-10 w-full" />
-                            ) : (
-                                <Select value={projectId} onValueChange={setProjectId}>
-                                    <SelectTrigger
-                                        className={formErrors.project ? 'border-red-300' : ''}
-                                        data-testid="select-project"
-                                    >
-                                        <SelectValue placeholder="Chọn dự án..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {projects.map((p) => (
-                                            <SelectItem key={p.id} value={p.id}>
-                                                [{p.code}] {p.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
                             )}
-                            {formErrors.project && (
-                                <p className="text-sm text-red-600">{formErrors.project}</p>
-                            )}
-                        </div>
 
-                        {/* Title */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">
-                                Tiêu đề <span className="text-red-500">*</span>
-                            </label>
-                            <Input
-                                placeholder="Nhập tiêu đề task..."
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className={formErrors.title ? 'border-red-300' : ''}
-                                data-testid="task-new-input-title"
-                            />
-                            {formErrors.title && (
-                                <p className="text-sm text-red-600">{formErrors.title}</p>
-                            )}
-                        </div>
-
-                        {/* Description */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">
-                                Mô tả
-                            </label>
-                            <Textarea
-                                placeholder="Mô tả chi tiết về task..."
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                rows={4}
-                                data-testid="task-new-input-description"
-                            />
-                        </div>
-
-                        {/* Status & Priority Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">Trạng thái</label>
-                                <Select value={statusCode} onValueChange={setStatusCode}>
-                                    <SelectTrigger data-testid="select-status">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {STATUSES.map((s) => (
-                                            <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">Độ ưu tiên</label>
-                                <Select value={priorityCode} onValueChange={setPriorityCode}>
-                                    <SelectTrigger data-testid="select-priority">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {PRIORITIES.map((p) => (
-                                            <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">Loại</label>
-                                <Select value={typeCode} onValueChange={setTypeCode}>
-                                    <SelectTrigger data-testid="select-type">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {TYPES.map((t) => (
-                                            <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        {/* Dates Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Project Select */}
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-slate-700">
-                                    <Calendar className="inline-block mr-1 h-4 w-4" />
-                                    Ngày bắt đầu
+                                    Dự án <span className="text-red-500">*</span>
                                 </label>
-                                <Input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    data-testid="input-start-date"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">
-                                    <Calendar className="inline-block mr-1 h-4 w-4" />
-                                    Hạn chót
-                                </label>
-                                <Input
-                                    type="date"
-                                    value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
-                                    className={formErrors.dueDate ? 'border-red-300' : ''}
-                                    data-testid="input-due-date"
-                                />
-                                {formErrors.dueDate && (
-                                    <p className="text-sm text-red-600">{formErrors.dueDate}</p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Assignees */}
-                        <div className="space-y-3">
-                            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                                <User className="h-4 w-4" />
-                                Giao cho
-                            </label>
-                            {!projectId ? (
-                                <p className="text-sm text-slate-400">Vui lòng chọn dự án để thấy danh sách thành viên</p>
-                            ) : teamMembers.length === 0 ? (
-                                <p className="text-sm text-slate-400">Dự án chưa có thành viên</p>
-                            ) : (
-                                <div className="flex flex-wrap gap-2" data-testid="assignees-list">
-                                    {teamMembers.map((member) => {
-                                        const isSelected = selectedAssignees.includes(member.id);
-                                        return (
-                                            <button
-                                                key={member.id}
-                                                type="button"
-                                                onClick={() => toggleAssignee(member.id)}
-                                                className={cn(
-                                                    "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all",
-                                                    isSelected
-                                                        ? "bg-blue-50 border-blue-300 text-blue-700"
-                                                        : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
-                                                )}
-                                                data-testid={`assignee-${member.id}`}
-                                            >
-                                                <Avatar className="h-6 w-6">
-                                                    <AvatarFallback className="text-xs font-bold">
-                                                        {member.full_name.charAt(0)}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <span className="text-sm font-medium">{member.full_name}</span>
-                                                {isSelected && <CheckCircle2 size={14} className="text-blue-600" />}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Tags */}
-                        <div className="space-y-3">
-                            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                                <Tag className="h-4 w-4" />
-                                Thẻ (Tags)
-                            </label>
-                            {tags.length === 0 ? (
-                                <p className="text-sm text-slate-400">Chưa có thẻ nào</p>
-                            ) : (
-                                <div className="flex flex-wrap gap-2" data-testid="tags-list">
-                                    {tags.map((tag) => {
-                                        const isSelected = selectedTags.includes(tag.id);
-                                        return (
-                                            <button
-                                                key={tag.id}
-                                                type="button"
-                                                onClick={() => toggleTag(tag.id)}
-                                                className={cn(
-                                                    "px-3 py-1.5 rounded-full text-sm font-medium border transition-all",
-                                                    isSelected
-                                                        ? "bg-blue-600 text-white border-blue-600"
-                                                        : "bg-slate-100 text-slate-600 border-slate-200 hover:border-blue-300"
-                                                )}
-                                                data-testid={`tag-${tag.id}`}
-                                            >
-                                                {tag.name}
-                                                {isSelected && <X size={12} className="ml-1 inline" />}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
-                            <Button
-                                variant="outline"
-                                onClick={() => router.push('/tasks')}
-                                data-testid="task-new-btn-cancel"
-                            >
-                                Hủy
-                            </Button>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={isSubmitting}
-                                className="bg-blue-600 hover:bg-blue-700 min-w-[120px]"
-                                data-testid="task-new-btn-submit"
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Đang tạo...
-                                    </>
+                                {loading ? (
+                                    <Skeleton className="h-10 w-full" />
                                 ) : (
-                                    <>
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Tạo Task
-                                    </>
+                                    <Select value={projectId} onValueChange={setProjectId}>
+                                        <SelectTrigger
+                                            className={formErrors.project ? 'border-red-300' : ''}
+                                            data-testid="select-project"
+                                        >
+                                            <SelectValue placeholder="Chọn dự án..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {projects.map((p) => (
+                                                <SelectItem key={p.id} value={p.id}>
+                                                    [{p.code}] {p.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 )}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </AppLayout>
+                                {formErrors.project && (
+                                    <p className="text-sm text-red-600">{formErrors.project}</p>
+                                )}
+                            </div>
+
+                            {/* Title */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-slate-700">
+                                    Tiêu đề <span className="text-red-500">*</span>
+                                </label>
+                                <Input
+                                    placeholder="Nhập tiêu đề task..."
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    className={formErrors.title ? 'border-red-300' : ''}
+                                    data-testid="task-new-input-title"
+                                />
+                                {formErrors.title && (
+                                    <p className="text-sm text-red-600">{formErrors.title}</p>
+                                )}
+                            </div>
+
+                            {/* Description */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-slate-700">
+                                    Mô tả
+                                </label>
+                                <Textarea
+                                    placeholder="Mô tả chi tiết về task..."
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    rows={4}
+                                    data-testid="task-new-input-description"
+                                />
+                            </div>
+
+                            {/* Status & Priority Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">Trạng thái</label>
+                                    <Select value={statusCode} onValueChange={setStatusCode}>
+                                        <SelectTrigger data-testid="select-status">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {STATUSES.map((s) => (
+                                                <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">Độ ưu tiên</label>
+                                    <Select value={priorityCode} onValueChange={setPriorityCode}>
+                                        <SelectTrigger data-testid="select-priority">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {PRIORITIES.map((p) => (
+                                                <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">Loại</label>
+                                    <Select value={typeCode} onValueChange={setTypeCode}>
+                                        <SelectTrigger data-testid="select-type">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {TYPES.map((t) => (
+                                                <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            {/* Dates Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        <Calendar className="inline-block mr-1 h-4 w-4" />
+                                        Ngày bắt đầu
+                                    </label>
+                                    <Input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        data-testid="input-start-date"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        <Calendar className="inline-block mr-1 h-4 w-4" />
+                                        Hạn chót
+                                    </label>
+                                    <Input
+                                        type="date"
+                                        value={dueDate}
+                                        onChange={(e) => setDueDate(e.target.value)}
+                                        className={formErrors.dueDate ? 'border-red-300' : ''}
+                                        data-testid="input-due-date"
+                                    />
+                                    {formErrors.dueDate && (
+                                        <p className="text-sm text-red-600">{formErrors.dueDate}</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Assignees */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                                    <User className="h-4 w-4" />
+                                    Giao cho
+                                </label>
+                                {!projectId ? (
+                                    <p className="text-sm text-slate-400">Vui lòng chọn dự án để thấy danh sách thành viên</p>
+                                ) : teamMembers.length === 0 ? (
+                                    <p className="text-sm text-slate-400">Dự án chưa có thành viên</p>
+                                ) : (
+                                    <div className="flex flex-wrap gap-2" data-testid="assignees-list">
+                                        {teamMembers.map((member) => {
+                                            const isSelected = selectedAssignees.includes(member.id);
+                                            return (
+                                                <button
+                                                    key={member.id}
+                                                    type="button"
+                                                    onClick={() => toggleAssignee(member.id)}
+                                                    className={cn(
+                                                        "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all",
+                                                        isSelected
+                                                            ? "bg-blue-50 border-blue-300 text-blue-700"
+                                                            : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
+                                                    )}
+                                                    data-testid={`assignee-${member.id}`}
+                                                >
+                                                    <Avatar className="h-6 w-6">
+                                                        <AvatarFallback className="text-xs font-bold">
+                                                            {member.full_name.charAt(0)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="text-sm font-medium">{member.full_name}</span>
+                                                    {isSelected && <CheckCircle2 size={14} className="text-blue-600" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Tags */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                                    <Tag className="h-4 w-4" />
+                                    Thẻ (Tags)
+                                </label>
+                                {tags.length === 0 ? (
+                                    <p className="text-sm text-slate-400">Chưa có thẻ nào</p>
+                                ) : (
+                                    <div className="flex flex-wrap gap-2" data-testid="tags-list">
+                                        {tags.map((tag) => {
+                                            const isSelected = selectedTags.includes(tag.id);
+                                            return (
+                                                <button
+                                                    key={tag.id}
+                                                    type="button"
+                                                    onClick={() => toggleTag(tag.id)}
+                                                    className={cn(
+                                                        "px-3 py-1.5 rounded-full text-sm font-medium border transition-all",
+                                                        isSelected
+                                                            ? "bg-blue-600 text-white border-blue-600"
+                                                            : "bg-slate-100 text-slate-600 border-slate-200 hover:border-blue-300"
+                                                    )}
+                                                    data-testid={`tag-${tag.id}`}
+                                                >
+                                                    {tag.name}
+                                                    {isSelected && <X size={12} className="ml-1 inline" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => router.push('/tasks')}
+                                    data-testid="task-new-btn-cancel"
+                                >
+                                    Hủy
+                                </Button>
+                                <Button
+                                    onClick={handleSubmit}
+                                    disabled={isSubmitting}
+                                    className="bg-blue-600 hover:bg-blue-700 min-w-[120px]"
+                                    data-testid="task-new-btn-submit"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Đang tạo...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Tạo Task
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </PermissionGuard>
+        </AppLayout >
     );
 }

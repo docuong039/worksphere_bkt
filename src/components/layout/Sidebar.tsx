@@ -27,54 +27,58 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
+import { PERMISSIONS, AppPermission } from '@/lib/permissions';
 
 interface MenuItem {
     label: string;
     href: string;
     icon: React.ElementType;
-    roles: string[];
+    requiredPermission?: AppPermission;
+    roles?: string[]; // Fallback or for legacy
 }
 
 const MENU_ITEMS: MenuItem[] = [
-    { label: 'Bảng điều khiển', href: '/dashboard', icon: LayoutDashboard, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN', 'SYS_ADMIN'] },
-    { label: 'Công việc của tôi', href: '/tasks', icon: CheckSquare, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
-    { label: 'Dự án', href: '/projects', icon: Briefcase, roles: ['PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
-    { label: 'Nhật ký thời gian', href: '/time-logs', icon: Clock, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
-    { label: 'Báo cáo', href: '/reports', icon: BarChart3, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
-    { label: 'Bảng cá nhân', href: '/personal-board', icon: Pin, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
-    { label: 'Hoạt động', href: '/activity', icon: Newspaper, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
-    { label: 'Thùng rác', href: '/recycle-bin', icon: Trash2, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN', 'SYS_ADMIN'] },
+    { label: 'Bảng điều khiển', href: '/dashboard', icon: LayoutDashboard }, // Dashboard usually everyone has it
+    { label: 'Công việc của tôi', href: '/tasks', icon: CheckSquare, requiredPermission: PERMISSIONS.MY_TASK_ALL },
+    { label: 'Dự án', href: '/projects', icon: Briefcase, requiredPermission: PERMISSIONS.PROJECT_READ },
+    { label: 'Nhật ký thời gian', href: '/time-logs', icon: Clock, requiredPermission: PERMISSIONS.TIME_LOG_READ },
+    { label: 'Báo cáo', href: '/reports', icon: BarChart3, requiredPermission: PERMISSIONS.REPORT_READ },
+    { label: 'Bảng cá nhân', href: '/personal-board', icon: Pin, requiredPermission: PERMISSIONS.MY_TASK_ALL },
+    { label: 'Hoạt động', href: '/activity', icon: Newspaper, requiredPermission: PERMISSIONS.ACTIVITY_READ },
+    { label: 'Thùng rác', href: '/recycle-bin', icon: Trash2, requiredPermission: PERMISSIONS.RECYCLE_BIN_READ },
 ];
 
 const HR_ITEMS: MenuItem[] = [
-    { label: 'Danh sách nhân viên', href: '/hr/employees', icon: Users, roles: ['PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
-    { label: 'Lương & Cấp bậc', href: '/hr/salary', icon: DollarSign, roles: ['PROJECT_MANAGER', 'CEO', 'ORG_ADMIN'] },
-    { label: 'Hợp đồng', href: '/hr/contracts', icon: FileText, roles: ['CEO', 'ORG_ADMIN'] },
+    { label: 'Danh sách nhân viên', href: '/hr/employees', icon: Users, requiredPermission: PERMISSIONS.ORG_USER_READ },
+    { label: 'Lương & Cấp bậc', href: '/hr/salary', icon: DollarSign, requiredPermission: PERMISSIONS.COMPENSATION_READ },
+    { label: 'Hợp đồng', href: '/hr/contracts', icon: FileText, requiredPermission: PERMISSIONS.JOB_CONTRACT_READ },
 ];
 
 const ADMIN_ITEMS: MenuItem[] = [
-    { label: 'Tổ chức', href: '/admin/organizations', icon: Building2, roles: ['SYS_ADMIN'] },
-    { label: 'Hạn mức hệ thống', href: '/admin/quotas', icon: HardDrive, roles: ['SYS_ADMIN'] },
-    { label: 'Người dùng', href: '/admin/users', icon: User, roles: ['ORG_ADMIN', 'SYS_ADMIN'] },
-    { label: 'Phân quyền & Vai trò', href: '/admin/roles', icon: Lock, roles: ['ORG_ADMIN', 'SYS_ADMIN'] },
-    { label: 'Nhật ký hệ thống', href: '/admin/audit-logs', icon: Activity, roles: ['ORG_ADMIN'] },
-    { label: 'Nhật ký hệ thống toàn cầu', href: '/admin/audit-logs', icon: Activity, roles: ['SYS_ADMIN'] },
-    { label: 'Giả lập người dùng', href: '/admin/impersonation', icon: Shield, roles: ['SYS_ADMIN'] },
-    { label: 'Thùng rác hệ thống', href: '/admin/org-recycle-bin', icon: History, roles: ['SYS_ADMIN'] },
+    { label: 'Tổ chức', href: '/admin/organizations', icon: Building2, requiredPermission: PERMISSIONS.PLATFORM_ORG_READ },
+    { label: 'Hạn mức hệ thống', href: '/admin/quotas', icon: HardDrive, requiredPermission: PERMISSIONS.PLATFORM_ORG_READ }, // Should probably have its own perm but this is close
+    { label: 'Người dùng', href: '/admin/users', icon: User, requiredPermission: PERMISSIONS.ORG_USER_READ },
+    { label: 'Phân quyền & Vai trò', href: '/admin/roles', icon: Lock, requiredPermission: PERMISSIONS.ROLE_PERM_UPDATE },
+    { label: 'Nhật ký hệ thống', href: '/admin/audit-logs', icon: Activity, requiredPermission: PERMISSIONS.SYS_AUDIT_READ },
+    { label: 'Giả lập người dùng', href: '/admin/impersonation', icon: Shield, requiredPermission: PERMISSIONS.SESSION_IMPERSONATE },
+    { label: 'Thùng rác hệ thống', href: '/admin/org-recycle-bin', icon: History, requiredPermission: PERMISSIONS.RECYCLE_BIN_ALL },
 ];
 
 const SETTINGS_ITEMS: MenuItem[] = [
-    { label: 'Cài đặt không gian', href: '/settings/workspace', icon: Settings, roles: ['ORG_ADMIN', 'SYS_ADMIN'] },
-    { label: 'Hồ sơ cá nhân', href: '/settings/profile', icon: User, roles: ['EMPLOYEE', 'PROJECT_MANAGER', 'CEO', 'ORG_ADMIN', 'SYS_ADMIN'] },
+    { label: 'Cài đặt không gian', href: '/settings/workspace', icon: Settings, requiredPermission: PERMISSIONS.TENANT_ORG_UPDATE },
+    { label: 'Hồ sơ cá nhân', href: '/settings/profile', icon: User }, // Specific to self
 ];
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const { user, logout } = useAuthStore();
+    const { user, logout, hasPermission } = useAuthStore();
     const userRole = user?.role || 'EMPLOYEE';
 
     const filterMenuItems = (items: MenuItem[]) => {
-        return items.filter(item => item.roles.includes(userRole));
+        return items.filter(item => {
+            if (!item.requiredPermission) return true;
+            return hasPermission(item.requiredPermission);
+        });
     };
 
     const mainItems = filterMenuItems(MENU_ITEMS);

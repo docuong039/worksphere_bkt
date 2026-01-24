@@ -36,7 +36,8 @@ import {
     Edit2,
     Search,
     Download,
-    Clock
+    Clock,
+    AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,6 +64,8 @@ import {
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
 
 interface Report {
     id: string;
@@ -97,15 +100,48 @@ const REACTIONS = [
     { code: 'FIRE', emoji: '🔥', label: 'Xuất sắc' },
 ];
 
+// Helper: get week range
+const getWeekRange = (date: Date) => {
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Monday start
+    const monday = new Date(date.setDate(diff));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return { start: new Date(monday), end: sunday };
+};
+
+// Helper: Get Period Dates
+const getPeriodDates = (type: 'WEEK' | 'MONTH' | 'QUARTER', date: Date = new Date()) => {
+    const d = new Date(date);
+    if (type === 'WEEK') {
+        const { start, end } = getWeekRange(d);
+        return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0], key: `WEEK-${start.getFullYear()}-${Math.ceil(start.getDate() / 7)}` };
+    }
+    if (type === 'MONTH') {
+        const start = new Date(d.getFullYear(), d.getMonth(), 1);
+        const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0], key: `MONTH-${d.getFullYear()}-${d.getMonth() + 1}` };
+    }
+    if (type === 'QUARTER') {
+        const quarter = Math.floor(d.getMonth() / 3);
+        const start = new Date(d.getFullYear(), quarter * 3, 1);
+        const end = new Date(d.getFullYear(), (quarter + 1) * 3, 0);
+        return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0], key: `QUARTER-${d.getFullYear()}-${quarter + 1}` };
+    }
+    return { start: '', end: '', key: '' };
+};
+
 // Report Card Component
 const ReportCard = ({
     report,
     isManager,
-    onView
+    onView,
+    onEdit
 }: {
     report: Report;
     isManager: boolean;
     onView: () => void;
+    onEdit?: () => void;
 }) => {
     const periodConfig = PERIOD_TYPES[report.period_type];
     const statusConfig = STATUS_CONFIG[report.status];
@@ -182,10 +218,22 @@ const ReportCard = ({
                         </div>
                     </div>
 
-                    <ExternalLink
-                        size={16}
-                        className="text-slate-300 group-hover:text-blue-500 transition-colors shrink-0"
-                    />
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                        {report.status === 'DRAFT' && !isManager && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-blue-600 hover:bg-blue-50 rounded-full"
+                                onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+                            >
+                                <Edit2 size={14} />
+                            </Button>
+                        )}
+                        <ExternalLink
+                            size={16}
+                            className="text-slate-300 group-hover:text-blue-500 transition-colors"
+                        />
+                    </div>
                 </div>
             </CardContent>
         </Card>
@@ -194,7 +242,7 @@ const ReportCard = ({
 
 // Main Page Component
 export default function ReportsPage() {
-    const { user } = useAuthStore();
+    const { user, hasPermission } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [reports, setReports] = useState<Report[]>([]);
     const [filter, setFilter] = useState('ALL');
@@ -211,9 +259,11 @@ export default function ReportsPage() {
     const [periodEnd, setPeriodEnd] = useState('');
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-    const isManager = user?.role === 'PROJECT_MANAGER' || user?.role === 'CEO' || user?.role === 'ORG_ADMIN';
+    const isManager = hasPermission(PERMISSIONS.REPORT_APPROVE);
+    const canCreate = hasPermission(PERMISSIONS.REPORT_CREATE);
 
     // Fetch reports
     const fetchReports = async () => {
@@ -245,13 +295,36 @@ export default function ReportsPage() {
 
     // Open create dialog
     const openCreateDialog = () => {
+        const { start, end } = getPeriodDates('WEEK');
+        setEditingId(null);
         setPeriodType('WEEK');
-        setPeriodStart('');
-        setPeriodEnd('');
-        setTitle('');
+        setPeriodStart(start);
+        setPeriodEnd(end);
+        setTitle(`Báo cáo công việc tuần (${start} - ${end})`);
         setContent('');
         setFormErrors({});
         setIsDialogOpen(true);
+    };
+
+    // Open edit dialog
+    const openEditDialog = (report: Report) => {
+        setEditingId(report.id);
+        setPeriodType(report.period_type);
+        setPeriodStart(report.period_start);
+        setPeriodEnd(report.period_end);
+        setTitle(report.title);
+        setContent(report.content);
+        setFormErrors({});
+        setIsDialogOpen(true);
+    };
+
+    const handlePeriodTypeChange = (type: 'WEEK' | 'MONTH' | 'QUARTER') => {
+        setPeriodType(type);
+        const { start, end } = getPeriodDates(type);
+        setPeriodStart(start);
+        setPeriodEnd(end);
+        const label = type === 'WEEK' ? 'tuần' : type === 'MONTH' ? 'tháng' : 'quý';
+        setTitle(`Báo cáo công việc ${label} (${start} - ${end})`);
     };
 
     // Validate form
@@ -259,6 +332,9 @@ export default function ReportsPage() {
         const errors: Record<string, string> = {};
         if (!periodStart) errors.periodStart = 'Vui lòng chọn ngày bắt đầu';
         if (!periodEnd) errors.periodEnd = 'Vui lòng chọn ngày kết thúc';
+        if (periodStart && periodEnd && new Date(periodStart) > new Date(periodEnd)) {
+            errors.periodEnd = 'Ngày kết thúc không được nhỏ hơn ngày bắt đầu';
+        }
         if (!title.trim()) errors.title = 'Vui lòng nhập tiêu đề';
         if (!content.trim()) errors.content = 'Vui lòng nhập nội dung';
         setFormErrors(errors);
@@ -269,16 +345,24 @@ export default function ReportsPage() {
     const handleSubmit = async (asDraft: boolean) => {
         if (!validateForm()) return;
 
+        if (!asDraft && !confirm("Bạn có chắc chắn muốn GỬI báo cáo này? Sau khi gửi, Quản lý sẽ nhận được thông báo và bạn sẽ không thể xóa báo cáo này.")) {
+            return;
+        }
+
         setIsSubmitting(true);
         try {
-            const res = await fetch('/api/reports', {
-                method: 'POST',
+            const url = editingId ? `/api/reports/${editingId}` : '/api/reports';
+            const method = editingId ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                     'x-user-id': user?.id || '',
                     'x-user-role': user?.role || ''
                 },
                 body: JSON.stringify({
+                    id: editingId,
                     period_type: periodType,
                     period_start: periodStart,
                     period_end: periodEnd,
@@ -288,12 +372,15 @@ export default function ReportsPage() {
                 })
             });
 
-            if (!res.ok) throw new Error('Không thể tạo báo cáo');
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || 'Không thể tạo báo cáo');
+            }
 
             setIsDialogOpen(false);
             fetchReports();
-        } catch (error) {
-            console.error('Error creating report:', error);
+        } catch (error: any) {
+            setFormErrors({ submit: error.message });
         } finally {
             setIsSubmitting(false);
         }
@@ -301,291 +388,309 @@ export default function ReportsPage() {
 
     return (
         <AppLayout>
-            <div className="space-y-6 animate-in fade-in duration-700" data-testid="reports-page-container">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="reports-page-title">
-                            <FileText className="inline-block mr-2 h-8 w-8 text-blue-600" />
-                            {isManager ? 'Đánh giá Báo cáo' : 'Báo cáo của tôi'}
-                        </h1>
-                        <p className="text-slate-500 mt-1 font-medium">
-                            {isManager
-                                ? 'Xem và phản hồi báo cáo của team.'
-                                : 'Tạo và theo dõi báo cáo định kỳ của bạn.'}
-                        </p>
-                    </div>
+            <PermissionGuard permission={PERMISSIONS.REPORT_READ} showFullPageError>
+                <div className="space-y-6 animate-in fade-in duration-700" data-testid="reports-page-container">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="reports-page-title">
+                                <FileText className="inline-block mr-2 h-8 w-8 text-blue-600" />
+                                {isManager ? 'Đánh giá Báo cáo' : 'Báo cáo của tôi'}
+                            </h1>
+                            <p className="text-slate-500 mt-1 font-medium">
+                                {isManager
+                                    ? 'Xem và phản hồi báo cáo của team.'
+                                    : 'Tạo và theo dõi báo cáo định kỳ của bạn.'}
+                            </p>
+                        </div>
 
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            className="text-slate-600 font-bold"
-                            onClick={() => alert('Đang xuất báo cáo sang CSV...')}
-                            data-testid="btn-export-reports"
-                        >
-                            <Download className="mr-2 h-4 w-4" /> Xuất File
-                        </Button>
-                        {!isManager && (
+                        <div className="flex items-center gap-2">
                             <Button
-                                className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
-                                onClick={openCreateDialog}
-                                data-testid="btn-create-report"
+                                variant="outline"
+                                className="text-slate-600 font-bold"
+                                onClick={() => alert('Đang xuất báo cáo sang CSV...')}
+                                data-testid="btn-export-reports"
                             >
-                                <Plus className="mr-2 h-4 w-4" /> Tạo Báo Cáo
+                                <Download className="mr-2 h-4 w-4" /> Xuất File
                             </Button>
-                        )}
+                            {canCreate && (
+                                <Button
+                                    className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200"
+                                    onClick={openCreateDialog}
+                                    data-testid="btn-create-report"
+                                >
+                                    <Plus className="mr-2 h-4 w-4" /> Tạo Báo Cáo
+                                </Button>
+                            )}
+                        </div>
                     </div>
-                </div>
 
-                {/* Filters */}
-                <Card className="border-none shadow-sm" data-testid="report-filters">
-                    <CardContent className="p-4">
-                        <div className="flex flex-wrap items-center gap-4">
-                            {isManager && (
-                                <div className="flex-1 min-w-[200px]">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    {/* Filters */}
+                    <Card className="border-none shadow-sm" data-testid="report-filters">
+                        <CardContent className="p-4">
+                            <div className="flex flex-wrap items-center gap-4">
+                                {isManager && (
+                                    <div className="flex-1 min-w-[200px]">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                            <Input
+                                                placeholder="Tìm theo tên nhân sự..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                className="pl-9"
+                                                data-testid="reports-input-search"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <Select value={filter} onValueChange={setFilter}>
+                                    <SelectTrigger className="w-[160px]" data-testid="reports-filter-status">
+                                        <SelectValue placeholder="Trạng thái" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL">Tất cả</SelectItem>
+                                        <SelectItem value="DRAFT">Bản nháp</SelectItem>
+                                        <SelectItem value="SUBMITTED">Đã gửi</SelectItem>
+                                        <SelectItem value="APPROVED">Đã duyệt</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                                    <SelectTrigger className="w-[160px]" data-testid="reports-filter-type">
+                                        <SelectValue placeholder="Loại báo cáo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ALL" data-testid="type-option-all">Tất cả loại</SelectItem>
+                                        <SelectItem value="WEEK" data-testid="type-option-week">Hàng tuần</SelectItem>
+                                        <SelectItem value="MONTH" data-testid="type-option-month">Hàng tháng</SelectItem>
+                                        <SelectItem value="QUARTER" data-testid="type-option-quarter">Hàng quý</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                {isManager && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => fetchReports()}
+                                        data-testid="reports-btn-search"
+                                    >
+                                        Tìm kiếm
+                                    </Button>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Reports List */}
+                    {
+                        loading ? (
+                            <div className="grid gap-4" data-testid="reports-loading">
+                                {[1, 2, 3].map((i) => (
+                                    <Skeleton key={i} className="h-28 w-full rounded-xl" />
+                                ))}
+                            </div>
+                        ) : reports.length > 0 ? (
+                            <div className="grid gap-4" data-testid="reports-list">
+                                {reports.map((report) => (
+                                    <ReportCard
+                                        key={report.id}
+                                        report={report}
+                                        isManager={isManager}
+                                        onView={() => window.location.href = `/reports/${report.id}`}
+                                        onEdit={() => openEditDialog(report)}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <Card className="border-none shadow-sm" data-testid="reports-empty">
+                                <CardContent className="py-16 text-center">
+                                    <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                                        <FileText className="h-8 w-8 text-slate-300" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-900 mb-2">
+                                        Chưa có báo cáo nào
+                                    </h3>
+                                    <p className="text-slate-500 mb-6">
+                                        {isManager
+                                            ? 'Chưa có nhân sự nào gửi báo cáo.'
+                                            : 'Bắt đầu tạo báo cáo đầu tiên của bạn!'}
+                                    </p>
+                                    {canCreate && (
+                                        <Button
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                            onClick={openCreateDialog}
+                                            data-testid="btn-create-report-empty"
+                                        >
+                                            <Plus className="mr-2 h-4 w-4" /> Tạo Báo Cáo
+                                        </Button>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )
+                    }
+
+                    {/* Create Report Dialog */}
+                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <DialogContent className="sm:max-w-xl" data-testid="dialog-create-report">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-blue-600" />
+                                    Tạo Báo Cáo
+                                </DialogTitle>
+                            </DialogHeader>
+
+                            <div className="space-y-4 py-4">
+                                {formErrors.submit && (
+                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2 animate-in shake duration-300">
+                                        <AlertCircle size={16} className="mt-0.5" />
+                                        {formErrors.submit}
+                                    </div>
+                                )}
+                                {/* Period Type */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Loại báo cáo <span className="text-red-500">*</span>
+                                    </label>
+                                    <Select value={periodType} onValueChange={(val: any) => handlePeriodTypeChange(val)}>
+                                        <SelectTrigger data-testid="select-period-type">
+                                            <SelectValue placeholder="Chọn loại kỳ báo cáo" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="WEEK">Báo cáo Tuần</SelectItem>
+                                            <SelectItem value="MONTH">Báo cáo Tháng</SelectItem>
+                                            <SelectItem value="QUARTER">Báo cáo Quý</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Period Dates */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold text-slate-700">
+                                            Từ ngày <span className="text-red-500">*</span>
+                                        </label>
                                         <Input
-                                            placeholder="Tìm theo tên nhân sự..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="pl-9"
-                                            data-testid="reports-input-search"
+                                            type="date"
+                                            value={periodStart}
+                                            onChange={(e) => setPeriodStart(e.target.value)}
+                                            className={formErrors.periodStart ? 'border-red-300' : ''}
+                                            data-testid="input-period-start"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold text-slate-700">
+                                            Đến ngày <span className="text-red-500">*</span>
+                                        </label>
+                                        <Input
+                                            type="date"
+                                            value={periodEnd}
+                                            onChange={(e) => setPeriodEnd(e.target.value)}
+                                            className={formErrors.periodEnd ? 'border-red-300' : ''}
+                                            data-testid="input-period-end"
                                         />
                                     </div>
                                 </div>
-                            )}
 
-                            <Select value={filter} onValueChange={setFilter}>
-                                <SelectTrigger className="w-[160px]" data-testid="reports-filter-status">
-                                    <SelectValue placeholder="Trạng thái" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả</SelectItem>
-                                    <SelectItem value="DRAFT">Bản nháp</SelectItem>
-                                    <SelectItem value="SUBMITTED">Đã gửi</SelectItem>
-                                    <SelectItem value="APPROVED">Đã duyệt</SelectItem>
-                                </SelectContent>
-                            </Select>
+                                {/* Title */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700">
+                                        Tiêu đề <span className="text-red-500">*</span>
+                                    </label>
+                                    <Input
+                                        placeholder="Báo cáo công việc tuần..."
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        className={formErrors.title ? 'border-red-300' : ''}
+                                        data-testid="reports-input-title"
+                                    />
+                                </div>
 
-                            <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                <SelectTrigger className="w-[160px]" data-testid="reports-filter-type">
-                                    <SelectValue placeholder="Loại báo cáo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả loại</SelectItem>
-                                    <SelectItem value="DAILY">Hàng ngày</SelectItem>
-                                    <SelectItem value="WEEKLY">Hàng tuần</SelectItem>
-                                    <SelectItem value="MONTHLY">Hàng tháng</SelectItem>
-                                </SelectContent>
-                            </Select>
+                                {/* Content */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-semibold text-slate-700">
+                                            Nội dung <span className="text-red-500">*</span>
+                                        </label>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 text-[10px] font-black uppercase text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                            onClick={async () => {
+                                                if (!user || !periodStart || !periodEnd) return;
+                                                try {
+                                                    const res = await fetch(`/api/time-logs?date_from=${periodStart}&date_to=${periodEnd}`, {
+                                                        headers: { 'x-user-id': user.id }
+                                                    });
+                                                    const data = await res.json();
+                                                    const logs = data.data || [];
+                                                    if (logs.length === 0) {
+                                                        alert("Không tìm thấy dữ liệu Log Time trong khoảng thời gian này.");
+                                                        return;
+                                                    }
 
-                            {isManager && (
+                                                    let logText = `1. CÔNG VIỆC ĐÃ HOÀN THÀNH (${periodStart} đến ${periodEnd}):\n`;
+                                                    logs.forEach((l: any) => {
+                                                        const duration = l.minutes >= 60 ? `${Math.floor(l.minutes / 60)}h ${l.minutes % 60}m` : `${l.minutes}m`;
+                                                        logText += `- [${l.project.code}] ${l.task.title}${l.subtask ? ` / ${l.subtask.title}` : ''}: ${duration}${l.note ? ` (${l.note})` : ''}\n`;
+                                                    });
+
+                                                    logText += "\n2. KHÓ KHĂN & ĐỀ XUẤT:\n- (Vui lòng nhập tại đây)\n\n3. KẾ HOẠCH TIẾP THEO:\n- (Vui lòng nhập tại đây)";
+                                                    setContent(logText);
+                                                } catch (e) {
+                                                    console.error(e);
+                                                    alert("Lỗi khi lấy dữ liệu Log Time.");
+                                                }
+                                            }}
+                                            title="Hệ thống tự động lấy danh sách Task/Subtask đã hoàn thành & có log time đổ vào nội dung nháp"
+                                        >
+                                            <Clock className="mr-1 h-3 w-3" /> Lấy dữ liệu Log Time
+                                        </Button>
+                                    </div>
+                                    {formErrors.content && <p className="text-[10px] font-bold text-red-600 mb-1">{formErrors.content}</p>}
+                                    <Textarea
+                                        placeholder="1. Công việc đã hoàn thành&#10;- ...&#10;&#10;2. Khó khăn gặp phải&#10;- ..."
+                                        value={content}
+                                        onChange={(e) => setContent(e.target.value)}
+                                        rows={8}
+                                        className={formErrors.content ? 'border-red-300' : ''}
+                                        data-testid="input-content"
+                                    />
+                                </div>
+                            </div>
+
+                            <DialogFooter className="gap-2">
+                                <DialogClose asChild>
+                                    <Button variant="outline" data-testid="reports-btn-cancel">
+                                        Hủy
+                                    </Button>
+                                </DialogClose>
                                 <Button
                                     variant="outline"
-                                    onClick={() => fetchReports()}
-                                    data-testid="reports-btn-search"
+                                    onClick={() => handleSubmit(true)}
+                                    disabled={isSubmitting}
+                                    data-testid="btn-save-draft"
                                 >
-                                    Tìm kiếm
+                                    <Edit2 className="mr-2 h-4 w-4" />
+                                    Lưu nháp
                                 </Button>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Reports List */}
-                {
-                    loading ? (
-                        <div className="grid gap-4" data-testid="reports-loading">
-                            {[1, 2, 3].map((i) => (
-                                <Skeleton key={i} className="h-28 w-full rounded-xl" />
-                            ))}
-                        </div>
-                    ) : reports.length > 0 ? (
-                        <div className="grid gap-4" data-testid="reports-list">
-                            {reports.map((report) => (
-                                <ReportCard
-                                    key={report.id}
-                                    report={report}
-                                    isManager={isManager}
-                                    onView={() => window.location.href = `/reports/${report.id}`}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <Card className="border-none shadow-sm" data-testid="reports-empty">
-                            <CardContent className="py-16 text-center">
-                                <div className="w-16 h-16 mx-auto bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
-                                    <FileText className="h-8 w-8 text-slate-300" />
-                                </div>
-                                <h3 className="text-xl font-bold text-slate-900 mb-2">
-                                    Chưa có báo cáo nào
-                                </h3>
-                                <p className="text-slate-500 mb-6">
-                                    {isManager
-                                        ? 'Chưa có nhân sự nào gửi báo cáo.'
-                                        : 'Bắt đầu tạo báo cáo đầu tiên của bạn!'}
-                                </p>
-                                {!isManager && (
-                                    <Button
-                                        className="bg-blue-600 hover:bg-blue-700"
-                                        onClick={openCreateDialog}
-                                        data-testid="btn-create-report-empty"
-                                    >
-                                        <Plus className="mr-2 h-4 w-4" /> Tạo Báo Cáo
-                                    </Button>
-                                )}
-                            </CardContent>
-                        </Card>
-                    )
-                }
-
-                {/* Create Report Dialog */}
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="sm:max-w-xl" data-testid="dialog-create-report">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-blue-600" />
-                                Tạo Báo Cáo
-                            </DialogTitle>
-                        </DialogHeader>
-
-                        <div className="space-y-4 py-4">
-                            {/* Period Type */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">
-                                    Loại báo cáo <span className="text-red-500">*</span>
-                                </label>
-                                <div className="flex gap-3">
-                                    {Object.entries(PERIOD_TYPES).map(([code, config]) => (
-                                        <label
-                                            key={code}
-                                            className={cn(
-                                                "flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-all",
-                                                periodType === code
-                                                    ? "bg-blue-50 border-blue-300 text-blue-700"
-                                                    : "bg-white border-slate-200 hover:border-blue-200"
-                                            )}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="periodType"
-                                                value={code}
-                                                checked={periodType === code}
-                                                onChange={(e) => setPeriodType(e.target.value as any)}
-                                                className="sr-only"
-                                            />
-                                            <span className="font-medium">{config.label}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Period Dates */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-slate-700">
-                                        Từ ngày <span className="text-red-500">*</span>
-                                    </label>
-                                    <Input
-                                        type="date"
-                                        value={periodStart}
-                                        onChange={(e) => setPeriodStart(e.target.value)}
-                                        className={formErrors.periodStart ? 'border-red-300' : ''}
-                                        data-testid="input-period-start"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-slate-700">
-                                        Đến ngày <span className="text-red-500">*</span>
-                                    </label>
-                                    <Input
-                                        type="date"
-                                        value={periodEnd}
-                                        onChange={(e) => setPeriodEnd(e.target.value)}
-                                        className={formErrors.periodEnd ? 'border-red-300' : ''}
-                                        data-testid="input-period-end"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Title */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-slate-700">
-                                    Tiêu đề <span className="text-red-500">*</span>
-                                </label>
-                                <Input
-                                    placeholder="Báo cáo công việc tuần..."
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    className={formErrors.title ? 'border-red-300' : ''}
-                                    data-testid="reports-input-title"
-                                />
-                            </div>
-
-                            {/* Content */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-semibold text-slate-700">
-                                        Nội dung <span className="text-red-500">*</span>
-                                    </label>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-7 text-[10px] font-black uppercase text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                        onClick={() => {
-                                            const mockLogTimeContent = "1. Công việc đã hoàn thành:\n- [TASK-001] Fix bug login (2h)\n- [TASK-002] Create dashboard UI (4h)\n- [SUB-01] Design mockup (2h)\n\n2. Khó khăn:\n- Không có";
-                                            setContent(prev => prev ? prev + "\n" + mockLogTimeContent : mockLogTimeContent);
-                                            alert("Đã tự động lấy dữ liệu từ Log Time của bạn trong kỳ báo cáo (US-EMP-03-01)");
-                                        }}
-                                        title="Hệ thống tự động lấy danh sách Task/Subtask đã hoàn thành & có log time đổ vào nội dung nháp"
-                                    >
-                                        <Clock className="mr-1 h-3 w-3" /> Lấy dữ liệu Log Time
-                                    </Button>
-                                </div>
-                                <Textarea
-                                    placeholder="1. Công việc đã hoàn thành&#10;- ...&#10;&#10;2. Khó khăn gặp phải&#10;- ..."
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    rows={8}
-                                    className={formErrors.content ? 'border-red-300' : ''}
-                                    data-testid="input-content"
-                                />
-                            </div>
-                        </div>
-
-                        <DialogFooter className="gap-2">
-                            <DialogClose asChild>
-                                <Button variant="outline" data-testid="reports-btn-cancel">
-                                    Hủy
+                                <Button
+                                    onClick={() => handleSubmit(false)}
+                                    disabled={isSubmitting}
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                    data-testid="reports-btn-submit"
+                                >
+                                    {isSubmitting ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Send className="mr-2 h-4 w-4" />
+                                    )}
+                                    Gửi báo cáo
                                 </Button>
-                            </DialogClose>
-                            <Button
-                                variant="outline"
-                                onClick={() => handleSubmit(true)}
-                                disabled={isSubmitting}
-                                data-testid="btn-save-draft"
-                            >
-                                <Edit2 className="mr-2 h-4 w-4" />
-                                Lưu nháp
-                            </Button>
-                            <Button
-                                onClick={() => handleSubmit(false)}
-                                disabled={isSubmitting}
-                                className="bg-blue-600 hover:bg-blue-700"
-                                data-testid="reports-btn-submit"
-                            >
-                                {isSubmitting ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Send className="mr-2 h-4 w-4" />
-                                )}
-                                Gửi báo cáo
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </div >
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </PermissionGuard>
         </AppLayout >
     );
 }

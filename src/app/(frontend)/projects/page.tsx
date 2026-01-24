@@ -27,6 +27,8 @@ import {
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
 
 interface Project {
     id: string;
@@ -64,9 +66,15 @@ const ProjectCard = ({ project }: { project: Project }) => {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem>Chỉnh sửa</DropdownMenuItem>
-                                <DropdownMenuItem>Lưu trữ dự án</DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-600">Xóa dự án</DropdownMenuItem>
+                                <PermissionGuard permission={PERMISSIONS.PROJECT_UPDATE}>
+                                    <DropdownMenuItem data-testid={`btn-edit-project-${project.code.toLowerCase()}`}>Chỉnh sửa</DropdownMenuItem>
+                                </PermissionGuard>
+                                <PermissionGuard permission={PERMISSIONS.PROJECT_UPDATE}>
+                                    <DropdownMenuItem data-testid={`btn-archive-project-${project.code.toLowerCase()}`}>Lưu trữ dự án</DropdownMenuItem>
+                                </PermissionGuard>
+                                <PermissionGuard permission={PERMISSIONS.PROJECT_UPDATE}>
+                                    <DropdownMenuItem className="text-red-600" data-testid={`btn-delete-project-${project.code.toLowerCase()}`}>Xóa dự án</DropdownMenuItem>
+                                </PermissionGuard>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -125,13 +133,13 @@ const ProjectCard = ({ project }: { project: Project }) => {
 };
 
 export default function ProjectsPage() {
-    const { user } = useAuthStore();
+    const { user, hasPermission } = useAuthStore();
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
 
-    const canCreateProject = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
+    const canCreateProject = hasPermission(PERMISSIONS.PROJECT_CREATE);
 
     useEffect(() => {
         const fetchProjects = async () => {
@@ -166,112 +174,114 @@ export default function ProjectsPage() {
 
     return (
         <AppLayout>
-            <div className="space-y-8 animate-in fade-in duration-700" data-testid="projects-page-container">
-                {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="projects-page-title">
-                            Dự án
-                        </h1>
-                        <p className="text-slate-500 mt-1 font-medium">
-                            Quản lý và theo dõi các dự án của tổ chức.
-                        </p>
-                    </div>
-                    {canCreateProject && (
-                        <Button
-                            className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 h-11 px-6 rounded-xl font-bold transition-all hover:scale-105 active:scale-95"
-                            data-testid="btn-create-project"
-                            asChild
-                        >
-                            <Link href="/projects/new">
-                                <Plus className="mr-2 h-5 w-5" /> Tạo dự án
-                            </Link>
-                        </Button>
-                    )}
-                </div>
-
-                {/* Filters Row */}
-                <Card className="border-none shadow-sm bg-white p-2">
-                    <CardContent className="p-2 flex flex-col sm:flex-row items-center gap-4">
-                        <div className="relative flex-1 w-full group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                            <Input
-                                placeholder="Tìm theo tên hoặc mã..."
-                                className="pl-10 h-11 bg-slate-50 border-transparent focus:bg-white focus:ring-1 focus:ring-blue-500 transition-all rounded-lg"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                data-testid="search-projects"
-                            />
+            <PermissionGuard permission={PERMISSIONS.PROJECT_READ} showFullPageError>
+                <div className="space-y-8 animate-in fade-in duration-700" data-testid="projects-page-container">
+                    {/* Header Section */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="projects-page-title">
+                                Dự án
+                            </h1>
+                            <p className="text-slate-500 mt-1 font-medium">
+                                Quản lý và theo dõi các dự án của tổ chức.
+                            </p>
                         </div>
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="h-11 px-4 gap-2 text-slate-600 font-semibold border-slate-200" data-testid="projects-filter-status">
-                                        <Filter size={18} />
-                                        Trạng thái: {statusFilter === 'ALL' ? 'Tất cả' : (statusFilter === 'ACTIVE' ? 'Hoạt động' : 'Lưu trữ')}
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => setStatusFilter('ALL')}>Tất cả</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setStatusFilter('ACTIVE')}>Hoạt động</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setStatusFilter('ARCHIVED')}>Lưu trữ</DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                            <Button variant="ghost" className="h-11 px-4 text-slate-400 font-bold uppercase tracking-widest text-[10px] hover:text-slate-900" onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }} data-testid="btn-clear-filters">
-                                Xóa lọc
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Projects Grid */}
-                {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <Card key={i} className="border-none shadow-sm overflow-hidden bg-white h-72">
-                                <CardContent className="p-6 space-y-4">
-                                    <Skeleton className="h-6 w-24 rounded-full" />
-                                    <div className="space-y-2">
-                                        <Skeleton className="h-8 w-48" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-2/3" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4 pt-4">
-                                        <Skeleton className="h-8 w-full" />
-                                        <Skeleton className="h-8 w-full" />
-                                    </div>
-                                    <div className="space-y-2 pt-2">
-                                        <Skeleton className="h-2 w-full" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                ) : filteredProjects.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" data-testid="projects-grid">
-                        {filteredProjects.map((project) => (
-                            <ProjectCard key={project.id} project={project} />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-3xl shadow-sm border border-slate-100 px-6" data-testid="projects-empty-state">
-                        <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-6">
-                            <FolderOpen size={48} />
-                        </div>
-                        <h3 className="text-2xl font-black text-slate-900">Không tìm thấy dự án</h3>
-                        <p className="text-slate-500 mt-2 max-w-xs font-medium">
-                            {searchQuery || statusFilter !== 'ALL'
-                                ? "Không tìm thấy dự án phù hợp với bộ lọc."
-                                : "Tổ chức của bạn chưa tạo dự án nào."}
-                        </p>
-                        {(searchQuery || statusFilter !== 'ALL') && (
-                            <Button variant="link" className="mt-4 text-blue-600 font-bold" onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }} data-testid="btn-reset-filters">
-                                Xóa tất cả bộ lọc
+                        {canCreateProject && (
+                            <Button
+                                className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 h-11 px-6 rounded-xl font-bold transition-all hover:scale-105 active:scale-95"
+                                data-testid="btn-create-project"
+                                asChild
+                            >
+                                <Link href="/projects/new">
+                                    <Plus className="mr-2 h-5 w-5" /> Tạo dự án
+                                </Link>
                             </Button>
                         )}
                     </div>
-                )}
-            </div>
+
+                    {/* Filters Row */}
+                    <Card className="border-none shadow-sm bg-white p-2">
+                        <CardContent className="p-2 flex flex-col sm:flex-row items-center gap-4">
+                            <div className="relative flex-1 w-full group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+                                <Input
+                                    placeholder="Tìm theo tên hoặc mã..."
+                                    className="pl-10 h-11 bg-slate-50 border-transparent focus:bg-white focus:ring-1 focus:ring-blue-500 transition-all rounded-lg"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    data-testid="search-projects"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="h-11 px-4 gap-2 text-slate-600 font-semibold border-slate-200" data-testid="projects-filter-status">
+                                            <Filter size={18} />
+                                            Trạng thái: {statusFilter === 'ALL' ? 'Tất cả' : (statusFilter === 'ACTIVE' ? 'Hoạt động' : 'Lưu trữ')}
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => setStatusFilter('ALL')}>Tất cả</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setStatusFilter('ACTIVE')}>Hoạt động</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setStatusFilter('ARCHIVED')}>Lưu trữ</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <Button variant="ghost" className="h-11 px-4 text-slate-400 font-bold uppercase tracking-widest text-[10px] hover:text-slate-900" onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }} data-testid="btn-clear-filters">
+                                    Xóa lọc
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Projects Grid */}
+                    {loading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {[1, 2, 3, 4, 5, 6].map((i) => (
+                                <Card key={i} className="border-none shadow-sm overflow-hidden bg-white h-72">
+                                    <CardContent className="p-6 space-y-4">
+                                        <Skeleton className="h-6 w-24 rounded-full" />
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-8 w-48" />
+                                            <Skeleton className="h-4 w-full" />
+                                            <Skeleton className="h-4 w-2/3" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 pt-4">
+                                            <Skeleton className="h-8 w-full" />
+                                            <Skeleton className="h-8 w-full" />
+                                        </div>
+                                        <div className="space-y-2 pt-2">
+                                            <Skeleton className="h-2 w-full" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : filteredProjects.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" data-testid="projects-grid">
+                            {filteredProjects.map((project) => (
+                                <ProjectCard key={project.id} project={project} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-3xl shadow-sm border border-slate-100 px-6" data-testid="projects-empty-state">
+                            <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-6">
+                                <FolderOpen size={48} />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900">Không tìm thấy dự án</h3>
+                            <p className="text-slate-500 mt-2 max-w-xs font-medium">
+                                {searchQuery || statusFilter !== 'ALL'
+                                    ? "Không tìm thấy dự án phù hợp với bộ lọc."
+                                    : "Tổ chức của bạn chưa tạo dự án nào."}
+                            </p>
+                            {(searchQuery || statusFilter !== 'ALL') && (
+                                <Button variant="link" className="mt-4 text-blue-600 font-bold" onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }} data-testid="btn-reset-filters">
+                                    Xóa tất cả bộ lọc
+                                </Button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </PermissionGuard>
         </AppLayout>
     );
 }

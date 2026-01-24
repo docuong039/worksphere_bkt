@@ -65,6 +65,7 @@ interface TimeLogEntry {
     work_date: string;
     minutes: number;
     note: string | null;
+    owner_user_id: string;
     is_locked: boolean;
     created_at: string;
 }
@@ -72,9 +73,11 @@ interface TimeLogEntry {
 interface DoneTaskOption {
     id: string;
     title: string;
+    project_id: string;
     project_name: string;
     type: 'TASK' | 'SUBTASK';
     parent_task_id?: string;
+    has_subtasks?: boolean;
 }
 
 // Helper: format minutes to "Xh Ym"
@@ -110,12 +113,17 @@ const formatDateDisplay = (date: Date) => {
 const TimeLogCard = ({
     entry,
     onEdit,
-    onDelete
+    onDelete,
+    currentUserId,
+    isPM
 }: {
     entry: TimeLogEntry;
     onEdit: () => void;
     onDelete: () => void;
+    currentUserId?: string;
+    isPM?: boolean;
 }) => {
+    const canManage = !entry.is_locked && (isPM || entry.owner_user_id === currentUserId);
     return (
         <div
             className={cn(
@@ -155,7 +163,7 @@ const TimeLogCard = ({
                     <span className="text-lg font-black text-slate-900">
                         {formatDuration(entry.minutes)}
                     </span>
-                    {!entry.is_locked && (
+                    {canManage && (
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                                 variant="ghost"
@@ -188,8 +196,16 @@ export default function TimeLogsPage() {
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [timeLogs, setTimeLogs] = useState<TimeLogEntry[]>([]);
-    const [currentWeek, setCurrentWeek] = useState(new Date());
-    const [weekRange, setWeekRange] = useState(getWeekRange(new Date()));
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [timeRangeMode, setTimeRangeMode] = useState<'WEEK' | 'MONTH'>('WEEK');
+    const [range, setRange] = useState(getWeekRange(new Date()));
+
+    // Helper: get month range
+    const getMonthRange = (date: Date) => {
+        const start = new Date(date.getFullYear(), date.getMonth(), 1);
+        const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        return { start, end };
+    };
 
     // Dialog states
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -211,8 +227,8 @@ export default function TimeLogsPage() {
         setLoading(true);
         try {
             const params = new URLSearchParams({
-                date_from: weekRange.start.toISOString().split('T')[0],
-                date_to: weekRange.end.toISOString().split('T')[0]
+                date_from: range.start.toISOString().split('T')[0],
+                date_to: range.end.toISOString().split('T')[0]
             });
             const res = await fetch(`/api/time-logs?${params.toString()}`, {
                 headers: {
@@ -247,26 +263,38 @@ export default function TimeLogsPage() {
     };
 
     useEffect(() => {
-        setWeekRange(getWeekRange(new Date(currentWeek)));
-    }, [currentWeek]);
+        if (timeRangeMode === 'WEEK') {
+            setRange(getWeekRange(new Date(currentDate)));
+        } else {
+            setRange(getMonthRange(new Date(currentDate)));
+        }
+    }, [currentDate, timeRangeMode]);
 
     useEffect(() => {
         if (user) {
             fetchTimeLogs();
         }
-    }, [user, weekRange]);
+    }, [user, range]);
 
-    // Navigate weeks
-    const goToPrevWeek = () => {
-        const newDate = new Date(currentWeek);
-        newDate.setDate(newDate.getDate() - 7);
-        setCurrentWeek(newDate);
+    // Navigate ranges
+    const goToPrevRange = () => {
+        const newDate = new Date(currentDate);
+        if (timeRangeMode === 'WEEK') {
+            newDate.setDate(newDate.getDate() - 7);
+        } else {
+            newDate.setMonth(newDate.getMonth() - 1);
+        }
+        setCurrentDate(newDate);
     };
 
-    const goToNextWeek = () => {
-        const newDate = new Date(currentWeek);
-        newDate.setDate(newDate.getDate() + 7);
-        setCurrentWeek(newDate);
+    const goToNextRange = () => {
+        const newDate = new Date(currentDate);
+        if (timeRangeMode === 'WEEK') {
+            newDate.setDate(newDate.getDate() + 7);
+        } else {
+            newDate.setMonth(newDate.getMonth() + 1);
+        }
+        setCurrentDate(newDate);
     };
 
     // Group logs by date
@@ -278,7 +306,7 @@ export default function TimeLogsPage() {
     }, {} as Record<string, TimeLogEntry[]>);
 
     // Calculate totals
-    const weekTotal = timeLogs.reduce((sum, log) => sum + log.minutes, 0);
+    const rangeTotal = timeLogs.reduce((sum, log) => sum + log.minutes, 0);
 
     // Open dialog for new log
     const openNewLogDialog = () => {
@@ -312,7 +340,14 @@ export default function TimeLogsPage() {
 
         if (!selectedTaskId) {
             errors.task = 'Vui lòng chọn task';
+        } else {
+            const [type, id] = selectedTaskId.split(':');
+            const selectedOpt = doneTaskOptions.find(o => o.id === id && o.type.toLowerCase() === type);
+            if (selectedOpt?.type === 'TASK' && selectedOpt.has_subtasks) {
+                errors.task = 'Công việc này có các đầu việc con, bạn bắt buộc phải chọn một Subtask cụ thể.';
+            }
         }
+
         if (!workDate) {
             errors.date = 'Vui lòng chọn ngày';
         } else if (new Date(workDate) > new Date()) {
@@ -336,8 +371,31 @@ export default function TimeLogsPage() {
 
         setIsSubmitting(true);
         try {
-            const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
+            // BA Rule: Period Locking Check (Rule 3)
             const [type, id] = selectedTaskId.split(':');
+            const selectedOpt = doneTaskOptions.find(o => o.id === id && o.type.toLowerCase() === type);
+
+            if (selectedOpt?.project_id) {
+                const locksRes = await fetch(`/api/projects/${selectedOpt.project_id}/locks`, {
+                    headers: { 'x-user-id': user?.id || '' }
+                });
+                const locksData = await locksRes.json();
+                const locks = locksData.locks || [];
+
+                const isLocked = locks.some((l: any) => {
+                    if (!l.is_locked) return false;
+                    const start = new Date(l.period_start);
+                    const end = new Date(l.period_end);
+                    const work = new Date(workDate);
+                    return work >= start && work <= end;
+                });
+
+                if (isLocked) {
+                    throw new Error("QUY TẮC: Kỳ làm việc này đã bị khóa (Period Locked), bạn không thể ghi nhận thời gian vào khoảng này. Vui lòng liên hệ PM.");
+                }
+            }
+
+            const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
 
             const payload = {
                 task_id: type === 'task' ? id : doneTaskOptions.find(t => t.id === id)?.parent_task_id,
@@ -417,34 +475,57 @@ export default function TimeLogsPage() {
                     </Button>
                 </div>
 
-                {/* Week Navigation */}
-                <Card className="border-none shadow-sm" data-testid="week-navigator">
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                        <Button
+                            variant={timeRangeMode === 'WEEK' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className={cn("rounded-lg h-8 px-4 font-bold text-xs transition-all", timeRangeMode === 'WEEK' ? "shadow-sm bg-white" : "text-slate-500")}
+                            onClick={() => setTimeRangeMode('WEEK')}
+                            data-testid="mode-week"
+                        >
+                            Theo Tuần
+                        </Button>
+                        <Button
+                            variant={timeRangeMode === 'MONTH' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className={cn("rounded-lg h-8 px-4 font-bold text-xs transition-all", timeRangeMode === 'MONTH' ? "shadow-sm bg-white" : "text-slate-500")}
+                            onClick={() => setTimeRangeMode('MONTH')}
+                            data-testid="mode-month"
+                        >
+                            Theo Tháng
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Range Navigation */}
+                <Card className="border-none shadow-sm" data-testid="range-navigator">
                     <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={goToPrevWeek}
-                                data-testid="btn-prev-week"
+                                onClick={goToPrevRange}
+                                data-testid="btn-prev-range"
                             >
                                 <ChevronLeft size={20} />
                             </Button>
                             <div className="text-center">
                                 <p className="text-sm font-medium text-slate-500">
                                     <Calendar className="inline-block mr-1 h-4 w-4" />
-                                    {weekRange.start.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' })}
+                                    {range.start.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' })}
                                     {' - '}
-                                    {weekRange.end.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    {range.end.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </p>
-                                <p className="text-2xl font-black text-slate-900 mt-1" data-testid="week-total">
-                                    Tổng: {formatDuration(weekTotal)}
+                                <p className="text-2xl font-black text-slate-900 mt-1" data-testid="range-total">
+                                    Tổng {timeRangeMode === 'WEEK' ? 'Tuần' : 'Tháng'}: {formatDuration(rangeTotal)}
                                 </p>
                             </div>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={goToNextWeek}
-                                data-testid="btn-next-week"
+                                onClick={goToNextRange}
+                                data-testid="btn-next-range"
                             >
                                 <ChevronRight size={20} />
                             </Button>
@@ -492,6 +573,8 @@ export default function TimeLogsPage() {
                                                     entry={log}
                                                     onEdit={() => openEditDialog(log)}
                                                     onDelete={() => handleDelete(log.id)}
+                                                    currentUserId={user?.id}
+                                                    isPM={user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN'}
                                                 />
                                             ))}
                                         </CardContent>
@@ -547,28 +630,39 @@ export default function TimeLogsPage() {
                                 </label>
                                 <Select value={selectedTaskId} onValueChange={setSelectedTaskId}>
                                     <SelectTrigger data-testid="select-task" className={formErrors.task ? 'border-red-300' : ''}>
-                                        <SelectValue placeholder="Chọn task hoặc subtask đã hoàn thành..." />
+                                        <SelectValue placeholder="Chọn task hoặc subtask..." />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {doneTaskOptions.map((opt) => (
                                             <SelectItem
                                                 key={`${opt.type}:${opt.id}`}
                                                 value={`${opt.type.toLowerCase()}:${opt.id}`}
+                                                disabled={opt.type === 'TASK' && opt.has_subtasks}
+                                                className={cn(
+                                                    opt.type === 'SUBTASK' && "pl-8 text-xs italic text-slate-600"
+                                                )}
                                             >
-                                                <span className="text-slate-400 text-xs mr-2">
-                                                    [{opt.project_name}]
-                                                </span>
-                                                {opt.type === 'SUBTASK' && '↳ '}
-                                                {opt.title}
+                                                <div className="flex flex-col">
+                                                    <span className="flex items-center gap-1">
+                                                        {opt.type === 'SUBTASK' && <span className="text-slate-300">↳</span>}
+                                                        {opt.title}
+                                                        {opt.type === 'TASK' && opt.has_subtasks &&
+                                                            <Badge variant="outline" className="ml-2 text-[8px] h-4 uppercase border-amber-200 text-amber-600 bg-amber-50">Cần chọn Subtask</Badge>
+                                                        }
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 font-normal">
+                                                        [{opt.project_name}]
+                                                    </span>
+                                                </div>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <p className="text-xs text-slate-400">
-                                    ⚠️ Chỉ hiển thị Task/Subtask có trạng thái Done
+                                <p className="text-[10px] text-slate-400 font-medium">
+                                    💡 Chỉ hiển thị những nội dung bạn đã đánh dấu HOÀN THÀNH (DONE).
                                 </p>
                                 {formErrors.task && (
-                                    <p className="text-sm text-red-600">{formErrors.task}</p>
+                                    <p className="text-xs font-bold text-red-600 mt-1">{formErrors.task}</p>
                                 )}
                             </div>
 

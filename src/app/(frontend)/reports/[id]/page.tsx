@@ -251,13 +251,13 @@ export default function ReportDetailPage() {
                             {report.title}
                         </CardTitle>
                         <div className="flex items-center gap-4 mt-4 text-sm text-slate-500 font-medium" data-testid="report-meta">
-                            <span className="flex items-center gap-1.5" data-testid="report-period">
+                            <span className="flex items-center gap-1.5" data-testid="report-period-badge">
                                 <Calendar size={14} className="text-blue-500" />
-                                {new Date(report.period_start).toLocaleDateString('vi-VN')} - {new Date(report.period_end).toLocaleDateString('vi-VN')}
+                                <span data-testid="report-period-start">{new Date(report.period_start).toLocaleDateString('vi-VN')}</span> - <span data-testid="report-period-end">{new Date(report.period_end).toLocaleDateString('vi-VN')}</span>
                             </span>
-                            <span className="flex items-center gap-1.5" data-testid="report-type">
+                            <span className="flex items-center gap-1.5" data-testid="report-type-badge">
                                 <FileText size={14} className="text-blue-500" />
-                                Báo cáo {report.period_type}
+                                Báo cáo <span className="uppercase">{report.period_type}</span>
                             </span>
                         </div>
                     </CardHeader>
@@ -337,7 +337,7 @@ export default function ReportDetailPage() {
                                         onClick={handlePostComment}
                                         disabled={!commentText.trim() || isSubmittingComment}
                                         className="bg-blue-600 hover:bg-blue-700 shadow-md px-6 rounded-full"
-                                        data-testid="btn-submit-comment"
+                                        data-testid="btn-post-comment"
                                     >
                                         {isSubmittingComment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={16} className="mr-2" />}
                                         Gửi phản hồi

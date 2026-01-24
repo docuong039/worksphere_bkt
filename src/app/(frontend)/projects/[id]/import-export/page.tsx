@@ -409,7 +409,7 @@ export default function ImportExportPage({ params }: { params: Promise<{ id: str
                                 </div>
                                 <div className="pt-4 flex flex-col gap-3 max-w-sm mx-auto">
                                     <Button className="h-12 font-black bg-blue-600 rounded-xl" asChild data-testid="btn-view-tasks">
-                                        <Link href={`/projects/${id}/tasks`}>XEM DANH SÁCH TASK</Link>
+                                        <Link href={`/projects/${id}`}>XEM DANH SÁCH TASK</Link>
                                     </Button>
                                     <Button
                                         variant="ghost"
