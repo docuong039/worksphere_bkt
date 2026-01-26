@@ -79,45 +79,18 @@ export default function AdminQuotasPage() {
         const fetchQuotas = async () => {
             setLoading(true);
             try {
-                // Mock data
-                await new Promise(r => setTimeout(r, 800));
-                setQuotas([
-                    {
-                        id: 'org1',
-                        org_name: 'TechCorp Global',
-                        max_users: 50,
-                        current_users: 42,
-                        max_storage_gb: 100,
-                        current_storage_gb: 85,
-                        max_projects: 20,
-                        current_projects: 18,
-                        status: 'WARNING'
-                    },
-                    {
-                        id: 'org2',
-                        org_name: 'Creative Studio',
-                        max_users: 10,
-                        current_users: 5,
-                        max_storage_gb: 20,
-                        current_storage_gb: 2,
-                        max_projects: 5,
-                        current_projects: 2,
-                        status: 'ACTIVE'
-                    },
-                    {
-                        id: 'org3',
-                        org_name: 'Fast Delivery Inc',
-                        max_users: 100,
-                        current_users: 98,
-                        max_storage_gb: 500,
-                        current_storage_gb: 490,
-                        max_projects: 50,
-                        current_projects: 52, // Over quota
-                        status: 'EXCEEDED'
+                const res = await fetch('/api/admin/quotas', {
+                    headers: {
+                        'x-user-id': user?.id || '',
+                        'x-user-role': user?.role || ''
                     }
-                ]);
+                });
+                const data = await res.json();
+                if (data.success) {
+                    setQuotas(data.data);
+                }
             } catch (error) {
-                console.error(error);
+                console.error('Error fetching quotas:', error);
             } finally {
                 setLoading(false);
             }
@@ -132,10 +105,28 @@ export default function AdminQuotasPage() {
     };
 
     const handleSaveQuota = async () => {
+        if (!selectedOrg) return;
         setIsSaving(true);
-        await new Promise(r => setTimeout(r, 1000));
-        setIsEditOpen(false);
-        setIsSaving(false);
+        try {
+            const res = await fetch(`/api/admin/quotas/${selectedOrg.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-id': user?.id || '',
+                    'x-user-role': user?.role || ''
+                },
+                body: JSON.stringify(selectedOrg)
+            });
+            const data = await res.json();
+            if (data.success) {
+                setQuotas(quotas.map(q => q.id === selectedOrg.id ? selectedOrg : q));
+                setIsEditOpen(false);
+            }
+        } catch (error) {
+            console.error('Error saving quota:', error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const filteredQuotas = quotas.filter(q => {

@@ -16,7 +16,8 @@ import {
     CheckCircle2,
     AlertCircle,
     Infinity,
-    Users
+    Users,
+    Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,9 +48,11 @@ export default function WorkspaceSettingsPage() {
     const [autoLockEnabled, setAutoLockEnabled] = useState(true);
     const [lockDay, setLockDay] = useState('SUNDAY');
 
-    // Dynamic Categories State
     const [projectTypes, setProjectTypes] = useState(['Phần mềm', 'Tiếp thị', 'Pháp lý']);
     const [skillGroups, setSkillGroups] = useState(['Frontend', 'Backend', 'Hạ tầng (DevOps)', 'Thiết kế']);
+    const [taskStatuses, setTaskStatuses] = useState(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE']);
+    const [taskPriorities, setTaskPriorities] = useState(['LOW', 'MEDIUM', 'HIGH', 'URGENT']);
+    const [taskTypes, setTaskTypes] = useState(['BUG', 'TASK', 'FEATURE', 'IMPROVEMENT']);
 
     // Schedule State (US-ORG-03-02)
     const [workDays, setWorkDays] = useState(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']);
@@ -61,7 +64,10 @@ export default function WorkspaceSettingsPage() {
     const [logo, setLogo] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
 
-    const isOrgAdmin = user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
+    const isOrgAdmin = user?.role === 'ORG_ADMIN';
+    const isSysAdminImpersonating = user?.role === 'SYS_ADMIN' && !!user?.org_id;
+
+    const hasAccess = isOrgAdmin || isSysAdminImpersonating;
 
     useEffect(() => {
         // Mock loading
@@ -85,6 +91,9 @@ export default function WorkspaceSettingsPage() {
                     lockDay,
                     projectTypes,
                     skillGroups,
+                    taskStatuses,
+                    taskPriorities,
+                    taskTypes,
                     logo,
                     // Schedule
                     workDays,
@@ -119,16 +128,22 @@ export default function WorkspaceSettingsPage() {
         }, 1500);
     };
 
-    const addCategory = (type: 'PROJECT' | 'SKILL') => {
-        const name = prompt(`Nhập tên ${type === 'PROJECT' ? 'loại dự án' : 'nhóm kỹ năng'} mới:`);
+    const addCategory = (type: 'PROJECT' | 'SKILL' | 'STATUS' | 'PRIORITY' | 'TASK_TYPE') => {
+        const name = prompt(`Nhập tên ${type === 'PROJECT' ? 'loại dự án' : type === 'SKILL' ? 'nhóm kỹ năng' : type === 'STATUS' ? 'trạng thái' : type === 'PRIORITY' ? 'độ ưu tiên' : 'loại công việc'} mới:`);
         if (!name) return;
         if (type === 'PROJECT') setProjectTypes([...projectTypes, name]);
-        else setSkillGroups([...skillGroups, name]);
+        else if (type === 'SKILL') setSkillGroups([...skillGroups, name]);
+        else if (type === 'STATUS') setTaskStatuses([...taskStatuses, name]);
+        else if (type === 'PRIORITY') setTaskPriorities([...taskPriorities, name]);
+        else setTaskTypes([...taskTypes, name]);
     };
 
-    const removeCategory = (type: 'PROJECT' | 'SKILL', index: number) => {
+    const removeCategory = (type: 'PROJECT' | 'SKILL' | 'STATUS' | 'PRIORITY' | 'TASK_TYPE', index: number) => {
         if (type === 'PROJECT') setProjectTypes(projectTypes.filter((_, i) => i !== index));
-        else setSkillGroups(skillGroups.filter((_, i) => i !== index));
+        else if (type === 'SKILL') setSkillGroups(skillGroups.filter((_, i) => i !== index));
+        else if (type === 'STATUS') setTaskStatuses(taskStatuses.filter((_, i) => i !== index));
+        else if (type === 'PRIORITY') setTaskPriorities(taskPriorities.filter((_, i) => i !== index));
+        else setTaskTypes(taskTypes.filter((_, i) => i !== index));
     };
 
     const toggleWorkDay = (day: string) => {
@@ -139,7 +154,7 @@ export default function WorkspaceSettingsPage() {
         }
     };
 
-    if (!isOrgAdmin) {
+    if (!hasAccess) {
         return (
             <AppLayout>
                 <div className="flex flex-col items-center justify-center py-32 text-center h-[70vh]">
@@ -389,7 +404,8 @@ export default function WorkspaceSettingsPage() {
                     <TabsContent value="customization" className="space-y-8 animate-in fade-in duration-500">
                         {/* Custom Categories */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <Card className="border-none shadow-sm bg-white overflow-hidden">
+                            {/* Project Types */}
+                            <Card className="border-none shadow-sm bg-white overflow-hidden" data-testid="card-project-types">
                                 <CardHeader className="pb-4 border-b border-slate-50 flex flex-row items-center justify-between">
                                     <CardTitle className="text-md font-bold flex items-center gap-2">
                                         <Tag size={18} className="text-blue-600" /> Loại dự án
@@ -421,7 +437,8 @@ export default function WorkspaceSettingsPage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-none shadow-sm bg-white overflow-hidden">
+                            {/* Skill Groups */}
+                            <Card className="border-none shadow-sm bg-white overflow-hidden" data-testid="card-skill-groups">
                                 <CardHeader className="pb-4 border-b border-slate-50 flex flex-row items-center justify-between">
                                     <CardTitle className="text-md font-bold flex items-center gap-2">
                                         <Users size={18} className="text-blue-600" /> Nhóm kỹ năng
@@ -452,6 +469,105 @@ export default function WorkspaceSettingsPage() {
                                     ))}
                                 </CardContent>
                             </Card>
+
+                            {/* Task Statuses */}
+                            <Card className="border-none shadow-sm bg-white overflow-hidden" data-testid="card-task-statuses">
+                                <CardHeader className="pb-4 border-b border-slate-50 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-md font-bold flex items-center gap-2">
+                                        <CheckCircle2 size={18} className="text-blue-600" /> Trạng thái công việc
+                                    </CardTitle>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-blue-600"
+                                        data-testid="add-task-status"
+                                        onClick={() => addCategory('STATUS')}
+                                    >
+                                        <Plus size={18} />
+                                    </Button>
+                                </CardHeader>
+                                <CardContent className="pt-4 space-y-3">
+                                    {taskStatuses.map((status, i) => (
+                                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl group transition-all">
+                                            <span className="text-sm font-bold text-slate-700">{status}</span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-slate-300 opacity-0 group-hover:opacity-100 hover:text-rose-600 transition-all"
+                                                onClick={() => removeCategory('STATUS', i)}
+                                            >
+                                                <Trash2 size={14} />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+
+                            {/* Task Priorities */}
+                            <Card className="border-none shadow-sm bg-white overflow-hidden" data-testid="card-task-priorities">
+                                <CardHeader className="pb-4 border-b border-slate-50 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-md font-bold flex items-center gap-2">
+                                        <AlertCircle size={18} className="text-blue-600" /> Độ ưu tiên
+                                    </CardTitle>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-blue-600"
+                                        data-testid="add-task-priority"
+                                        onClick={() => addCategory('PRIORITY')}
+                                    >
+                                        <Plus size={18} />
+                                    </Button>
+                                </CardHeader>
+                                <CardContent className="pt-4 space-y-3">
+                                    {taskPriorities.map((prio, i) => (
+                                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl group transition-all">
+                                            <span className="text-sm font-bold text-slate-700">{prio}</span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-slate-300 opacity-0 group-hover:opacity-100 hover:text-rose-600 transition-all"
+                                                onClick={() => removeCategory('PRIORITY', i)}
+                                            >
+                                                <Trash2 size={14} />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+
+                            {/* Task Types */}
+                            <Card className="border-none shadow-sm bg-white overflow-hidden" data-testid="card-task-types">
+                                <CardHeader className="pb-4 border-b border-slate-50 flex flex-row items-center justify-between">
+                                    <CardTitle className="text-md font-bold flex items-center gap-2">
+                                        <Zap size={18} className="text-blue-600" /> Loại công việc
+                                    </CardTitle>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-blue-600"
+                                        data-testid="add-task-type"
+                                        onClick={() => addCategory('TASK_TYPE')}
+                                    >
+                                        <Plus size={18} />
+                                    </Button>
+                                </CardHeader>
+                                <CardContent className="pt-4 space-y-3">
+                                    {taskTypes.map((type, i) => (
+                                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl group transition-all">
+                                            <span className="text-sm font-bold text-slate-700">{type}</span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-slate-300 opacity-0 group-hover:opacity-100 hover:text-rose-600 transition-all"
+                                                onClick={() => removeCategory('TASK_TYPE', i)}
+                                            >
+                                                <Trash2 size={14} />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
                         </div>
 
                         {/* Note */}
@@ -471,6 +587,6 @@ export default function WorkspaceSettingsPage() {
                     </TabsContent>
                 </Tabs>
             </div>
-        </AppLayout>
+        </AppLayout >
     );
 }

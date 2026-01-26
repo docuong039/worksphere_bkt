@@ -45,6 +45,8 @@ import {
 } from '@/components/ui/alert';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 interface Organization {
     id: string;
@@ -69,15 +71,27 @@ interface ImpersonationSession {
 }
 
 export default function AdminImpersonationPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>}>
+            <ImpersonationContent />
+        </Suspense>
+    );
+}
+
+function ImpersonationContent() {
     const { user } = useAuthStore();
+    const searchParams = useSearchParams();
+    const paramOrgId = searchParams.get('orgId');
+    const paramUserId = searchParams.get('userId');
+
     const [loading, setLoading] = useState(false);
     const [orgs, setOrgs] = useState<Organization[]>([]);
     const [users, setUsers] = useState<OrgUser[]>([]);
     const [activeSessions, setActiveSessions] = useState<ImpersonationSession[]>([]);
 
     // Form state
-    const [selectedOrg, setSelectedOrg] = useState('');
-    const [selectedUser, setSelectedUser] = useState('');
+    const [selectedOrg, setSelectedOrg] = useState(paramOrgId || '');
+    const [selectedUser, setSelectedUser] = useState(paramUserId || '');
     const [reason, setReason] = useState('');
     const [ticketId, setTicketId] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -101,6 +115,12 @@ export default function AdminImpersonationPage() {
         };
         if (user) fetchOrgs();
     }, [user]);
+
+    // Update selection if params change
+    useEffect(() => {
+        if (paramOrgId) setSelectedOrg(paramOrgId);
+        if (paramUserId) setSelectedUser(paramUserId);
+    }, [paramOrgId, paramUserId]);
 
     // Fetch users when org selected
     useEffect(() => {
@@ -160,8 +180,14 @@ export default function AdminImpersonationPage() {
 
             if (res.ok) {
                 const data = await res.json();
-                // Redirect or show success
-                window.location.href = '/dashboard';
+                // Update local state and redirect
+                if (data.user && data.token) {
+                    useAuthStore.getState().startImpersonation(data.user, data.token);
+                    window.location.href = '/dashboard';
+                } else {
+                    // Fallback if API doesn't return full user object in mock
+                    setErrors({ form: 'Lỗi đồng bộ phiên bản (Mock API error)' });
+                }
             } else {
                 const data = await res.json();
                 setErrors({ form: data.message || 'Không thể bắt đầu phiên impersonate' });

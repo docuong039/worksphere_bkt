@@ -388,6 +388,13 @@ export default function EmployeesListPage() {
                                             <TableHead className="font-bold">Vai trò</TableHead>
                                             <TableHead className="font-bold">Phòng ban</TableHead>
                                             <TableHead className="font-bold">Trạng thái</TableHead>
+                                            {(user?.role === 'CEO' || user?.role === 'ORG_ADMIN') && (
+                                                <>
+                                                    <TableHead className="font-bold">Cấp bậc</TableHead>
+                                                    <TableHead className="font-bold text-right">Lương tháng</TableHead>
+                                                    <TableHead className="font-bold text-right">Cost/h</TableHead>
+                                                </>
+                                            )}
                                             <TableHead className="font-bold">Ngày tham gia</TableHead>
                                             <TableHead className="text-right font-bold">Thao tác</TableHead>
                                         </TableRow>
@@ -422,6 +429,17 @@ export default function EmployeesListPage() {
                                                 <TableCell data-testid={`emp-status-${emp.id}`}>
                                                     {getStatusBadge(emp.member_status)}
                                                 </TableCell>
+                                                {(user?.role === 'CEO' || user?.role === 'ORG_ADMIN') && (
+                                                    <>
+                                                        <TableCell className="font-bold text-slate-600">{(emp as any).level_code}</TableCell>
+                                                        <TableCell className="text-right font-black text-emerald-600">
+                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', notation: 'compact' }).format((emp as any).monthly_salary)}
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-bold text-blue-600">
+                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', notation: 'compact' }).format((emp as any).hourly_cost_rate)}
+                                                        </TableCell>
+                                                    </>
+                                                )}
                                                 <TableCell data-testid={`emp-joined-at-${emp.id}`}>
                                                     {emp.joined_at ? (
                                                         <div className="flex items-center gap-1 text-sm text-slate-600">

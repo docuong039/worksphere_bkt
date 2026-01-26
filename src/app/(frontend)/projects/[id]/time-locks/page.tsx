@@ -34,6 +34,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
@@ -55,11 +56,13 @@ export default function TimeLocksPage({ params }: { params: Promise<{ id: string
     const [loading, setLoading] = useState(true);
     const [projectName, setProjectName] = useState('');
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const { toast } = useToast();
 
     // Form state
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [processingId, setProcessingId] = useState<string | null>(null);
 
     const isPM = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
 
@@ -105,6 +108,10 @@ export default function TimeLocksPage({ params }: { params: Promise<{ id: string
             });
 
             if (res.ok) {
+                toast({
+                    title: "Thành công",
+                    description: "Đã tạo khóa kỳ công mới.",
+                });
                 fetchLocks();
                 setIsCreateOpen(false);
                 setStartDate('');
@@ -118,6 +125,7 @@ export default function TimeLocksPage({ params }: { params: Promise<{ id: string
     };
 
     const toggleLock = async (lockId: string, currentStatus: boolean) => {
+        setProcessingId(lockId);
         try {
             const res = await fetch(`/api/projects/${id}/locks/${lockId}`, {
                 method: 'PATCH',
@@ -129,10 +137,25 @@ export default function TimeLocksPage({ params }: { params: Promise<{ id: string
                 body: JSON.stringify({ is_locked: !currentStatus })
             });
             if (res.ok) {
+                toast({
+                    title: !currentStatus ? "Đã khóa kỳ công" : "Đã mở khóa kỳ công",
+                    description: !currentStatus
+                        ? "Hệ thống đã chặn mọi thao tác trong giai đoạn này."
+                        : "Giai đoạn này hiện đã có thể chỉnh sửa lại.",
+                });
                 fetchLocks();
+            } else {
+                throw new Error("Failed to update lock status");
             }
         } catch (error) {
             console.error(error);
+            toast({
+                title: "Lỗi",
+                description: "Không thể thay đổi trạng thái khóa. Vui lòng thử lại.",
+                variant: "destructive"
+            });
+        } finally {
+            setProcessingId(null);
         }
     };
 
@@ -153,10 +176,17 @@ export default function TimeLocksPage({ params }: { params: Promise<{ id: string
         <div className="max-w-5xl mx-auto pb-20 animate-in fade-in duration-700" data-testid="time-locks-container">
             {/* Header - now using shared layout */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                <div className="space-y-2">
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight" data-testid="time-locks-title">
-                        Khóa kỳ công (Work Period Locks)
-                    </h2>
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white shadow-sm border border-slate-100" asChild data-testid="btn-back-to-settings">
+                        <Link href={`/projects/${id}/settings`}>
+                            <ChevronLeft size={20} className="text-slate-600" />
+                        </Link>
+                    </Button>
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-black text-slate-800 tracking-tight" data-testid="time-locks-title">
+                            Khóa kỳ công (Work Period Locks)
+                        </h2>
+                    </div>
                 </div>
 
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -265,9 +295,12 @@ export default function TimeLocksPage({ params }: { params: Promise<{ id: string
                                                     !lock.is_locked && "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100"
                                                 )}
                                                 onClick={() => toggleLock(lock.id, lock.is_locked)}
+                                                disabled={processingId === lock.id}
                                                 data-testid={`toggle-lock-${lock.id}`}
                                             >
-                                                {lock.is_locked ? (
+                                                {processingId === lock.id ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : lock.is_locked ? (
                                                     <><Unlock className="mr-2 h-4 w-4" /> Mở khóa</>
                                                 ) : (
                                                     <><Lock className="mr-2 h-4 w-4" /> Khóa ngay</>

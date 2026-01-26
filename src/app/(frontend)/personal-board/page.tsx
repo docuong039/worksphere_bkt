@@ -388,17 +388,25 @@ export default function PersonalBoardPage() {
         const taskId = e.dataTransfer.getData('taskId');
         const fromStatus = e.dataTransfer.getData('fromStatus');
 
-        if (!taskId || fromStatus === toStatus) return;
+        if (!taskId) return;
 
-        // Optimistic update
-        const task = tasks[fromStatus].find(t => t.id === taskId);
+        // Find the task
+        const task = tasks[fromStatus as any]?.find(t => t.id === taskId);
         if (!task) return;
 
-        setTasks(prev => ({
-            ...prev,
-            [fromStatus]: prev[fromStatus].filter(t => t.id !== taskId),
-            [toStatus]: [...prev[toStatus], { ...task, status_code: toStatus as any }]
-        }));
+        // Optimistic update
+        setTasks(prev => {
+            const newTasks = { ...prev };
+
+            // Remove from old position
+            newTasks[fromStatus as any] = newTasks[fromStatus as any].filter(t => t.id !== taskId);
+
+            // Add to new position (end of list for now, or could insert at specific index)
+            const updatedTask = { ...task, status_code: toStatus as any };
+            newTasks[toStatus as any] = [...(newTasks[toStatus as any] || []), updatedTask];
+
+            return newTasks;
+        });
 
         // API call
         try {
@@ -409,7 +417,10 @@ export default function PersonalBoardPage() {
                     'x-user-id': user?.id || '',
                     'x-user-role': user?.role || ''
                 },
-                body: JSON.stringify({ status_code: toStatus })
+                body: JSON.stringify({
+                    status_code: toStatus,
+                    // If we had index-based reordering, we'd send new index here
+                })
             });
         } catch (error) {
             console.error('Error reordering:', error);
@@ -427,10 +438,12 @@ export default function PersonalBoardPage() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="personal-board-title">
-                                📌 Task Cá Nhân
+                                {user?.role === 'CEO' ? '📌 Lộ Trình Chiến Lược' : '📌 Task Cá Nhân'}
                             </h1>
                             <p className="text-slate-500 mt-1 font-medium">
-                                Quản lý công việc riêng của bạn. Hoàn toàn riêng tư.
+                                {user?.role === 'CEO'
+                                    ? 'Không gian riêng tư để hoạch định các mục tiêu và ý tưởng quan trọng.'
+                                    : 'Quản lý công việc riêng của bạn. Hoàn toàn riêng tư.'}
                             </p>
                         </div>
                         <Button

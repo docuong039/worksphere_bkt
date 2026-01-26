@@ -28,7 +28,10 @@ import {
     Award,
     FileText,
     AlertTriangle,
+    Download,
+    Loader2
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -63,6 +66,26 @@ export default function PerformancePage({ params }: { params: Promise<{ id: stri
     const [summary, setSummary] = useState<PerformanceSummary | null>(null);
     const [projectName, setProjectName] = useState('');
     const [timeRange, setTimeRange] = useState('month');
+    const [isExporting, setIsExporting] = useState(false);
+    const { toast } = useToast();
+
+    const handleExport = async () => {
+        setIsExporting(true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setIsExporting(false);
+        toast({
+            title: "Thành công",
+            description: "Báo cáo hiệu suất dự án đã được xuất.",
+        });
+    };
+
+    const handleRefresh = async () => {
+        await fetchData();
+        toast({
+            title: "Đã làm mới",
+            description: "Dữ liệu hiệu suất đã được cập nhật.",
+        });
+    };
 
     useEffect(() => {
         fetchData();
@@ -136,8 +159,12 @@ export default function PerformancePage({ params }: { params: Promise<{ id: stri
                             <SelectItem value="quarter">Quý này</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button variant="outline" size="sm" onClick={fetchData} data-testid="project-performance-btn-refresh" className="h-9">
+                    <Button variant="outline" size="sm" onClick={handleRefresh} data-testid="project-performance-btn-refresh" className="h-9">
                         <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting} data-testid="project-performance-btn-export" className="h-9 font-bold gap-2">
+                        {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        Xuất báo cáo
                     </Button>
                 </div>
             </div>

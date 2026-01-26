@@ -142,10 +142,17 @@ export default function ProjectRecycleBinPage({ params }: { params: Promise<{ id
         <div className="max-w-6xl mx-auto pb-20 animate-in fade-in duration-700" data-testid="project-recycle-bin-container">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 shrink-0">
-                <div className="space-y-2">
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight" data-testid="project-recycle-bin-title">
-                        Thùng rác Dự án
-                    </h2>
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white shadow-sm border border-slate-100" asChild data-testid="btn-back-to-settings">
+                        <Link href={`/projects/${projectId}/settings`}>
+                            <ChevronLeft size={20} className="text-slate-600" />
+                        </Link>
+                    </Button>
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-black text-slate-800 tracking-tight" data-testid="project-recycle-bin-title">
+                            Thùng rác Dự án
+                        </h2>
+                    </div>
                 </div>
 
                 <div className="flex gap-3">
@@ -154,11 +161,18 @@ export default function ProjectRecycleBinPage({ params }: { params: Promise<{ id
                             className="bg-emerald-600 hover:bg-emerald-700 h-9 px-6 font-bold shadow-lg shadow-emerald-100"
                             onClick={() => handleBulkAction('restore')}
                             size="sm"
+                            data-testid="btn-bulk-restore"
                         >
                             <RotateCcw className="mr-2 h-4 w-4" /> Khôi phục ({selectedItems.size})
                         </Button>
                     )}
-                    <Button variant="outline" className="h-9 px-6 font-bold border-slate-200" onClick={() => window.location.reload()} size="sm">
+                    <Button
+                        variant="outline"
+                        className="h-9 px-6 font-bold border-slate-200"
+                        onClick={() => window.location.reload()}
+                        size="sm"
+                        data-testid="btn-refresh-recycle-bin"
+                    >
                         <RefreshCw size={16} className="mr-2" /> Làm mới
                     </Button>
                 </div>

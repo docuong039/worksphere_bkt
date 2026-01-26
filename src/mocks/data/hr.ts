@@ -90,3 +90,10 @@ export const mockCompensations = [
         effective_to: null,
     }
 ];
+
+export const mockDocuments = [
+    { id: 'doc-1', user_id: 'user-emp', type: 'CV', name: 'Nguyen_Van_A_CV.pdf', size: '1.2MB', uploaded_at: '2024-01-15' },
+    { id: 'doc-2', user_id: 'user-emp', type: 'CONTRACT', name: 'Contract_2024_A.pdf', size: '2.5MB', uploaded_at: '2024-01-20' },
+    { id: 'doc-3', user_id: 'user-pm', type: 'CV', name: 'Hoang_Ngoc_Son_CV.pdf', size: '1.5MB', uploaded_at: '2023-12-10' },
+    { id: 'doc-4', user_id: 'user-pm', type: 'CONTRACT', name: 'Contract_Lead_Son.pdf', size: '3.1MB', uploaded_at: '2024-01-01' },
+];

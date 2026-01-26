@@ -303,13 +303,22 @@ export default function ActivityPage() {
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="activity-page-title">
-                                📰 Nhật ký hoạt động
-                            </h1>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="activity-page-title">
+                                    {user?.role === 'CEO' ? '📈 Nhịp đập doanh nghiệp' : '📰 Nhật ký hoạt động'}
+                                </h1>
+                                {user?.role === 'CEO' && (
+                                    <Badge className="bg-rose-500 text-white animate-pulse border-none">
+                                        LIVE
+                                    </Badge>
+                                )}
+                            </div>
                             <p className="text-slate-500 mt-1 font-medium">
-                                {user?.role === 'EMPLOYEE'
-                                    ? 'Theo dõi lịch sử hoạt động của bạn.'
-                                    : 'Theo dõi hoạt động của team và dự án.'}
+                                {user?.role === 'CEO'
+                                    ? 'Giám sát toàn bộ dòng chảy công việc của tổ chức theo thời gian thực.'
+                                    : user?.role === 'EMPLOYEE'
+                                        ? 'Theo dõi lịch sử hoạt động của bạn.'
+                                        : 'Theo dõi hoạt động của dự án và thành viên.'}
                             </p>
                         </div>
                     </div>

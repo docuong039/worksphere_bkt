@@ -202,6 +202,19 @@ export default function LoginPage() {
                             )}
                         </Button>
                     </form>
+
+                    <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+                        <p className="text-sm text-slate-500">
+                            Chưa có không gian làm việc?{' '}
+                            <Link
+                                href="/register-org"
+                                className="font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+                                data-testid="link-register-org"
+                            >
+                                Đăng ký Tổ chức ngay
+                            </Link>
+                        </p>
+                    </div>
                 </CardContent>
             </Card>
         </div>

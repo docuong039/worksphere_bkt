@@ -12,6 +12,7 @@ import {
     Shield,
     TrendingUp,
     History,
+    FileText,
     FolderGit2,
     Settings,
     ChevronLeft
@@ -51,14 +52,15 @@ export default function ProjectLayout({
 
     const tabs = [
         { name: 'Tổng quan', href: `/projects/${id}/overview`, icon: LayoutDashboard },
-        { name: 'Công việc', href: `/projects/${id}`, icon: Layers, exact: true },
-        { name: 'Gantt', href: `/projects/${id}/gantt`, icon: BarChart3 },
+        { name: 'Công việc', href: `/projects/${id}`, icon: Layers, exact: true }, // CEO can monitor
+        { name: 'Gantt', href: `/projects/${id}/gantt`, icon: BarChart3 }, // CEO can monitor
         { name: 'Chi phí', href: `/projects/${id}/cost`, icon: BarChart3, hidden: !isPM && !isCEO },
-        { name: 'Chất lượng', href: `/projects/${id}/quality`, icon: Shield },
-        { name: 'Hiệu suất', href: `/projects/${id}/performance`, icon: TrendingUp },
+        { name: 'Chất lượng', href: `/projects/${id}/quality`, icon: Shield, hidden: isCEO }, // Specific to PM/QA
+        { name: 'Hiệu suất', href: `/projects/${id}/performance`, icon: TrendingUp, hidden: isCEO }, // Specific to PM
         { name: 'Nhật ký', href: `/projects/${id}/activity`, icon: History },
-        { name: 'Tài nguyên', href: `/projects/${id}/resources`, icon: FolderGit2 },
-        { name: 'Cài đặt', href: `/projects/${id}/settings`, icon: Settings, hidden: !isPM },
+        { name: 'Tài liệu', href: `/projects/${id}/documents`, icon: FileText },
+        { name: 'Tài nguyên', href: `/projects/${id}/resources`, icon: FolderGit2, hidden: isCEO },
+        { name: 'Cài đặt', href: `/projects/${id}/settings`, icon: Settings, hidden: !isPM }, // CEO monitors, PM updates
     ];
 
     return (

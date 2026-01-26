@@ -37,6 +37,7 @@ import {
     Calendar,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { cn } from '@/lib/utils';
 
 interface CostSummary {
     total_cost: number;
@@ -67,12 +68,23 @@ interface EmployeeCost {
     total_cost: number;
 }
 
+interface ProjectCost {
+    id: string;
+    name: string;
+    total_hours: number;
+    total_cost: number;
+    member_count: number;
+    status: string;
+}
+
 export default function OrgCostAnalysisPage() {
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [summary, setSummary] = useState<CostSummary | null>(null);
     const [departments, setDepartments] = useState<DepartmentCost[]>([]);
     const [employees, setEmployees] = useState<EmployeeCost[]>([]);
+    const [projects, setProjects] = useState<ProjectCost[]>([]);
+    const [viewMode, setViewMode] = useState<'EMPLOYEE' | 'PROJECT'>('PROJECT');
     const [timeRange, setTimeRange] = useState('month');
     const [departmentFilter, setDepartmentFilter] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
@@ -111,9 +123,17 @@ export default function OrgCostAnalysisPage() {
                 { user_id: 'u6', full_name: 'Vũ Thị F', email: 'vu.f@company.com', department: 'Engineering', position: 'Middle Developer', hours_logged: 168, hourly_rate: 350000, total_cost: 58800000 },
             ];
 
+            const mockProjects: ProjectCost[] = [
+                { id: 'p1', name: 'WorkSphere 2.0', total_hours: 850, total_cost: 320000000, member_count: 12, status: 'ON_TRACK' },
+                { id: 'p2', name: 'Mobile App Redesign', total_hours: 420, total_cost: 156000000, member_count: 5, status: 'AT_RISK' },
+                { id: 'p3', name: 'AI Integration', total_hours: 310, total_cost: 110000000, member_count: 4, status: 'ON_TRACK' },
+                { id: 'p4', name: 'Bifrost API', total_hours: 280, total_cost: 95000000, member_count: 6, status: 'DELAYED' },
+            ];
+
             setSummary(mockSummary);
             setDepartments(mockDepartments);
             setEmployees(mockEmployees);
+            setProjects(mockProjects);
         } catch (error) {
             console.error(error);
         } finally {
@@ -260,13 +280,33 @@ export default function OrgCostAnalysisPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Employee Details */}
-                        <Card className="border-none shadow-sm" data-testid="employee-details-card">
+                        {/* Details Table */}
+                        <Card className="border-none shadow-sm" data-testid="details-card">
                             <CardHeader className="border-b border-slate-100">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                    <div>
-                                        <CardTitle className="text-lg font-bold">Chi tiết theo nhân viên</CardTitle>
-                                        <CardDescription>Top nhân viên theo chi phí</CardDescription>
+                                    <div className="flex items-center gap-4">
+                                        <div>
+                                            <CardTitle className="text-lg font-bold">Chi tiết theo {viewMode === 'EMPLOYEE' ? 'nhân viên' : 'dự án'}</CardTitle>
+                                            <CardDescription>Báo cáo chi phí chi tiết theo {viewMode === 'EMPLOYEE' ? 'từng nhân sự' : 'từng dự án'}</CardDescription>
+                                        </div>
+                                        <div className="bg-slate-100 p-1 rounded-xl flex">
+                                            <Button
+                                                variant={viewMode === 'PROJECT' ? 'secondary' : 'ghost'}
+                                                size="sm"
+                                                className={cn("rounded-lg font-bold text-xs", viewMode === 'PROJECT' && "bg-white shadow-sm")}
+                                                onClick={() => setViewMode('PROJECT')}
+                                            >
+                                                Theo Dự án
+                                            </Button>
+                                            <Button
+                                                variant={viewMode === 'EMPLOYEE' ? 'secondary' : 'ghost'}
+                                                size="sm"
+                                                className={cn("rounded-lg font-bold text-xs", viewMode === 'EMPLOYEE' && "bg-white shadow-sm")}
+                                                onClick={() => setViewMode('EMPLOYEE')}
+                                            >
+                                                Theo Nhân viên
+                                            </Button>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="relative">
@@ -305,7 +345,7 @@ export default function OrgCostAnalysisPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredEmployees.map(emp => (
+                                        {viewMode === 'EMPLOYEE' ? filteredEmployees.map(emp => (
                                             <TableRow key={emp.user_id} data-testid={`emp-row-${emp.user_id}`}>
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
@@ -327,6 +367,35 @@ export default function OrgCostAnalysisPage() {
                                                 <TableCell className="text-right">{formatCurrency(emp.hourly_rate)}</TableCell>
                                                 <TableCell className="text-right font-bold text-emerald-600">
                                                     {formatCurrency(emp.total_cost)}
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : projects.map(proj => (
+                                            <TableRow key={proj.id} data-testid={`proj-row-${proj.id}`} className="cursor-pointer hover:bg-slate-50">
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                                                            P
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-slate-900">{proj.name}</p>
+                                                            <p className="text-xs text-slate-400">{proj.member_count} thành viên</p>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge className={cn(
+                                                        "font-bold",
+                                                        proj.status === 'ON_TRACK' ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" :
+                                                            proj.status === 'AT_RISK' ? "bg-amber-100 text-amber-700 hover:bg-amber-100" :
+                                                                "bg-red-100 text-red-700 hover:bg-red-100"
+                                                    )}>
+                                                        {proj.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium">{proj.total_hours}h</TableCell>
+                                                <TableCell className="text-right">---</TableCell>
+                                                <TableCell className="text-right font-black text-indigo-600">
+                                                    {formatCurrency(proj.total_cost)}
                                                 </TableCell>
                                             </TableRow>
                                         ))}

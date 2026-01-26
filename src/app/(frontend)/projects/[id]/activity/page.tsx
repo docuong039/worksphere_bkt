@@ -35,6 +35,7 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface ActivityLog {
     id: string;
@@ -54,32 +55,38 @@ export default function ProjectActivityPage({ params }: { params: Promise<{ id: 
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
     const [projectName, setProjectName] = useState('');
+    const { toast } = useToast();
 
     const isPM = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
 
-    useEffect(() => {
-        const fetchActivities = async () => {
-            setLoading(true);
-            try {
-                setProjectName('Worksphere Platform');
-                const mockActivities: ActivityLog[] = [
-                    { id: '1', user_name: 'Nguyễn Văn A', action_type: 'TIME_LOG', entity_name: 'Task #123', entity_id: 't123', details: 'đã ghi nhận 4.5 giờ làm việc.', created_at: '2026-01-24T10:30:00Z' },
-                    { id: '2', user_name: 'Trần Thị B', action_type: 'STATUS_CHANGE', entity_name: 'Fix bug Login UI', entity_id: 't001', details: 'đã chuyển trạng thái sang DONE.', created_at: '2026-01-24T09:15:00Z' },
-                    { id: '3', user_name: 'Lê Văn PM', action_type: 'CREATE', entity_name: 'Setup Production Cluster', entity_id: 't456', details: 'đã tạo một công việc mới.', created_at: '2026-01-23T16:00:00Z' },
-                    { id: '4', user_name: 'Alice Designer', action_type: 'COMMENT', entity_name: 'User Onboarding Flow', entity_id: 't789', details: 'đã bình luận: "Cần cập nhật lại màu sắc nút."', created_at: '2026-01-23T14:45:00Z' },
-                    { id: '5', user_name: 'Lê Văn PM', action_type: 'ASSIGN', entity_name: 'Task #999', entity_id: 't999', details: 'đã phân công công việc cho Nguyễn Văn A.', created_at: '2026-01-23T11:20:00Z' },
-                    { id: '6', user_name: 'Bob Backend', action_type: 'UPDATE', entity_name: 'Database Schema', entity_id: 't222', details: 'đã cập nhật mô tả chi tiết.', created_at: '2026-01-23T08:00:00Z' },
-                    { id: '7', user_name: 'HR Manager', action_type: 'DELETE', entity_name: 'Old Meeting Notes', entity_id: 'd10', details: 'đã xóa một tài liệu khỏi dự án.', created_at: '2026-01-22T17:30:00Z' },
-                ];
-                setActivities(mockActivities);
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const handleRefresh = async () => {
+        setLoading(true);
+        // Simulate refresh delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        await fetchActivitiesData();
+        setLoading(false);
+        toast({
+            title: "Cập nhật",
+            description: "Nhật ký hoạt động đã được làm mới.",
+        });
+    };
 
-        if (user) fetchActivities();
+    const fetchActivitiesData = async () => {
+        // Mock data logic moved here for reuse
+        const mockActivities: ActivityLog[] = [
+            { id: '1', user_name: 'Nguyễn Văn A', action_type: 'TIME_LOG', entity_name: 'Task #123', entity_id: 't123', details: 'đã ghi nhận 4.5 giờ làm việc.', created_at: new Date().toISOString() },
+            { id: '2', user_name: 'Trần Thị B', action_type: 'STATUS_CHANGE', entity_name: 'Fix bug Login UI', entity_id: 't001', details: 'đã chuyển trạng thái sang DONE.', created_at: new Date(Date.now() - 3600000).toISOString() },
+            { id: '3', user_name: 'Lê Văn PM', action_type: 'CREATE', entity_name: 'Setup Production Cluster', entity_id: 't456', details: 'đã tạo một công việc mới.', created_at: new Date(Date.now() - 7200000).toISOString() },
+            { id: '4', user_name: 'Alice Designer', action_type: 'COMMENT', entity_name: 'User Onboarding Flow', entity_id: 't789', details: 'đã bình luận: "Cần cập nhật lại màu sắc nút."', created_at: new Date(Date.now() - 86400000).toISOString() },
+        ];
+        setActivities(mockActivities);
+    };
+
+    useEffect(() => {
+        if (user) {
+            setProjectName('Worksphere Platform');
+            fetchActivitiesData().then(() => setLoading(false));
+        }
     }, [projectId, user]);
 
     const getActionIcon = (type: string) => {
@@ -135,8 +142,8 @@ export default function ProjectActivityPage({ params }: { params: Promise<{ id: 
                     </h2>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="h-9 font-bold border-slate-200 bg-white" onClick={() => { }}>
-                        <RefreshCw size={14} className="mr-2" /> Làm mới
+                    <Button variant="outline" size="sm" className="h-9 font-bold border-slate-200 bg-white" onClick={handleRefresh} data-testid="btn-refresh-activity" disabled={loading}>
+                        <RefreshCw size={14} className={cn("mr-2", loading && "animate-spin")} /> Làm mới
                     </Button>
                 </div>
             </div>

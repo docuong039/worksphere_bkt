@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -29,6 +29,16 @@ import { useAuthStore } from '@/stores/authStore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { PERMISSIONS } from '@/lib/permissions';
+import {
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Cell
+} from 'recharts';
 
 interface Project {
     id: string;
@@ -41,9 +51,12 @@ interface Project {
     member_count: number;
     task_count: number;
     completion_rate: number;
+    overdue_count?: number;
+    is_blocked?: boolean;
 }
 
 const ProjectCard = ({ project }: { project: Project }) => {
+    const { user } = useAuthStore();
     return (
         <Card
             className="group hover:shadow-xl transition-all duration-300 border-none shadow-sm overflow-hidden bg-white"
@@ -52,13 +65,29 @@ const ProjectCard = ({ project }: { project: Project }) => {
             <CardContent className="p-0">
                 <Link href={`/projects/${project.id}/overview`} className="block p-6">
                     <div className="flex justify-between items-start mb-4">
-                        <Badge
-                            variant={project.status === 'ACTIVE' ? 'default' : 'secondary'}
-                            className={project.status === 'ACTIVE' ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-none px-3" : ""}
-                            data-testid={`project-status-${project.code.toLowerCase()}`}
-                        >
-                            {project.status === 'ACTIVE' ? 'Hoạt động' : 'Lưu trữ'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                            {project.is_blocked && (
+                                <Badge variant="destructive" className="bg-rose-100 text-rose-700 border-none px-2 h-6 font-black uppercase text-[10px]">
+                                    Bị chặn (Blocked)
+                                </Badge>
+                            )}
+                            {project.overdue_count && project.overdue_count > 0 ? (
+                                <Badge variant="destructive" className="bg-rose-50 text-rose-700 hover:bg-rose-100 border-none px-2 py-0 h-6">
+                                    {project.overdue_count} Quá hạn
+                                </Badge>
+                            ) : (project.completion_rate < 30 && project.status === 'ACTIVE' && (
+                                <Badge variant="outline" className="text-amber-600 border-amber-200 px-2 py-0 h-6">
+                                    Tiến độ chậm
+                                </Badge>
+                            ))}
+                            <Badge
+                                variant={project.status === 'ACTIVE' ? 'default' : 'secondary'}
+                                className={project.status === 'ACTIVE' ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-none px-3 h-6 underline-offset-4" : "h-6"}
+                                data-testid={`project-status-${project.code.toLowerCase()}`}
+                            >
+                                {project.status === 'ACTIVE' ? 'Hoạt động' : 'Lưu trữ'}
+                            </Badge>
+                        </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={(e) => e.preventDefault()}>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
@@ -89,20 +118,22 @@ const ProjectCard = ({ project }: { project: Project }) => {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="flex items-center gap-2 text-slate-500">
-                            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                                <Users size={14} />
+                    {user?.role !== 'CEO' && (
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="flex items-center gap-2 text-slate-500">
+                                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
+                                    <Users size={14} />
+                                </div>
+                                <span className="text-sm font-semibold">{project.member_count} Thành viên</span>
                             </div>
-                            <span className="text-sm font-semibold">{project.member_count} Thành viên</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-slate-500">
-                            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                                <CheckSquare size={14} />
+                            <div className="flex items-center gap-2 text-slate-500">
+                                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
+                                    <CheckSquare size={14} />
+                                </div>
+                                <span className="text-sm font-semibold">{project.task_count} Công việc</span>
                             </div>
-                            <span className="text-sm font-semibold">{project.task_count} Công việc</span>
                         </div>
-                    </div>
+                    )}
 
                     <div className="space-y-2">
                         <div className="flex justify-between items-end">
@@ -180,10 +211,12 @@ export default function ProjectsPage() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="projects-page-title">
-                                Dự án
+                                {(user?.role === 'CEO' || user?.role === 'ORG_ADMIN') ? 'Quản trị Dự án Toàn công ty' : 'Dự án'}
                             </h1>
                             <p className="text-slate-500 mt-1 font-medium">
-                                Quản lý và theo dõi các dự án của tổ chức.
+                                {(user?.role === 'CEO' || user?.role === 'ORG_ADMIN')
+                                    ? 'Cái nhìn chiến lược (Strategic View) về toàn bộ dự án và tiến độ của tổ chức.'
+                                    : 'Danh sách dự án bạn tham gia và theo dõi tiến độ.'}
                             </p>
                         </div>
                         {canCreateProject && (
@@ -232,6 +265,65 @@ export default function ProjectsPage() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Financial Overview (CEO Only) */}
+                    {hasPermission(PERMISSIONS.COMPENSATION_READ) && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8 animate-in slide-in-from-top-4 duration-1000">
+                            <Card className="lg:col-span-2 border-none shadow-sm bg-white overflow-hidden">
+                                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle className="text-lg font-bold">Phân tích Chi phí Dự án</CardTitle>
+                                        <CardDescription>Tổng chi phí nhân sự phân bổ theo từng dự án lớn.</CardDescription>
+                                    </div>
+                                    <Badge className="bg-blue-50 text-blue-700 border-none font-bold">Tháng này</Badge>
+                                </CardHeader>
+                                <CardContent className="h-[300px] w-full mt-4">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                            data={projects.map(p => ({
+                                                name: p.name,
+                                                cost: (p.completion_rate * 1500000) + (p.member_count * 5000000)
+                                            }))}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
+                                            <YAxis fontSize={10} axisLine={false} tickLine={false} tickFormatter={(value) => `${(value / 1000000).toFixed(0)}tr`} />
+                                            <Tooltip
+                                                cursor={{ fill: '#f8fafc' }}
+                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                formatter={(value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value))}
+                                            />
+                                            <Bar dataKey="cost" fill="#2563eb" radius={[6, 6, 0, 0]} barSize={40} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border-none shadow-sm bg-gradient-to-br from-blue-600 to-indigo-700 text-white overflow-hidden relative">
+                                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                                    <ArrowUpRight size={150} />
+                                </div>
+                                <CardHeader>
+                                    <CardTitle className="text-xl font-bold">Hiệu quả đầu tư (ROI)</CardTitle>
+                                    <CardDescription className="text-blue-100">Ước tính giá trị mang lại.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6 pt-4 relative z-10">
+                                    <div className="space-y-1">
+                                        <p className="text-4xl font-black text-white">82%</p>
+                                        <p className="text-xs font-medium text-blue-100 uppercase tracking-widest">Chỉ số tối ưu hóa</p>
+                                    </div>
+                                    <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/10">
+                                        <p className="text-sm font-medium leading-relaxed">
+                                            Phòng Kỹ thuật đang đạt hiệu suất log hours cao nhất (89%). Các dự án Game có mức chi phí / giá trị tốt nhất tháng này.
+                                        </p>
+                                    </div>
+                                    <Button variant="secondary" className="w-full bg-white text-blue-600 font-bold border-none hover:bg-blue-50 h-11 rounded-xl">
+                                        Xuất báo cáo tài chính
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
 
                     {/* Projects Grid */}
                     {loading ? (

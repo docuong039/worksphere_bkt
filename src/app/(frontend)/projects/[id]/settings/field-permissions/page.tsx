@@ -11,8 +11,10 @@ import {
     CheckCircle2,
     XCircle,
     Loader2,
-    Lock
+    Lock,
+    ChevronLeft
 } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -116,13 +118,26 @@ export default function FieldPermissionsPage({ params }: { params: Promise<{ id:
     return (
         <div className="space-y-6 animate-in fade-in duration-700 pb-20" data-testid="field-permissions-container">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-2 shrink-0">
-                <div>
-                    <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-indigo-600" />
-                        Phân quyền trường dữ liệu
-                    </h2>
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white shadow-sm border border-slate-100" asChild data-testid="btn-back-to-settings">
+                        <Link href={`/projects/${id}/settings`}>
+                            <ChevronLeft size={20} className="text-slate-600" />
+                        </Link>
+                    </Button>
+                    <div>
+                        <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-indigo-600" />
+                            Phân quyền trường dữ liệu
+                        </h2>
+                    </div>
                 </div>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 h-9 px-6 font-bold shadow-lg shadow-emerald-100" onClick={handleSave} disabled={isSaving} size="sm">
+                <Button
+                    className="bg-emerald-600 hover:bg-emerald-700 h-9 px-6 font-bold shadow-lg shadow-emerald-100"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    size="sm"
+                    data-testid="btn-save-matrix"
+                >
                     {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <><Save className="mr-2 h-4 w-4" /> Lưu Ma trận</>}
                 </Button>
             </div>
@@ -130,19 +145,23 @@ export default function FieldPermissionsPage({ params }: { params: Promise<{ id:
             <Card className="border-none shadow-sm bg-white overflow-hidden">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100 px-6 py-4">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-fit">
+                        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-fit" data-testid="field-permissions-tabs">
                             <TabsList className="bg-white p-1 border border-slate-200 rounded-xl">
-                                <TabsTrigger value="TASK" className="rounded-lg px-4 text-xs font-bold transition-all">Công việc</TabsTrigger>
-                                <TabsTrigger value="SUBTASK" className="rounded-lg px-4 text-xs font-bold transition-all">Công việc con</TabsTrigger>
+                                <TabsTrigger value="TASK" className="rounded-lg px-4 text-xs font-bold transition-all" data-testid="tab-task">Công việc</TabsTrigger>
+                                <TabsTrigger value="SUBTASK" className="rounded-lg px-4 text-xs font-bold transition-all" data-testid="tab-subtask">Công việc con</TabsTrigger>
                             </TabsList>
                         </Tabs>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                            <Input placeholder="Tìm thành viên..." className="pl-9 h-9 w-64 bg-white border-slate-200 rounded-xl text-xs font-semibold" />
+                            <Input
+                                placeholder="Tìm thành viên..."
+                                className="pl-9 h-9 w-64 bg-white border-slate-200 rounded-xl text-xs font-semibold"
+                                data-testid="input-member-search"
+                            />
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="p-0 overflow-x-auto">
+                <CardContent className="p-0 overflow-x-auto" data-testid="permissions-table-container">
                     {loading ? (
                         <div className="p-8 space-y-4">
                             <Skeleton className="h-10 w-full" />
@@ -182,6 +201,7 @@ export default function FieldPermissionsPage({ params }: { params: Promise<{ id:
                                                         checked={hasPerm}
                                                         disabled={member.role === 'PROJECT_MANAGER'}
                                                         onCheckedChange={() => togglePermission(member.id, field.id)}
+                                                        data-testid={`checkbox-${member.id}-${field.id}`}
                                                     />
                                                 </TableCell>
                                             );

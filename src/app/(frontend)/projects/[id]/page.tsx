@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Search, Filter, Plus, Calendar,
-    User, CheckCircle2, Clock, AlertCircle, ChevronUp, ChevronDown, MoreVertical
+    User, CheckCircle2, Clock, AlertCircle, ChevronUp, ChevronDown, MoreVertical,
+    FileText, FolderUp
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -56,6 +57,13 @@ export default function ProjectTasksPage({ params }: { params: Promise<{ id: str
                         </h2>
                     </div>
                     <div className="flex items-center gap-3">
+                        {hasPermission(PERMISSIONS.TASK_IMPORT) && (
+                            <Link href={`/projects/${projectId}/import-export`}>
+                                <Button variant="ghost" size="sm" className="font-bold text-slate-600 hover:text-blue-600" data-testid="btn-import-export-tasks">
+                                    <FolderUp className="mr-2 h-4 w-4" /> Nhập/Xuất
+                                </Button>
+                            </Link>
+                        )}
                         {hasPermission(PERMISSIONS.PROJECT_UPDATE) && (
                             <Link href={`/projects/${projectId}/settings/custom-fields`}>
                                 <Button variant="outline" size="sm" className="font-bold border-slate-200" data-testid="btn-custom-fields">
@@ -227,6 +235,6 @@ export default function ProjectTasksPage({ params }: { params: Promise<{ id: str
                     </div>
                 )}
             </div>
-        </PermissionGuard>
+        </PermissionGuard >
     );
 }

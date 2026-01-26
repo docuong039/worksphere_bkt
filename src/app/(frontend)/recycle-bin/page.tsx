@@ -230,6 +230,14 @@ export default function RecycleBinPage() {
     const [emptyDialogOpen, setEmptyDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
+    // Filters for CEO/MNG
+    const [selectedProject, setSelectedProject] = useState('ALL');
+    const [selectedActor, setSelectedActor] = useState('ALL');
+    const [projects, setProjects] = useState<any[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
+
+    const isManager = user?.role === 'CEO' || user?.role === 'ORG_ADMIN' || user?.role === 'PROJECT_MANAGER';
+
     // Fetch recycle bin items
     const fetchItems = async () => {
         if (!user) return;
@@ -237,6 +245,8 @@ export default function RecycleBinPage() {
         try {
             const params = new URLSearchParams();
             if (filterType !== 'ALL') params.append('entity_type', filterType);
+            if (selectedProject !== 'ALL') params.append('project_id', selectedProject);
+            if (selectedActor !== 'ALL') params.append('actor_id', selectedActor);
 
             const res = await fetch(`/api/recycle-bin?${params.toString()}`, {
                 headers: {
@@ -255,7 +265,20 @@ export default function RecycleBinPage() {
 
     useEffect(() => {
         if (user) fetchItems();
-    }, [user, filterType]);
+    }, [user, filterType, selectedProject, selectedActor]);
+
+    useEffect(() => {
+        if (user && isManager) {
+            // Fetch projects and users for filters
+            fetch('/api/projects', { headers: { 'x-user-id': user.id } })
+                .then(res => res.json())
+                .then(data => setProjects(data.data || []));
+
+            fetch('/api/admin/users', { headers: { 'x-user-id': user.id } })
+                .then(res => res.json())
+                .then(data => setUsers(data.data || []));
+        }
+    }, [user]);
 
     // Toggle selection
     const toggleSelect = (id: string, checked: boolean) => {
@@ -373,10 +396,12 @@ export default function RecycleBinPage() {
                         <div>
                             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="recycle-bin-title">
                                 <Trash2 className="inline-block mr-2 h-8 w-8 text-slate-600" />
-                                Thùng rác
+                                {user?.role === 'CEO' ? 'Lưới an toàn dữ liệu' : 'Thùng rác'}
                             </h1>
                             <p className="text-slate-500 mt-1 font-medium">
-                                Các mục đã xóa được giữ trong 30 ngày trước khi xóa vĩnh viễn.
+                                {user?.role === 'CEO'
+                                    ? 'Giám sát việc hủy bỏ tài nguyên và khôi phục thông tin quan trọng của toàn công ty.'
+                                    : 'Các mục đã xóa được giữ trong 30 ngày trước khi xóa vĩnh viễn.'}
                             </p>
                         </div>
 
@@ -397,7 +422,7 @@ export default function RecycleBinPage() {
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
                                     <Select value={filterType} onValueChange={setFilterType}>
-                                        <SelectTrigger className="w-[160px]" data-testid="recycle-bin-filter-type">
+                                        <SelectTrigger className="w-[140px]" data-testid="recycle-bin-filter-type">
                                             <SelectValue placeholder="Loại" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -409,6 +434,34 @@ export default function RecycleBinPage() {
                                             ))}
                                         </SelectContent>
                                     </Select>
+
+                                    {isManager && (
+                                        <>
+                                            <Select value={selectedProject} onValueChange={setSelectedProject}>
+                                                <SelectTrigger className="w-[160px]" data-testid="recycle-bin-filter-project">
+                                                    <SelectValue placeholder="Dự án" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="ALL">Mọi dự án</SelectItem>
+                                                    {projects.map(p => (
+                                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+
+                                            <Select value={selectedActor} onValueChange={setSelectedActor}>
+                                                <SelectTrigger className="w-[160px]" data-testid="recycle-bin-filter-actor">
+                                                    <SelectValue placeholder="Người xóa" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="ALL">Mọi người</SelectItem>
+                                                    {users.map(u => (
+                                                        <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </>
+                                    )}
 
                                     {items.length > 0 && (
                                         <Button

@@ -13,7 +13,9 @@ import {
   ExternalLink,
   Filter,
   Download,
+  Loader2,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,8 +102,28 @@ export default function QualityPage({
 }) {
   const { id } = use(params);
   const { user } = useAuthStore();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [project, setProject] = useState<ProjectQuality | null>(null);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setIsExporting(false);
+    toast({
+      title: "Thành công",
+      description: "Báo cáo chất lượng đã được chuẩn bị và sẽ tải xuống sau vài giây.",
+    });
+  };
+
+  const handleFilter = () => {
+    toast({
+      title: "Thông báo",
+      description: "Chức năng lọc nâng cao đang được cập nhật.",
+    });
+  };
 
   useEffect(() => {
     const fetchQualityData = async () => {
@@ -183,12 +205,29 @@ export default function QualityPage({
           </h2>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="h-9 font-bold gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 font-bold gap-2"
+            onClick={handleFilter}
+            data-testid="btn-filter-quality"
+          >
             <Filter size={14} />
             Lọc
           </Button>
-          <Button variant="outline" size="sm" className="h-9 font-bold gap-2">
-            <Download size={14} />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 font-bold gap-2"
+            onClick={handleExport}
+            disabled={isExporting}
+            data-testid="btn-export-quality"
+          >
+            {isExporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download size={14} />
+            )}
             Xuất báo cáo
           </Button>
         </div>

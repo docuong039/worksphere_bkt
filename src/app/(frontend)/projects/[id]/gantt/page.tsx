@@ -9,13 +9,16 @@ import {
     Users,
     ChevronDown,
     ChevronRight,
-    ZoomIn,
     ZoomOut,
     Maximize2,
+    Target,
     CheckCircle2,
     Clock,
-    SeparatorVertical
+    SeparatorVertical,
+    Download,
+    Loader2
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -50,6 +53,73 @@ export default function GanttPage({ params }: { params: Promise<{ id: string }> 
     const [loading, setLoading] = useState(true);
     const [zoom, setZoom] = useState<'DAYS' | 'WEEKS' | 'MONTHS' | 'QUARTERS'>('DAYS');
     const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+    const [isExporting, setIsExporting] = useState(false);
+    const { toast } = useToast();
+
+    const startDate = new Date('2026-01-01');
+    const endDate = new Date('2026-02-28');
+    const daysCount = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
+    const dayWidth = 40;
+
+    const getLeftPosition = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const diff = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
+        return diff * dayWidth;
+    };
+
+    const getWidth = (startStr: string, endStr: string) => {
+        const start = new Date(startStr);
+        const end = new Date(endStr);
+        const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1;
+        return diff * dayWidth;
+    };
+
+    const handleFilter = () => {
+        toast({
+            title: "Thông báo",
+            description: "Tính năng lọc biểu đồ đang được phát triển.",
+        });
+    };
+
+    const handleMaximize = () => {
+        const container = document.getElementById('gantt-chart-wrapper');
+        if (container) {
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => {
+                    toast({
+                        title: "Lỗi",
+                        description: `Không thể mở toàn màn hình: ${err.message}`,
+                        variant: "destructive"
+                    });
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    };
+
+    const handleExport = async () => {
+        setIsExporting(true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setIsExporting(false);
+        toast({
+            title: "Thành công",
+            description: "Biểu đồ Gantt đã được xuất ra định dạng PDF.",
+        });
+    };
+
+    const handleGoToToday = () => {
+        const today = new Date();
+        const timeline = document.getElementById('gantt-timeline-scroll');
+        if (timeline) {
+            const left = getLeftPosition(today.toISOString().split('T')[0]);
+            timeline.scrollTo({ left: left - 200, behavior: 'smooth' });
+            toast({
+                title: "Đã chuyển",
+                description: "Đã di chuyển tới ngày hôm nay.",
+            });
+        }
+    };
 
     const isPM = user?.role === 'PROJECT_MANAGER' || user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
 
@@ -91,24 +161,6 @@ export default function GanttPage({ params }: { params: Promise<{ id: string }> 
         setExpandedTasks(newSet);
     };
 
-    const startDate = new Date('2026-01-01');
-    const endDate = new Date('2026-02-28');
-    const daysCount = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
-    const dayWidth = 40;
-
-    const getLeftPosition = (dateStr: string) => {
-        const date = new Date(dateStr);
-        const diff = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
-        return diff * dayWidth;
-    };
-
-    const getWidth = (startStr: string, endStr: string) => {
-        const start = new Date(startStr);
-        const end = new Date(endStr);
-        const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1;
-        return diff * dayWidth;
-    };
-
     if (loading) {
         return (
             <div className="max-w-7xl mx-auto space-y-8 animate-pulse p-4">
@@ -119,7 +171,7 @@ export default function GanttPage({ params }: { params: Promise<{ id: string }> 
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-250px)] animate-in fade-in duration-700" data-testid="gantt-page-container">
+        <div id="gantt-chart-wrapper" className="flex flex-col h-[calc(100vh-250px)] animate-in fade-in duration-700 bg-slate-50 p-4 rounded-3xl overflow-hidden" data-testid="gantt-page-container">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6 shrink-0">
                 <div className="space-y-1">
@@ -142,12 +194,20 @@ export default function GanttPage({ params }: { params: Promise<{ id: string }> 
                             </Button>
                         ))}
                     </Card>
-                    <Separator orientation="vertical" className="h-8 mx-2" />
-                    <Button variant="outline" size="icon" className="h-10 w-10 border-slate-200">
+                    <Button variant="outline" size="sm" className="h-10 font-bold gap-2 border-slate-200" onClick={handleGoToToday} data-testid="btn-gantt-today">
+                        <Target size={16} className="text-blue-600" />
+                        Hôm nay
+                    </Button>
+                    <Separator orientation="vertical" className="h-8 mx-1" />
+                    <Button variant="outline" size="icon" className="h-10 w-10 border-slate-200" onClick={handleFilter} data-testid="btn-gantt-filter">
                         <Filter size={18} />
                     </Button>
-                    <Button variant="outline" size="icon" className="h-10 w-10 border-slate-200">
+                    <Button variant="outline" size="icon" className="h-10 w-10 border-slate-200" onClick={handleMaximize} data-testid="btn-gantt-maximize">
                         <Maximize2 size={18} />
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-10 font-bold gap-2 border-slate-200 px-4" onClick={handleExport} disabled={isExporting} data-testid="btn-gantt-export">
+                        {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download size={18} />}
+                        Xuất PDF
                     </Button>
                 </div>
             </div>
@@ -209,7 +269,7 @@ export default function GanttPage({ params }: { params: Promise<{ id: string }> 
                     </div>
 
                     {/* Timeline (Right) */}
-                    <div className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-50/10">
+                    <div id="gantt-timeline-scroll" className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-50/10 scroll-smooth">
                         <div className="relative min-h-full" style={{ width: `${dayWidth * daysCount}px` }}>
                             <div className="h-12 border-b border-slate-100 flex absolute top-0 left-0 bg-white z-10 w-full shadow-sm">
                                 {Array.from({ length: daysCount }).map((_, i) => {
@@ -232,7 +292,7 @@ export default function GanttPage({ params }: { params: Promise<{ id: string }> 
                                 })}
                             </div>
 
-                            <div className="absolute top-12 left-0 bottom-0 flex w-full">
+                            <div className="absolute top-12 left-0 bottom-0 flex w-full pointer-events-none">
                                 {Array.from({ length: daysCount }).map((_, i) => (
                                     <div
                                         key={i}
@@ -240,6 +300,14 @@ export default function GanttPage({ params }: { params: Promise<{ id: string }> 
                                         style={{ width: `${dayWidth}px` }}
                                     ></div>
                                 ))}
+
+                                {/* Today Line Marker */}
+                                <div
+                                    className="absolute top-0 bottom-0 border-l-2 border-rose-500 z-30 flex flex-col items-center pointer-events-none"
+                                    style={{ left: `${getLeftPosition(new Date().toISOString().split('T')[0])}px` }}
+                                >
+                                    <div className="bg-rose-500 text-[8px] text-white px-1.5 py-0.5 rounded-full font-black uppercase mt-1 shadow-sm">Today</div>
+                                </div>
                             </div>
 
                             <div className="absolute top-12 left-0 bottom-0 w-full overflow-y-auto no-scrollbar">

@@ -46,6 +46,11 @@ export const mockUsers = [
         status: 'ACTIVE',
         created_at: '2025-01-03T11:00:00Z',
         updated_at: '2025-01-03T11:00:00Z',
+        dob: '1995-05-20',
+        id_number: '012345678910',
+        tax_code: '8123456789',
+        bank_account: '998877665544 (Vietcombank)',
+        address: '123 Đường Láng, Đống Đa, Hà Nội',
     },
     {
         id: 'user-emp-dev1',
@@ -54,6 +59,11 @@ export const mockUsers = [
         status: 'ACTIVE',
         created_at: '2025-01-20T08:00:00Z',
         updated_at: '2025-01-20T08:00:00Z',
+        dob: '1998-10-12',
+        id_number: '034567891234',
+        tax_code: '8345678912',
+        bank_account: '112233445566 (Techcombank)',
+        address: 'Số 10 Ngõ 5, Cầu Giấy, Hà Nội',
     },
     {
         id: 'user-emp-dev2',
@@ -62,6 +72,11 @@ export const mockUsers = [
         status: 'ACTIVE',
         created_at: '2025-01-21T08:00:00Z',
         updated_at: '2025-01-21T08:00:00Z',
+        dob: '1997-03-25',
+        id_number: '034567892234',
+        tax_code: '8345678922',
+        bank_account: '665544332211 (MB Bank)',
+        address: '22 Giải Phóng, Hai Bà Trưng, Hà Nội',
     },
     {
         id: 'user-emp-qa',
@@ -70,6 +85,11 @@ export const mockUsers = [
         status: 'ACTIVE',
         created_at: '2025-01-22T08:00:00Z',
         updated_at: '2025-01-22T08:00:00Z',
+        dob: '1996-07-08',
+        id_number: '034567893234',
+        tax_code: '8345678932',
+        bank_account: '778899001122 (TPBank)',
+        address: '15 Lê Văn Lương, Thanh Xuân, Hà Nội',
     },
     {
         id: 'user-emp-designer',
@@ -78,6 +98,11 @@ export const mockUsers = [
         status: 'ACTIVE',
         created_at: '2025-01-22T09:00:00Z',
         updated_at: '2025-01-22T09:00:00Z',
+        dob: '1999-12-05',
+        id_number: '034567894234',
+        tax_code: '8345678942',
+        bank_account: '554433221100 (ACB)',
+        address: '77 Kim Mã, Ba Đình, Hà Nội',
     }
 ];
 

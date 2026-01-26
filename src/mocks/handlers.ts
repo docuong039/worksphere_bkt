@@ -6,7 +6,7 @@ import { mockActivities } from './data/activity';
 import { mockNotifications } from './data/notifications';
 import { mockReports, mockReportComments } from './data/reports';
 import { mockTimeLogs } from './data/timelogs';
-import { mockCompensations, mockJobLevels } from './data/hr';
+import { mockCompensations, mockJobLevels, mockDocuments } from './data/hr';
 import { mockOrganizations } from './data/organizations';
 import { mockRecycleBin } from './data/recycle-bin';
 import { mockPersonalTasks } from './data/personal-tasks';
@@ -14,6 +14,12 @@ import { ROLE_PERMISSIONS, AppRole } from '@/lib/permissions';
 
 
 export const handlers = [
+    // Public Register Org
+    http.post('/api/public/register-org', async ({ request }) => {
+        const body = await request.json() as any;
+        return HttpResponse.json({ success: true, message: 'Registration request submitted', data: body });
+    }),
+
     // Auth Handlers
     http.post('/api/auth/login', async ({ request }) => {
         const { email } = await request.json() as any;
@@ -127,7 +133,12 @@ export const handlers = [
     // Project Handlers
     http.get('/api/projects', ({ request }) => {
         const orgId = request.headers.get('x-org-id') || 'org-1';
-        const filteredProjects = mockProjects.filter(p => p.org_id === orgId);
+        const filteredProjects = mockProjects.filter(p => p.org_id === orgId).map(p => ({
+            ...p,
+            completion_rate: p.id === 'prj-1' ? 65 : (p.id === 'prj-2' ? 25 : 0),
+            overdue_count: p.id === 'prj-2' ? 3 : 0,
+            is_blocked: p.id === 'prj-1' ? true : false
+        }));
 
         return HttpResponse.json({
             success: true,
@@ -145,8 +156,8 @@ export const handlers = [
 
         let filteredTasks = [...mockTasks];
 
-        // Role-based scoping (Scoping Logic)
-        if (role === 'EMPLOYEE') {
+        // Role-based scoping (Scoping Logic) - CEO and EMP only see own tasks to avoid micromanagement
+        if (role === 'EMPLOYEE' || role === 'CEO') {
             filteredTasks = filteredTasks.filter(t =>
                 t.assignees.some(a => a.id === userId) || t.created_by === userId
             );
@@ -763,23 +774,98 @@ export const handlers = [
     // Admin Roles & Permissions
     http.get('/api/admin/roles', () => {
         const roles = [
-            { id: '1', code: 'SYS_ADMIN', name: 'Quản trị hệ thống', description: 'Toàn quyền hệ thống', is_system: true, permissions: ['*'] },
-            { id: '2', code: 'ORG_ADMIN', name: 'Quản trị tổ chức', description: 'Quản trị tổ chức khách hàng', is_system: true, permissions: ['org.*', 'user.*'] },
-            { id: '3', code: 'CEO', name: 'Giám đốc (CEO)', description: 'Giám đốc điều hành', is_system: true, permissions: ['report.view', 'project.view'] },
-            { id: '4', code: 'PROJECT_MANAGER', name: 'Quản lý dự án', description: 'Quản lý dự án (PM)', is_system: true, permissions: ['project.edit', 'task.*'] },
-            { id: '5', code: 'EMPLOYEE', name: 'Nhân viên', description: 'Nhân viên phổ thông', is_system: true, permissions: ['task.view', 'time.log'] },
+            {
+                id: '1', code: 'SYS_ADMIN', name: 'Quản trị hệ thống',
+                description: 'Toàn quyền điều hành toàn bộ nền tảng SaaS (Dành cho nhân sự nội bộ Worksphere)',
+                is_system: true,
+                permissions: ['*']
+            },
+            {
+                id: '2', code: 'ORG_ADMIN', name: 'Quản trị tổ chức',
+                description: 'Quyền cao nhất của một khách hàng doanh nghiệp. Quản lý người dùng, cấu hình tổ chức và vai trò.',
+                is_system: true,
+                permissions: ['TENANT_ORG.UPDATE', 'ORG_USER.CREATE', 'ORG_USER.INVITE', 'ORG_USER.READ', 'ROLE_PERM.READ', 'ROLE_PERM.UPDATE', 'RECYCLE_BIN.READ', 'RECYCLE_BIN.ALL']
+            },
+            {
+                id: '3', code: 'CEO', name: 'Giám đốc (CEO)',
+                description: 'Giám sát toàn bộ hoạt động, xem báo cáo, chi phí và phê duyệt các quyết định lớn.',
+                is_system: true,
+                permissions: ['DASHBOARD.READ', 'REPORT.READ', 'REPORT.APPROVE', 'PROJECT.READ', 'COMPENSATION.READ', 'ACTIVITY.READ']
+            },
+            {
+                id: '4', code: 'PROJECT_MANAGER', name: 'Quản lý dự án',
+                description: 'Người đứng đầu dự án. Quản lý Task, Subtask, Thành viên và Ngân sách trong dự án mình phụ trách.',
+                is_system: true,
+                permissions: ['PROJECT.READ', 'PROJECT.UPDATE', 'TASK.CREATE', 'TASK.UPDATE', 'TASK.DELETE', 'TASK.ASSIGN', 'CUSTOM_FIELD.CREATE']
+            },
+            {
+                id: '5', code: 'EMPLOYEE', name: 'Nhân viên',
+                description: 'Thành viên cơ bản. Thực hiện Task, ghi Log Time và gửi báo cáo tuần/tháng.',
+                is_system: true,
+                permissions: ['TASK.READ', 'TASK.UPDATE', 'SUBTASK.CREATE', 'TIME_LOG.LOG_TIME', 'REPORT.CREATE', 'REPORT.SUBMIT']
+            },
         ];
         return HttpResponse.json({ success: true, data: roles });
     }),
 
     http.get('/api/admin/permissions', () => {
         const permissions = [
-            { code: 'task.view', name: 'Xem công việc', category: 'TASK' },
-            { code: 'task.edit', name: 'Sửa công việc', category: 'TASK' },
-            { code: 'project.view', name: 'Xem dự án', category: 'PROJECT' },
-            { code: 'time.log', name: 'Ghi nhật ký', category: 'TIME' },
-            { code: 'user.manage', name: 'Quản lý nhân sự', category: 'USER' },
-            { code: 'org.settings', name: 'Cấu hình tổ chức', category: 'ORG' },
+            // TASK
+            { code: 'TASK.CREATE', name: 'Tạo công việc', category: 'TASK' },
+            { code: 'TASK.READ', name: 'Xem công việc', category: 'TASK' },
+            { code: 'TASK.UPDATE', name: 'Sửa công việc', category: 'TASK' },
+            { code: 'TASK.DELETE', name: 'Xóa công việc', category: 'TASK' },
+            { code: 'TASK.ASSIGN', name: 'Giao việc cho nhân sự', category: 'TASK' },
+            { code: 'TASK.IMPORT', name: 'Nhập dữ liệu Task (Excel)', category: 'TASK' },
+            { code: 'TASK.EXPORT', name: 'Xuất dữ liệu Task (Excel)', category: 'TASK' },
+            { code: 'SUBTASK.CREATE', name: 'Tạo công việc con', category: 'TASK' },
+            { code: 'SUBTASK.UPDATE', name: 'Sửa công việc con', category: 'TASK' },
+            { code: 'SUBTASK.DELETE', name: 'Xóa công việc con', category: 'TASK' },
+
+            // PROJECT
+            { code: 'PROJECT.CREATE', name: 'Tạo dự án mới', category: 'PROJECT' },
+            { code: 'PROJECT.READ', name: 'Xem thông tin dự án', category: 'PROJECT' },
+            { code: 'PROJECT.UPDATE', name: 'Cấu hình dự án (PM)', category: 'PROJECT' },
+            { code: 'PRJ_LOCK.LOCK', name: 'Khóa đối soát dự án', category: 'PROJECT' },
+            { code: 'PRJ_LOCK.UNLOCK', name: 'Mở khóa đối soát', category: 'PROJECT' },
+            { code: 'CUSTOM_FIELD.CREATE', name: 'Quản lý trường tùy chỉnh dự án', category: 'PROJECT' },
+            { code: 'TAG.UPDATE', name: 'Quản lý nhãn (Tag) dự án', category: 'PROJECT' },
+            { code: 'ASSET.CREATE', name: 'Tải lên tài liệu/tài sản dự án', category: 'PROJECT' },
+
+            // TIME
+            { code: 'TIME_LOG.LOG_TIME', name: 'Ghi nhật ký thời gian', category: 'TIME' },
+            { code: 'TIME_LOG.READ', name: 'Xem nhật ký thời gian', category: 'TIME' },
+            { code: 'TIME_LOG.UPDATE', name: 'Sửa nhật ký thời gian', category: 'TIME' },
+            { code: 'TIME_LOG.DELETE', name: 'Xóa nhật ký thời gian', category: 'TIME' },
+
+            // REPORTING
+            { code: 'REPORT.CREATE', name: 'Tạo báo cáo định kỳ', category: 'REPORT' },
+            { code: 'REPORT.SUBMIT', name: 'Gửi báo cáo lên cấp trên', category: 'REPORT' },
+            { code: 'REPORT.READ', name: 'Xem báo cáo của cấp dưới', category: 'REPORT' },
+            { code: 'REPORT.APPROVE', name: 'Duyệt & Comment báo cáo', category: 'REPORT' },
+            { code: 'REPORT.EXPORT', name: 'Xuất báo cáo tổng hợp (CSV)', category: 'REPORT' },
+
+            // USER MANAGEMENT
+            { code: 'ORG_USER.CREATE', name: 'Thêm tài khoản nhân sự trực tiếp', category: 'USER' },
+            { code: 'ORG_USER.INVITE', name: 'Gửi link mời nhân gia nhập', category: 'USER' },
+            { code: 'ORG_USER.READ', name: 'Xem danh sách và hồ sơ nhân sự', category: 'USER' },
+            { code: 'ORG_USER.UPDATE', name: 'Cập nhật thông tin/Trạng thái nhân sự', category: 'USER' },
+
+            // HR & FINANCE
+            { code: 'COMPENSATION.READ', name: 'Xem thông tin lương & phụ cấp', category: 'HR' },
+            { code: 'COMPENSATION.UPDATE', name: 'Cập nhật bảng lương (HR/CEO)', category: 'HR' },
+            { code: 'JOB_CONTRACT.READ', name: 'Xem thông tin hợp đồng lao động', category: 'HR' },
+
+            // ORG / SYSTEM
+            { code: 'TENANT_ORG.UPDATE', name: 'Cấu hình Không gian làm việc (Workspace)', category: 'ORG' },
+            { code: 'ROLE_PERM.READ', name: 'Xem danh sách vai trò nội bộ', category: 'ORG' },
+            { code: 'ROLE_PERM.UPDATE', name: 'Chỉnh sửa quyền hạn của vai trò', category: 'ORG' },
+            { code: 'ACTIVITY.READ', name: 'Xem nhật ký hoạt động hệ thống', category: 'ORG' },
+            { code: 'RECYCLE_BIN.READ', name: 'Xem thùng rác công ty', category: 'ORG' },
+            { code: 'RECYCLE_BIN.RESTORE', name: 'Khôi phục dữ liệu từ thùng rác', category: 'ORG' },
+            { code: 'RECYCLE_BIN.DESTROY', name: 'Xóa vĩnh viễn dữ liệu (Hủy tài nguyên)', category: 'ORG' },
+            { code: 'DASHBOARD.READ', name: 'Truy cập Executive Dashboard', category: 'ORG' },
+            { code: 'LOOKUP.ALL', name: 'Tra cứu dữ liệu hệ thống (Lookup)', category: 'ORG' },
         ];
         return HttpResponse.json({ success: true, data: permissions });
     }),
@@ -825,7 +911,100 @@ export const handlers = [
     }),
 
     http.post('/api/admin/impersonate', async ({ request }) => {
-        return HttpResponse.json({ success: true, message: 'Impersonation started' });
+        const { subject_user_id, org_id } = await request.json() as any;
+        const user = mockUsers.find(u => u.id === subject_user_id) || mockUsers[0];
+        const roleEntry = mockUserRoles.find(r => r.user_id === user.id);
+        const role_code = (roleEntry?.role_code || 'EMPLOYEE') as AppRole;
+
+        return HttpResponse.json({
+            success: true,
+            user: {
+                ...user,
+                role: role_code,
+                org_id,
+                permissions: ROLE_PERMISSIONS[role_code] || []
+            },
+            token: 'mock-impersonation-token-' + subject_user_id
+        });
+    }),
+
+    // Admin Organization Approvals
+    http.get('/api/admin/org-approvals', () => {
+        return HttpResponse.json({
+            success: true,
+            data: [
+                {
+                    id: 'app-1', org_name: 'TechStart Vietnam', org_slug: 'techstart-vn',
+                    owner_name: 'Nguyễn Văn Founder', owner_email: 'founder@techstart.vn',
+                    plan_requested: 'PROFESSIONAL', employee_count: 50, industry: 'Technology',
+                    status: 'PENDING', submitted_at: '2025-01-19T14:00:00Z'
+                },
+                {
+                    id: 'app-2', org_name: 'Design Studio XYZ', org_slug: 'design-studio-xyz',
+                    owner_name: 'Trần Thị Designer', owner_email: 'designer@xyz.com',
+                    plan_requested: 'BASIC', employee_count: 15, industry: 'Design',
+                    status: 'PENDING', submitted_at: '2025-01-18T10:00:00Z'
+                },
+                {
+                    id: 'app-3', org_name: 'Marketing Pro', org_slug: 'marketing-pro',
+                    owner_name: 'Lê Văn Marketer', owner_email: 'marketer@pro.com',
+                    plan_requested: 'ENTERPRISE', employee_count: 200, industry: 'Marketing',
+                    status: 'PENDING', submitted_at: '2025-01-17T09:00:00Z'
+                },
+                {
+                    id: 'app-4', org_name: 'Old Company', org_slug: 'old-company',
+                    owner_name: 'Phạm Văn Old', owner_email: 'old@company.com',
+                    plan_requested: 'FREE', employee_count: 5, industry: 'Other',
+                    status: 'APPROVED', submitted_at: '2025-01-10T08:00:00Z',
+                    processed_at: '2025-01-11T10:00:00Z', processed_by: 'System Admin'
+                },
+            ]
+        });
+    }),
+
+    http.post('/api/admin/org-approvals/:id/approve', async ({ params }) => {
+        return HttpResponse.json({ success: true, message: 'Application approved' });
+    }),
+
+    http.post('/api/admin/org-approvals/:id/reject', async ({ params, request }) => {
+        const { reason } = await request.json() as any;
+        return HttpResponse.json({ success: true, message: 'Application rejected', reason });
+    }),
+
+    // Admin Quotas
+    http.get('/api/admin/quotas', () => {
+        return HttpResponse.json({
+            success: true,
+            data: [
+                {
+                    id: 'org-1',
+                    org_name: 'Tập đoàn Công nghệ WorkSphere',
+                    max_users: 50,
+                    current_users: 42,
+                    max_storage_gb: 100,
+                    current_storage_gb: 85,
+                    max_projects: 20,
+                    current_projects: 18,
+                    status: 'WARNING'
+                },
+                {
+                    id: 'org-2',
+                    org_name: 'Công ty Cổ phần FPT',
+                    max_users: 1000,
+                    current_users: 500,
+                    max_storage_gb: 1024,
+                    current_storage_gb: 200,
+                    max_projects: 500,
+                    current_projects: 50,
+                    status: 'ACTIVE'
+                }
+            ]
+        });
+    }),
+
+    http.patch('/api/admin/quotas/:orgId', async ({ params, request }) => {
+        const body = await request.json() as any;
+        return HttpResponse.json({ success: true, data: body });
     }),
 
     http.patch('/api/admin/workspace/settings', async ({ request }) => {
@@ -1201,7 +1380,17 @@ export const handlers = [
                 position: u.id.includes('pm') ? 'Project Manager' : (u.id.includes('ceo') ? 'CEO' : (u.id.includes('qa') ? 'QA Engineer' : 'Developer')),
                 join_method: membership?.join_method || 'MANUAL',
                 joined_at: membership?.activated_at?.split('T')[0] || null,
-                created_at: u.created_at
+                created_at: u.created_at,
+                // Financial info for CEO/Admin - US-CEO-02-01
+                ...(role === 'CEO' || role === 'ORG_ADMIN' ? (() => {
+                    const comp = mockCompensations.find(c => c.user_id === u.id);
+                    const lvl = mockJobLevels.find(l => l.id === comp?.level_id);
+                    return {
+                        monthly_salary: comp?.monthly_salary || 0,
+                        hourly_cost_rate: comp?.hourly_cost_rate || 0,
+                        level_code: lvl?.code || 'N/A'
+                    };
+                })() : {})
             };
         });
 
@@ -1270,6 +1459,14 @@ export const handlers = [
                 department: u.id.includes('dev') || u.id.includes('pm') || u.id.includes('qa') ? 'Engineering' : (u.id.includes('designer') ? 'Design' : 'Executive'),
                 position: u.id.includes('pm') ? 'Project Manager' : (u.id.includes('ceo') ? 'CEO' : (u.id.includes('qa') ? 'QA Engineer' : 'Developer')),
                 joined_at: membership?.activated_at?.split('T')[0] || null,
+                // PII for CEO/Admin - US-CEO-02-01
+                ...(role === 'CEO' || role === 'ORG_ADMIN' ? {
+                    dob: (u as any).dob || '1990-01-01',
+                    id_number: (u as any).id_number || '000000000000',
+                    tax_code: (u as any).tax_code || '0000000000',
+                    bank_account: (u as any).bank_account || 'N/A',
+                    address: (u as any).address || 'N/A',
+                } : {})
             }
         });
     }),
@@ -1334,5 +1531,36 @@ export const handlers = [
             success: true,
             data: { id: params.id, ...body }
         });
+    }),
+
+    // Project Lockdown - CEO Capability
+    http.get('/api/projects/:id/lockdown', ({ params }) => {
+        return HttpResponse.json({
+            success: true,
+            is_locked: params.id === 'p1-urgent', // Mock 'p1-urgent' as locked
+            lock_info: {
+                user_name: 'Nguyễn Thế Cường (CEO)',
+                at: '2024-01-15 14:30',
+                reason: 'Dự án đã bàn giao, chuyển sang chế độ lưu trữ.'
+            }
+        });
+    }),
+
+    http.post('/api/projects/:id/lockdown', async ({ params, request }) => {
+        const { action } = await request.json() as any;
+        return HttpResponse.json({
+            success: true,
+            is_locked: action === 'lock',
+            lock_info: {
+                user_name: 'Nguyễn Thế Cường (CEO)',
+                at: new Date().toLocaleString('vi-VN'),
+            }
+        });
+    }),
+
+    // HR - Employee Documents
+    http.get('/api/hr/employees/:id/documents', ({ params }) => {
+        const docs = mockDocuments.filter(d => d.user_id === params.id);
+        return HttpResponse.json({ success: true, data: docs });
     }),
 ];

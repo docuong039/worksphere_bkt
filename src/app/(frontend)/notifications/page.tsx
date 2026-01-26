@@ -31,7 +31,8 @@ import {
     CheckCheck,
     Loader2,
     ExternalLink,
-    AtSign
+    AtSign,
+    AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -64,6 +65,7 @@ const NOTIFICATION_TYPES = {
     MENTION: { label: 'Được nhắc đến', icon: AtSign, color: 'text-pink-600' },
     LOCK_UNLOCK: { label: 'Khóa/mở kỳ', icon: Lock, color: 'text-slate-600' },
     REPORT_SUBMITTED: { label: 'Báo cáo mới', icon: FileText, color: 'text-indigo-600' },
+    ALERT: { label: 'Cảnh báo đỏ', icon: AlertCircle, color: 'text-rose-600' },
 };
 
 // Time ago helper
@@ -102,11 +104,21 @@ const NotificationCard = ({
     notification: NotificationItem;
     onRead: () => void;
 }) => {
-    const typeConfig = NOTIFICATION_TYPES[notification.notification_type as keyof typeof NOTIFICATION_TYPES] || {
+    // Determine type config without mutating the global state
+    const baseConfig = NOTIFICATION_TYPES[notification.notification_type as keyof typeof NOTIFICATION_TYPES] || {
         label: notification.notification_type,
         icon: Bell,
         color: 'text-slate-600'
     };
+
+    const typeConfig = { ...baseConfig };
+
+    if (notification.notification_type === 'ALERT') {
+        typeConfig.label = 'Cảnh báo đỏ';
+        typeConfig.icon = AlertCircle;
+        typeConfig.color = 'text-rose-600';
+    }
+
     const Icon = typeConfig.icon;
 
     // Determine link based on entity_type
@@ -168,11 +180,17 @@ const NotificationCard = ({
                     <div className="flex items-start gap-2 mt-1">
                         <Icon size={16} className={cn("mt-0.5 shrink-0", typeConfig.color)} />
                         <div>
-                            <p className="text-sm font-medium text-slate-700">
+                            <p className={cn(
+                                "text-sm font-medium",
+                                notification.notification_type === 'ALERT' ? "text-rose-600 font-extrabold" : "text-slate-700"
+                            )}>
                                 {notification.title}
                             </p>
                             {notification.body && (
-                                <p className="text-sm text-slate-500 mt-0.5 line-clamp-2">
+                                <p className={cn(
+                                    "text-sm mt-0.5",
+                                    notification.notification_type === 'ALERT' ? "text-rose-500 font-bold" : "text-slate-500"
+                                )}>
                                     {notification.body}
                                 </p>
                             )}

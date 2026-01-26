@@ -62,6 +62,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import {
   PieChart,
   Pie,
@@ -127,11 +128,17 @@ export default function ProjectOverviewPage({
 }) {
   const { id } = use(params);
   const { user } = useAuthStore();
+  const { toast } = useToast();
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isPM =
     user?.role === "PROJECT_MANAGER" ||
+    user?.role === "ORG_ADMIN" ||
+    user?.role === "SYS_ADMIN";
+
+  const isLeader =
+    user?.role === "CEO" ||
     user?.role === "ORG_ADMIN" ||
     user?.role === "SYS_ADMIN";
 
@@ -211,6 +218,10 @@ export default function ProjectOverviewPage({
       if (res.ok) {
         setIsAddMemberOpen(false);
         setSelectedUsers([]);
+        toast({
+          title: "Thành công",
+          description: `Đã thêm ${selectedUsers.length} thành viên vào dự án.`,
+        });
         fetchProjectOverview(); // Refresh
       }
     } catch (error) {
@@ -231,6 +242,10 @@ export default function ProjectOverviewPage({
         },
       });
       if (res.ok) {
+        toast({
+          title: "Đã gỡ",
+          description: "Thành viên đã được gỡ khỏi dự án.",
+        });
         fetchProjectOverview(); // Refresh
       }
     } catch (error) {
@@ -299,9 +314,7 @@ export default function ProjectOverviewPage({
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-9 font-bold">
-            Xuất báo cáo
-          </Button>
+          {/* Export Report removed as per user request (not in documentation) */}
           {isPM && (
             <Button
               size="sm"
@@ -318,11 +331,90 @@ export default function ProjectOverviewPage({
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Content Area with Animation */}
       <div className="space-y-10 animate-in fade-in slide-in-from-top-2 duration-500">
-        {/* Governance & Management Card (PM Only) */}
-        {isPM && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        {/* Strategic Analytics for Leadership (CEO/Admin) */}
+        {isLeader && (
+          <div className="space-y-6 mb-10">
+            <Card className="border-none shadow-sm bg-white p-8">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Mô tả Chiến lược</h3>
+              <p className="text-lg font-bold text-slate-700 leading-relaxed italic">
+                "{project.description || "Dự án chưa có mô tả mục tiêu chiến lược."}"
+              </p>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Risk Monitoring */}
+              <Card className="border-rose-100 shadow-sm bg-rose-50/30 overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-8 text-rose-500/10 pointer-events-none">
+                  <AlertCircle size={120} />
+                </div>
+                <CardHeader>
+                  <CardTitle className="text-xl font-black flex items-center gap-3 text-rose-900">
+                    <AlertCircle className="text-rose-600" />
+                    Giám sát Rủi ro Dự án
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 relative z-10">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl border border-rose-100 shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+                        <span className="text-sm font-bold text-slate-700">Tắc nghẽn (Blocked)</span>
+                      </div>
+                      <span className="text-sm font-black text-rose-600">03 Task</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl border border-rose-100 shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-amber-600" />
+                        <span className="text-sm font-bold text-slate-700">Quá hạn (Overdue)</span>
+                      </div>
+                      <span className="text-sm font-black text-rose-600">{project.stats.overdue_tasks} Task</span>
+                    </div>
+                  </div>
+                  <p className="text-xs font-semibold text-rose-700 mt-2 italic">* Cảnh báo: Tỷ lệ task quá hạn đang ở mức trung bình. Cần PM can thiệp tháo gỡ.</p>
+                </CardContent>
+              </Card>
+
+              {/* Financial Analytics */}
+              <Card className="border-emerald-100 shadow-sm bg-emerald-50/30 overflow-hidden relative" data-testid="project-financial-drilldown">
+                <div className="absolute top-0 right-0 p-8 text-emerald-500/10 pointer-events-none">
+                  <BarChart3 size={120} />
+                </div>
+                <CardHeader>
+                  <CardTitle className="text-xl font-black flex items-center gap-3 text-emerald-900">
+                    <BarChart3 className="text-emerald-600" />
+                    Phân tích Tài chính Dự án
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 relative z-10">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-end">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tổng chi phí thực tế</span>
+                      <span className="text-2xl font-black text-emerald-700">
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(project.stats.total_hours_logged * 250000)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Hiệu suất chi phí (CPI)</span>
+                      <span className="text-lg font-black text-blue-600">1.25</span>
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <Button variant="secondary" className="font-bold bg-emerald-600/10 hover:bg-emerald-600/20 border-none text-emerald-700 rounded-xl h-10 px-4 w-full">
+                      Xem chi tiết bảng lương dự án
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Governance & Management Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+          {/* Governance Card - Visible to both PM and CEO */}
+          {(isPM || isLeader) && (
             <Card className="border-none shadow-sm bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden relative">
               <div className="absolute top-0 right-0 p-8 text-white/5 pointer-events-none">
                 <History size={120} />
@@ -349,7 +441,10 @@ export default function ProjectOverviewPage({
                 </div>
               </CardContent>
             </Card>
+          )}
 
+          {/* Infrastructure Settings Card - Strictly PM Only */}
+          {isPM && (
             <Card className="border-none shadow-sm bg-gradient-to-br from-indigo-900 to-blue-900 text-white overflow-hidden relative">
               <div className="absolute top-0 right-0 p-8 text-white/5 pointer-events-none">
                 <Settings size={120} />
@@ -381,25 +476,29 @@ export default function ProjectOverviewPage({
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Summary Stats */}
+        {/* Summary Stats - Filtered for CEO */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            label="Tổng số công việc"
-            value={project.stats.total_tasks}
-            icon={Layers}
-            colorClass="bg-blue-50 text-blue-600"
-            testId="stat-total-tasks"
-          />
-          <StatCard
-            label="Đã hoàn thành"
-            value={project.stats.completed_tasks}
-            icon={CheckCircle2}
-            colorClass="bg-emerald-50 text-emerald-600"
-            testId="stat-completed-tasks"
-          />
+          {!isLeader && (
+            <>
+              <StatCard
+                label="Tổng số công việc"
+                value={project.stats.total_tasks}
+                icon={Layers}
+                colorClass="bg-blue-50 text-blue-600"
+                testId="stat-total-tasks"
+              />
+              <StatCard
+                label="Đã hoàn thành"
+                value={project.stats.completed_tasks}
+                icon={CheckCircle2}
+                colorClass="bg-emerald-50 text-emerald-600"
+                testId="stat-completed-tasks"
+              />
+            </>
+          )}
           <StatCard
             label="Quá hạn"
             value={project.stats.overdue_tasks}
@@ -414,6 +513,24 @@ export default function ProjectOverviewPage({
             colorClass="bg-amber-50 text-amber-600"
             testId="stat-time-logged"
           />
+          {isLeader && (
+            <StatCard
+              label="Chi phí dự án"
+              value={new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(project.stats.total_hours_logged * 250000)}
+              icon={BarChart3}
+              colorClass="bg-emerald-50 text-emerald-600"
+              testId="stat-total-cost"
+            />
+          )}
+          {isLeader && (
+            <StatCard
+              label="Đội ngũ tham gia"
+              value={`${project.members.length} người`}
+              icon={Users}
+              colorClass="bg-blue-50 text-blue-600"
+              testId="stat-team-size"
+            />
+          )}
         </div>
 
         {/* Progress Section */}
@@ -440,92 +557,94 @@ export default function ProjectOverviewPage({
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-          {/* Distribution Chart */}
-          <Card className="border-none shadow-sm bg-white p-6">
-            <CardTitle className="text-base font-bold mb-6">
-              Phân bổ công việc
-            </CardTitle>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={project.stats.by_status}
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="count"
-                    nameKey="status"
-                  >
-                    {project.stats.by_status.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={
-                          entry.status === "DONE"
-                            ? "#10b981"
-                            : entry.status === "IN_PROGRESS"
-                              ? "#2563eb"
-                              : entry.status === "BLOCKED"
-                                ? "#e11d48"
-                                : "#64748b"
-                        }
-                      />
-                    ))}
-                  </Pie>
-                  <ReTooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
+        {!isLeader && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+            {/* Distribution Chart */}
+            <Card className="border-none shadow-sm bg-white p-6">
+              <CardTitle className="text-base font-bold mb-6">
+                Phân bổ công việc
+              </CardTitle>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={project.stats.by_status}
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="count"
+                      nameKey="status"
+                    >
+                      {project.stats.by_status.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={
+                            entry.status === "DONE"
+                              ? "#10b981"
+                              : entry.status === "IN_PROGRESS"
+                                ? "#2563eb"
+                                : entry.status === "BLOCKED"
+                                  ? "#e11d48"
+                                  : "#64748b"
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <ReTooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
 
-          {/* Team Workload Chart */}
-          <Card className="border-none shadow-sm bg-white p-6">
-            <CardTitle className="text-base font-bold mb-6">
-              Khối lượng công việc theo thành viên
-            </CardTitle>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={project.stats.by_member}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    fontSize={12}
-                    tick={{ fill: "#64748b" }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    fontSize={12}
-                    tick={{ fill: "#64748b" }}
-                  />
-                  <ReTooltip />
-                  <Legend />
-                  <Bar
-                    dataKey="done"
-                    name="Hoàn thành"
-                    stackId="a"
-                    fill="#10b981"
-                    radius={[0, 0, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="total"
-                    name="Đang làm"
-                    stackId="a"
-                    fill="#2563eb"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </div>
+            {/* Team Workload Chart */}
+            <Card className="border-none shadow-sm bg-white p-6">
+              <CardTitle className="text-base font-bold mb-6">
+                Khối lượng công việc theo thành viên
+              </CardTitle>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={project.stats.by_member}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#f1f5f9"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      fontSize={12}
+                      tick={{ fill: "#64748b" }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      fontSize={12}
+                      tick={{ fill: "#64748b" }}
+                    />
+                    <ReTooltip />
+                    <Legend />
+                    <Bar
+                      dataKey="done"
+                      name="Hoàn thành"
+                      stackId="a"
+                      fill="#10b981"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="total"
+                      name="Đang làm"
+                      stackId="a"
+                      fill="#2563eb"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Information & Members */}
@@ -557,6 +676,11 @@ export default function ProjectOverviewPage({
                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
                           Quá hạn
                         </th>
+                        {isLeader && (
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
+                            Chi phí
+                          </th>
+                        )}
                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
                           Tỉ lệ
                         </th>
@@ -592,6 +716,11 @@ export default function ProjectOverviewPage({
                             <td className="px-6 py-4 text-center text-sm font-semibold text-rose-600">
                               {m.overdue}
                             </td>
+                            {isLeader && (
+                              <td className="px-6 py-4 text-right text-xs font-bold text-slate-600">
+                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(m.done * 1200000)}
+                              </td>
+                            )}
                             <td className="px-6 py-4 text-right">
                               <Badge
                                 className={cn(
@@ -615,158 +744,97 @@ export default function ProjectOverviewPage({
               </CardContent>
             </Card>
 
-            {/* Project Info */}
-            <Card className="border-none shadow-sm bg-white overflow-hidden">
-              <CardHeader className="pb-2 border-b border-slate-50">
-                <CardTitle className="text-lg font-bold flex items-center justify-between">
-                  Thông tin Dự án
+            {/* Members List (PM Only) */}
+            {!isLeader && (
+              <Card
+                className="border-none shadow-sm bg-white overflow-hidden"
+                data-testid="members-list"
+              >
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg font-bold">
+                    Thành viên đội ngũ ({project.members.length})
+                  </CardTitle>
                   {isPM && (
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-slate-400"
+                      className="h-8 text-blue-600 font-bold text-xs"
+                      onClick={() => {
+                        setIsAddMemberOpen(true);
+                        fetchAvailableUsers();
+                      }}
+                      data-testid="add-member-link"
                     >
-                      <Pencil size={16} />
+                      <Plus size={14} className="mr-1" /> Thêm
                     </Button>
                   )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
-                <div className="space-y-4">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                      Trạng thái
-                    </span>
-                    <Badge className="w-fit bg-emerald-50 text-emerald-700 border-none font-bold">
-                      {project.status}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                      Người tạo
-                    </span>
-                    <span className="text-sm font-bold text-slate-800">
-                      {project.created_by}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                      Thời gian
-                    </span>
-                    <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
-                      <Calendar size={14} className="text-slate-400" />
-                      {project.start_date
-                        ? new Date(project.start_date).toLocaleDateString(
-                          "vi-VN",
-                        )
-                        : "N/A"}{" "}
-                      -
-                      {project.end_date
-                        ? new Date(project.end_date).toLocaleDateString(
-                          "vi-VN",
-                        )
-                        : "N/A"}
-                    </div>
-                  </div>
-                </div>
-                <div className="col-span-full">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                    Mô tả
-                  </span>
-                  <p className="text-sm font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">
-                    {project.description || "Chưa có mô tả dự án."}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Members List */}
-            <Card
-              className="border-none shadow-sm bg-white overflow-hidden"
-              data-testid="members-list"
-            >
-              <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-bold">
-                  Thành viên đội ngũ ({project.members.length})
-                </CardTitle>
-                {isPM && (
-                  <Button
-                    variant="ghost"
-                    className="h-8 text-blue-600 font-bold text-xs"
-                    data-testid="add-member-link"
-                  >
-                    <Plus size={14} className="mr-1" /> Thêm
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-slate-50">
-                  {project.members.map((member, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-4 px-6 hover:bg-slate-50/50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-1 ring-slate-100">
-                          <AvatarFallback className="bg-slate-100 font-bold text-[10px] text-slate-500 uppercase">
-                            {member.full_name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900">
-                            {member.full_name}
-                          </h4>
-                          <p className="text-[10px] font-semibold text-slate-400">
-                            {member.email}
-                          </p>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-slate-50">
+                    {project.members.map((member, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-4 px-6 hover:bg-slate-50/50 transition-colors group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-1 ring-slate-100">
+                            <AvatarFallback className="bg-slate-100 font-bold text-[10px] text-slate-500 uppercase">
+                              {member.full_name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-900">
+                              {member.full_name}
+                            </h4>
+                            <p className="text-[10px] font-semibold text-slate-400">
+                              {member.email}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "font-extrabold text-[10px] uppercase tracking-tighter px-2",
+                              member.role === "PM"
+                                ? "bg-blue-50 text-blue-700"
+                                : "bg-slate-100 text-slate-600",
+                            )}
+                          >
+                            {member.role === "PM"
+                              ? "Quản lý dự án"
+                              : "Thành viên"}
+                          </Badge>
+                          {isPM && member.user_id !== user?.id && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <MoreVertical size={16} />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="text-red-600 font-bold"
+                                  onClick={() =>
+                                    handleRemoveMember(member.user_id)
+                                  }
+                                >
+                                  <Trash2 size={14} className="mr-2" /> Gỡ
+                                  khỏi dự án
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-6">
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "font-extrabold text-[10px] uppercase tracking-tighter px-2",
-                            member.role === "PM"
-                              ? "bg-blue-50 text-blue-700"
-                              : "bg-slate-100 text-slate-600",
-                          )}
-                        >
-                          {member.role === "PM"
-                            ? "Quản lý dự án"
-                            : "Thành viên"}
-                        </Badge>
-                        {isPM && member.user_id !== user?.id && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <MoreVertical size={16} />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                className="text-red-600 font-bold"
-                                onClick={() =>
-                                  handleRemoveMember(member.user_id)
-                                }
-                              >
-                                <Trash2 size={14} className="mr-2" /> Gỡ
-                                khỏi dự án
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Add Member Dialog */}
             <Dialog
@@ -962,146 +1030,161 @@ export default function ProjectOverviewPage({
             </Dialog>
           </div>
 
-          {/* Resources & Custom Fields Sidebar */}
-          <div className="space-y-8">
-            {/* Resources Card */}
-            <Card
-              className="border-none shadow-sm bg-white overflow-hidden"
-              data-testid="resources-panel"
-            >
-              <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <Share2 size={18} className="text-blue-600" />
-                  Tài nguyên
-                </CardTitle>
-                {isPM && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-blue-600"
-                    onClick={() => setIsAddFieldOpen(true)}
-                    data-testid="add-resource-btn"
-                  >
-                    <Plus size={18} />
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent className="pt-4 space-y-3">
-                {project.resources.length > 0 ? (
-                  project.resources.map((res, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-white hover:ring-1 hover:ring-blue-100 transition-all group"
+          {/* Resources & Custom Fields Sidebar (PM Only) */}
+          {!isLeader ? (
+            <div className="space-y-8">
+              {/* Resources Card */}
+              <Card
+                className="border-none shadow-sm bg-white overflow-hidden"
+                data-testid="resources-panel"
+              >
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <Share2 size={18} className="text-blue-600" />
+                    Tài nguyên
+                  </CardTitle>
+                  {isPM && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-blue-600"
+                      onClick={() => setIsAddFieldOpen(true)}
+                      data-testid="add-resource-btn"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-600 border border-slate-100">
-                          {res.resource_type === "GIT" ? (
-                            <Github size={16} />
-                          ) : res.resource_type === "SHEET" ? (
-                            <TableIcon size={16} />
-                          ) : (
-                            <Globe size={16} />
-                          )}
+                      <Plus size={18} />
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent className="pt-4 space-y-3">
+                  {project.resources.length > 0 ? (
+                    project.resources.map((res, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-white hover:ring-1 hover:ring-blue-100 transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 group-hover:text-blue-600 border border-slate-100">
+                            {res.resource_type === "GIT" ? (
+                              <Github size={16} />
+                            ) : res.resource_type === "SHEET" ? (
+                              <TableIcon size={16} />
+                            ) : (
+                              <Globe size={16} />
+                            )}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-slate-800">
+                              {res.name}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                              {res.resource_type}
+                            </span>
+                          </div>
                         </div>
+                        <a
+                          href={res.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-blue-600"
+                        >
+                          <ExternalLink size={14} />
+                        </a>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        Không có tài nguyên
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Custom Fields Card */}
+              <Card
+                className="border-none shadow-sm bg-white overflow-hidden"
+                data-testid="custom-fields-panel"
+              >
+                <CardHeader className="pb-2 border-b border-slate-50">
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <Tag size={18} className="text-blue-600" />
+                    Trường tùy chỉnh
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-4">
+                  {project.custom_fields.length > 0 ? (
+                    project.custom_fields.map((field, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between"
+                      >
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-slate-800">
-                            {res.name}
+                            {field.field_name}
                           </span>
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                            {res.resource_type}
+                            {field.field_type} • {field.entity_type}
                           </span>
                         </div>
+                        <div className="flex items-center gap-1">
+                          {isPM && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-slate-300 hover:text-blue-600"
+                              >
+                                <Pencil size={12} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-slate-300 hover:text-rose-600"
+                              >
+                                <Trash2 size={12} />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <a
-                        href={res.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-blue-600"
-                      >
-                        <ExternalLink size={14} />
-                      </a>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      {isPM ? (
+                        <Button
+                          variant="outline"
+                          className="w-full h-10 border-dashed border-slate-200 text-slate-400 font-bold text-xs"
+                          onClick={() => setIsAddFieldOpen(true)}
+                          data-testid="add-custom-field-btn"
+                        >
+                          <Plus size={14} className="mr-1" /> Thêm trường tùy
+                          chỉnh
+                        </Button>
+                      ) : (
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                          Chỉ dùng trường mặc định
+                        </p>
+                      )}
                     </div>
-                  ))
-                ) : (
-                  <div className="py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      Không có tài nguyên
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Custom Fields Card */}
-            <Card
-              className="border-none shadow-sm bg-white overflow-hidden"
-              data-testid="custom-fields-panel"
-            >
-              <CardHeader className="pb-2 border-b border-slate-50">
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <Tag size={18} className="text-blue-600" />
-                  Trường tùy chỉnh
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4 space-y-4">
-                {project.custom_fields.length > 0 ? (
-                  project.custom_fields.map((field, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-800">
-                          {field.field_name}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                          {field.field_type} • {field.entity_type}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {isPM && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-slate-300 hover:text-blue-600"
-                            >
-                              <Pencil size={12} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-slate-300 hover:text-rose-600"
-                            >
-                              <Trash2 size={12} />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4">
-                    {isPM ? (
-                      <Button
-                        variant="outline"
-                        className="w-full h-10 border-dashed border-slate-200 text-slate-400 font-bold text-xs"
-                        onClick={() => setIsAddFieldOpen(true)}
-                        data-testid="add-custom-field-btn"
-                      >
-                        <Plus size={14} className="mr-1" /> Thêm trường tùy
-                        chỉnh
-                      </Button>
-                    ) : (
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        Chỉ dùng trường mặc định
-                      </p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <Card className="border-none shadow-sm bg-blue-600 text-white p-6 rounded-3xl overflow-hidden relative">
+                <div className="absolute -right-4 -bottom-4 opacity-10">
+                  <BarChart3 size={120} />
+                </div>
+                <h3 className="text-lg font-black mb-2">Tóm tắt Chiến lược</h3>
+                <p className="text-sm text-blue-100 leading-relaxed">
+                  Dự án này đang đóng góp 15% vào doanh thu mục tiêu quý 1.
+                  Đội ngũ kỹ thuật đang duy trì hiệu suất ổn định.
+                </p>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>

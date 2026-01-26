@@ -229,9 +229,35 @@ export default function ReportDetailPage() {
                                 <CheckCircle2 size={12} className="mr-1" /> Đã duyệt
                             </Badge>
                         ) : report.status === 'SUBMITTED' ? (
-                            <Badge className="bg-blue-50 text-blue-700 border-none font-bold" data-testid="badge-pending">
-                                <Clock size={12} className="mr-1" /> {user?.role === 'PROJECT_MANAGER' ? 'Chờ CEO duyệt' : 'Chờ duyệt'}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                                <Badge className="bg-blue-50 text-blue-700 border-none font-bold" data-testid="badge-pending">
+                                    <Clock size={12} className="mr-1" /> {user?.role === 'PROJECT_MANAGER' ? 'Chờ CEO duyệt' : 'Chờ duyệt'}
+                                </Badge>
+                                {(user?.role === 'CEO' || user?.role === 'ORG_ADMIN') && (
+                                    <Button
+                                        size="sm"
+                                        className="bg-emerald-600 hover:bg-emerald-700 h-7 text-xs font-bold px-3 rounded-full shadow-sm"
+                                        onClick={async () => {
+                                            if (!confirm("Bạn có chắc chắn muốn DUYỆT báo cáo này?")) return;
+                                            try {
+                                                const res = await fetch(`/api/reports/${params.id}/approve`, {
+                                                    method: 'POST',
+                                                    headers: { 'x-user-id': user?.id || '' }
+                                                });
+                                                if (res.ok) {
+                                                    fetchReport();
+                                                    toast({ title: 'Đã duyệt báo cáo', description: 'Kết quả đã được ghi nhận vào hệ thống.', variant: 'success' });
+                                                }
+                                            } catch (e) {
+                                                toast({ title: 'Lỗi', description: 'Không thể duyệt báo cáo.', variant: 'destructive' });
+                                            }
+                                        }}
+                                        data-testid="btn-approve-report"
+                                    >
+                                        Duyệt ngay
+                                    </Button>
+                                )}
+                            </div>
                         ) : (
                             <Badge variant="outline" className="text-slate-500 font-bold" data-testid="badge-draft">
                                 <Clock size={12} className="mr-1" /> Bản nháp
@@ -373,7 +399,7 @@ export default function ReportDetailPage() {
                                                         {comment.user?.full_name || 'Người dùng hệ thống'}
                                                     </span>
                                                     {comment.user?.role === 'CEO' && (
-                                                        <Badge className="bg-amber-100 text-amber-700 text-[10px] py-0 px-1.5 border-none">CEO</Badge>
+                                                        <Badge className="bg-amber-600 text-white text-[10px] py-0.5 px-2 border-none shadow-sm animate-pulse">CHỈ ĐẠO CEO</Badge>
                                                     )}
                                                     {comment.user?.role === 'PROJECT_MANAGER' && (
                                                         <Badge className="bg-blue-100 text-blue-700 text-[10px] py-0 px-1.5 border-none">PM</Badge>

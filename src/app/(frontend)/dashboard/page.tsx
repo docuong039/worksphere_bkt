@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     BarChart3, Users, CheckSquare, Clock, Activity, Briefcase, ChevronRight, Layout, Plus,
     Calendar, Target, ArrowUpRight, ArrowDownRight,
@@ -79,8 +80,19 @@ export default function DashboardPage() {
     const role = user?.role || 'EMPLOYEE';
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
+        // Role-based redirect to specialized dashboards
+        if (role === 'CEO' || role === 'ORG_ADMIN') {
+            router.replace('/executive/dashboard');
+            return;
+        }
+        if (role === 'SYS_ADMIN') {
+            router.replace('/admin/platform-dashboard');
+            return;
+        }
+
         const fetchData = async () => {
             setLoading(true);
             try {

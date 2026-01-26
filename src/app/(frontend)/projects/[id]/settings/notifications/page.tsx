@@ -19,6 +19,7 @@ import {
     Users,
     Calendar,
     ArrowLeft,
+    ChevronLeft
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
@@ -163,11 +164,18 @@ export default function NotificationSettingsPage({ params }: { params: Promise<{
         <div className="space-y-6 animate-in fade-in duration-700 pb-20" data-testid="notification-settings-page">
             {/* Header - now using shared layout */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-xl font-black tracking-tight text-slate-800 flex items-center gap-2" data-testid="project-notifications-page-title">
-                        <Bell className="h-5 w-5 text-amber-500" />
-                        Cấu hình Thông báo
-                    </h2>
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white shadow-sm border border-slate-100" asChild data-testid="btn-back-to-settings">
+                        <Link href={`/projects/${projectId}/settings`}>
+                            <ChevronLeft size={20} className="text-slate-600" />
+                        </Link>
+                    </Button>
+                    <div>
+                        <h2 className="text-xl font-black tracking-tight text-slate-800 flex items-center gap-2" data-testid="project-notifications-page-title">
+                            <Bell className="h-5 w-5 text-amber-500" />
+                            Cấu hình Thông báo
+                        </h2>
+                    </div>
                 </div>
                 <Button
                     className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 h-9 font-bold"

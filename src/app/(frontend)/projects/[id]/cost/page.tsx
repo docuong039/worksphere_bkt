@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -15,20 +16,30 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import {
-    ArrowLeft,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogDescription,
+} from '@/components/ui/dialog';
+import {
     Users,
     Clock,
-    FolderKanban,
     DollarSign,
     TrendingUp,
     TrendingDown,
     BarChart3,
     PieChart,
-    Calendar,
     RefreshCw,
+    Download,
+    Loader2,
+    Edit2
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
+import { PERMISSIONS } from '@/lib/permissions';
 
 interface ProjectCostStats {
     project_id: string;
@@ -55,11 +66,52 @@ interface MemberCost {
 
 export default function ProjectCostPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: projectId } = use(params);
-    const { user } = useAuthStore();
+    const { user, hasPermission } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<ProjectCostStats | null>(null);
     const [memberCosts, setMemberCosts] = useState<MemberCost[]>([]);
     const [timeRange, setTimeRange] = useState('month');
+    const [isExporting, setIsExporting] = useState(false);
+    const [editingMember, setEditingMember] = useState<MemberCost | null>(null);
+    const [newRate, setNewRate] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
+
+    const handleExport = async () => {
+        setIsExporting(true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setIsExporting(false);
+        toast({
+            title: "Thành công",
+            description: "Báo cáo chi phí dự án đã được chuẩn bị.",
+        });
+    };
+
+    const handleRefresh = async () => {
+        await fetchData();
+        toast({
+            title: "Cập nhật thành công",
+            description: "Dữ liệu chi phí đã được làm mới.",
+        });
+    };
+
+    const handleSaveRate = async () => {
+        if (!editingMember || !newRate) return;
+        setIsSaving(true);
+        // Mock save
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setMemberCosts(prev => prev.map(m =>
+            m.user_id === editingMember.user_id
+                ? { ...m, hourly_rate: Number(newRate), total_cost: m.hours_logged * Number(newRate) }
+                : m
+        ));
+        setIsSaving(false);
+        setEditingMember(null);
+        toast({
+            title: "Đã cập nhật",
+            description: `Mức lương của ${editingMember.user_name} đã được thay đổi.`,
+        });
+    };
 
     useEffect(() => {
         fetchData();
@@ -108,7 +160,8 @@ export default function ProjectCostPage({ params }: { params: Promise<{ id: stri
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
     };
 
-    const canViewCost = user?.role === 'CEO' || user?.role === 'ORG_ADMIN' || user?.role === 'PROJECT_MANAGER';
+    const canViewCost = hasPermission(PERMISSIONS.COMPENSATION_READ) || user?.role === 'CEO' || user?.role === 'SYS_ADMIN';
+    const canEditRate = hasPermission(PERMISSIONS.COMPENSATION_UPDATE) || user?.role === 'SYS_ADMIN';
 
     if (!canViewCost) {
         return (
@@ -150,8 +203,12 @@ export default function ProjectCostPage({ params }: { params: Promise<{ id: stri
                             <SelectItem value="all">Toàn bộ</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button variant="outline" size="sm" onClick={fetchData} data-testid="project-cost-btn-refresh" className="h-9">
+                    <Button variant="outline" size="sm" onClick={handleRefresh} data-testid="project-cost-btn-refresh" className="h-9">
                         <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting} data-testid="project-cost-btn-export" className="h-9 font-bold gap-2">
+                        {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        Xuất báo cáo
                     </Button>
                 </div>
             </div>
@@ -274,16 +331,63 @@ export default function ProjectCostPage({ params }: { params: Promise<{ id: stri
                                             </div>
                                             <p className="text-xs text-slate-400 mt-1 text-right">{member.cost_percent.toFixed(1)}%</p>
                                         </div>
-                                        <div className="w-28 text-right">
+                                        <div className="w-28 text-right flex items-center justify-end gap-3">
                                             <p className="font-bold text-emerald-600" data-testid={`member-cost-value-${member.user_id}`}>
                                                 {formatCurrency(member.total_cost)}
                                             </p>
+                                            {canEditRate && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-slate-400 hover:text-blue-600"
+                                                    onClick={() => {
+                                                        setEditingMember(member);
+                                                        setNewRate(member.hourly_rate.toString());
+                                                    }}
+                                                    data-testid={`btn-edit-rate-${member.user_id}`}
+                                                >
+                                                    <Edit2 size={14} />
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         </CardContent>
                     </Card>
+
+                    <Dialog open={!!editingMember} onOpenChange={(open) => !open && setEditingMember(null)}>
+                        <DialogContent data-testid="edit-rate-dialog">
+                            <DialogHeader>
+                                <DialogTitle>Cập nhật Mức lương / Chi phí</DialogTitle>
+                                <DialogDescription>
+                                    Thay đổi mức lương cho <strong>{editingMember?.user_name}</strong> trong phạm vi dự án này.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4 space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-slate-700">Mức lương mỗi giờ (VND)</label>
+                                    <Input
+                                        type="number"
+                                        value={newRate}
+                                        onChange={e => setNewRate(e.target.value)}
+                                        placeholder="VD: 350000"
+                                        data-testid="input-member-rate"
+                                    />
+                                    <p className="text-[10px] text-slate-500 italic">
+                                        * Lương này chỉ áp dụng để tính toán chi phí cho các task thuộc dự án hiện tại.
+                                    </p>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="ghost" onClick={() => setEditingMember(null)}>Hủy</Button>
+                                <Button className="bg-blue-600" onClick={handleSaveRate} disabled={isSaving}>
+                                    {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+                                    Xác nhận thay đổi
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </>
             )}
         </div>

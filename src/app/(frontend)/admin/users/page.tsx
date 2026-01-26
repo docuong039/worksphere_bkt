@@ -81,9 +81,12 @@ interface OrgMember {
     roles: string[];
     last_login_at: string | null;
     joined_at: string | null;
+    org_id?: string;
+    org_name?: string;
 }
 
 const ROLE_OPTIONS = [
+    { code: 'ORG_ADMIN', label: 'Quản trị Tổ chức', color: 'bg-indigo-100 text-indigo-700' },
     { code: 'CEO', label: 'CEO', color: 'bg-amber-100 text-amber-700' },
     { code: 'PROJECT_MANAGER', label: 'Quản lý dự án', color: 'bg-blue-100 text-blue-700' },
     { code: 'EMPLOYEE', label: 'Nhân viên', color: 'bg-purple-100 text-purple-700' },
@@ -103,6 +106,7 @@ const MemberCard = ({
     member: OrgMember;
     onAction: (action: string) => void;
 }) => {
+    const { user } = useAuthStore();
     const statusConfig = STATUS_CONFIG[member.member_status] || STATUS_CONFIG.ACTIVE;
     const StatusIcon = statusConfig.icon;
 
@@ -137,6 +141,13 @@ const MemberCard = ({
                                     </Badge>
                                 );
                             })}
+
+                            {member.user_status === 'LOCKED' && (
+                                <Badge className="text-[10px] font-black bg-red-600 text-white border-none animate-pulse">
+                                    <Lock size={10} className="mr-1" />
+                                    GLOBAL LOCKED
+                                </Badge>
+                            )}
                         </div>
 
                         {member.last_login_at && (
@@ -172,6 +183,10 @@ const MemberCard = ({
                                         <Key size={14} className="mr-2" />
                                         Đặt lại mật khẩu
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => onAction('edit')}>
+                                        <Shield size={14} className="mr-2" />
+                                        Cập nhật & Phân quyền
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => onAction('deactivate')} className="text-red-600">
                                         <Lock size={14} className="mr-2" />
                                         Vô hiệu hóa
@@ -183,6 +198,27 @@ const MemberCard = ({
                                     <Unlock size={14} className="mr-2" />
                                     Kích hoạt lại
                                 </DropdownMenuItem>
+                            )}
+                            <PermissionGuard permission={PERMISSIONS.SESSION_IMPERSONATE}>
+                                <DropdownMenuItem onClick={() => onAction('impersonate')} className="text-blue-600 font-bold">
+                                    <Shield size={14} className="mr-2" />
+                                    Đăng nhập hỗ trợ
+                                </DropdownMenuItem>
+                            </PermissionGuard>
+                            {user?.role === 'SYS_ADMIN' && (
+                                <>
+                                    {member.user_status === 'LOCKED' ? (
+                                        <DropdownMenuItem onClick={() => onAction('global-unlock')} className="text-emerald-600">
+                                            <Unlock size={14} className="mr-2" />
+                                            Mở khóa toàn cục
+                                        </DropdownMenuItem>
+                                    ) : (
+                                        <DropdownMenuItem onClick={() => onAction('global-lock')} className="text-red-600">
+                                            <Lock size={14} className="mr-2" />
+                                            Khóa toàn cục (Ban)
+                                        </DropdownMenuItem>
+                                    )}
+                                </>
                             )}
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -208,6 +244,7 @@ export default function AdminUsersPage() {
     const [inviteMode, setInviteMode] = useState<'INVITE' | 'MANUAL'>('INVITE');
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteName, setInviteName] = useState('');
+    const [inviteTargetOrg, setInviteTargetOrg] = useState('');
     const [invitePassword, setInvitePassword] = useState('');
     const [inviteRoles, setInviteRoles] = useState<string[]>(['EMPLOYEE']);
     const [inviting, setInviting] = useState(false);
@@ -220,6 +257,15 @@ export default function AdminUsersPage() {
     const [resetMember, setResetMember] = useState<OrgMember | null>(null);
     const [tempPassword, setTempPassword] = useState('');
     const [reseting, setReseting] = useState(false);
+
+    // Edit Member Dialog (US-ORG-01-03)
+    const [editOpen, setEditOpen] = useState(false);
+    const [editingMember, setEditingMember] = useState<OrgMember | null>(null);
+    const [editFormData, setEditFormData] = useState({
+        full_name: '',
+        roles: [] as string[]
+    });
+    const [saving, setSaving] = useState(false);
 
     // Filtered members for Tab view
     const [activeTab, setActiveTab] = useState<'ACTIVE' | 'DEACTIVATED' | 'INVITED'>('ACTIVE');
@@ -322,6 +368,7 @@ export default function AdminUsersPage() {
                 body: JSON.stringify({
                     email: inviteEmail.trim(),
                     full_name: inviteName.trim(),
+                    org_id: user?.role === 'SYS_ADMIN' ? inviteTargetOrg : user?.org_id,
                     role_codes: inviteRoles,
                     password: inviteMode === 'MANUAL' ? invitePassword : undefined
                 })
@@ -359,14 +406,28 @@ export default function AdminUsersPage() {
             return;
         }
 
+        if (action === 'edit') {
+            setEditingMember(member);
+            setEditFormData({
+                full_name: member.full_name,
+                roles: member.roles
+            });
+            setEditOpen(true);
+            return;
+        }
+
         try {
             let method = 'POST';
             let endpoint = `/api/admin/users/${memberId}/${action}`;
 
             // Map actions to actual endpoints if needed or use a generic status update
-            if (action === 'deactivate' || action === 'activate') {
+            if (action === 'deactivate' || action === 'activate' || action === 'global-lock' || action === 'global-unlock') {
                 method = 'PATCH';
-                endpoint = `/api/admin/users/${memberId}/status`;
+                if (action === 'global-lock' || action === 'global-unlock') {
+                    endpoint = `/api/admin/users/${memberId}/global-status`;
+                } else {
+                    endpoint = `/api/admin/users/${memberId}/status`;
+                }
             }
 
             const res = await fetch(endpoint, {
@@ -377,7 +438,9 @@ export default function AdminUsersPage() {
                     'x-user-role': user?.role || ''
                 },
                 body: action === 'deactivate' ? JSON.stringify({ status: 'DEACTIVATED' }) :
-                    action === 'activate' ? JSON.stringify({ status: 'ACTIVE' }) : undefined
+                    action === 'activate' ? JSON.stringify({ status: 'ACTIVE' }) :
+                        action === 'global-lock' ? JSON.stringify({ status: 'LOCKED' }) :
+                            action === 'global-unlock' ? JSON.stringify({ status: 'ACTIVE' }) : undefined
             });
 
             if (res.ok) {
@@ -385,6 +448,43 @@ export default function AdminUsersPage() {
             }
         } catch (error) {
             console.error(` Error performing ${action}:`, error);
+        }
+    };
+
+    const handleActionWithTarget = (memberId: string, action: string) => {
+        if (action === 'impersonate') {
+            const member = members.find(m => m.id === memberId);
+            const searchParams = new URLSearchParams();
+            searchParams.append('userId', memberId);
+            if (member?.email) searchParams.append('email', member.email);
+            if (member?.org_id) searchParams.append('orgId', member.org_id);
+            window.location.href = `/admin/impersonation?${searchParams.toString()}`;
+            return;
+        }
+        handleMemberAction(memberId, action);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingMember) return;
+        setSaving(true);
+        try {
+            const res = await fetch(`/api/admin/users/${editingMember.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-id': user?.id || '',
+                    'x-user-role': user?.role || ''
+                },
+                body: JSON.stringify(editFormData)
+            });
+            if (res.ok) {
+                setEditOpen(false);
+                fetchMembers();
+            }
+        } catch (error) {
+            console.error('Error updating member:', error);
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -420,10 +520,12 @@ export default function AdminUsersPage() {
                         <div>
                             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-users-title">
                                 <Users className="inline-block mr-2 h-8 w-8 text-blue-600" />
-                                Quản lý Nhân sự
+                                {user?.role === 'SYS_ADMIN' ? 'Người dùng toàn hệ thống' : 'Quản lý Nhân sự'}
                             </h1>
                             <p className="text-slate-500 mt-1 font-medium">
-                                Mời và quản lý người dùng trong tổ chức.
+                                {user?.role === 'SYS_ADMIN'
+                                    ? 'Quản lý và hỗ trợ người dùng trên toàn bộ nền tảng SaaS.'
+                                    : 'Mời và quản lý người dùng trong tổ chức của bạn.'}
                             </p>
                         </div>
 
@@ -512,7 +614,7 @@ export default function AdminUsersPage() {
                                 <MemberCard
                                     key={member.id}
                                     member={member}
-                                    onAction={(action) => handleMemberAction(member.id, action)}
+                                    onAction={(action) => handleActionWithTarget(member.id, action)}
                                 />
                             ))}
                         </div>
@@ -571,6 +673,23 @@ export default function AdminUsersPage() {
                             </div>
 
                             <div className="space-y-4 py-2">
+                                {user?.role === 'SYS_ADMIN' && (
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold text-slate-700">
+                                            Tổ chức đích <span className="text-red-500">*</span>
+                                        </label>
+                                        <Select value={inviteTargetOrg} onValueChange={setInviteTargetOrg}>
+                                            <SelectTrigger data-testid="invite-select-org">
+                                                <SelectValue placeholder="Chọn tổ chức cho user..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {orgs.map(o => (
+                                                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold text-slate-700">
                                         Email <span className="text-red-500">*</span>
@@ -799,6 +918,70 @@ export default function AdminUsersPage() {
                                 ) : (
                                     <Button onClick={() => setResetOpen(false)} className="w-full">Đóng</Button>
                                 )}
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Edit Member Dialog */}
+                    <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                        <DialogContent className="sm:max-w-md" data-testid="dialog-edit-member">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Shield className="h-5 w-5 text-indigo-600" />
+                                    Cập nhật & Phân quyền
+                                </DialogTitle>
+                            </DialogHeader>
+
+                            <div className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-slate-700 uppercase">Họ tên nhân sự</label>
+                                    <Input
+                                        value={editFormData.full_name}
+                                        onChange={(e) => setEditFormData({ ...editFormData, full_name: e.target.value })}
+                                        data-testid="edit-member-name"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-slate-700 uppercase">Vai trò nội bộ</label>
+                                    <div className="space-y-2 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        {ROLE_OPTIONS.map(role => (
+                                            <label
+                                                key={role.code}
+                                                className="flex items-center gap-3 cursor-pointer group"
+                                            >
+                                                <Checkbox
+                                                    checked={editFormData.roles.includes(role.code)}
+                                                    onCheckedChange={(checked) => {
+                                                        const newRoles = checked
+                                                            ? [...editFormData.roles, role.code]
+                                                            : editFormData.roles.filter(r => r !== role.code);
+                                                        setEditFormData({ ...editFormData, roles: newRoles });
+                                                    }}
+                                                />
+                                                <span className="text-sm font-medium group-hover:text-indigo-600 transition-colors">
+                                                    {role.label}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 italic mt-2">
+                                        Lưu ý: Một nhân sự có thể giữ nhiều vai trò cùng lúc.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setEditOpen(false)}>Hủy</Button>
+                                <Button
+                                    onClick={handleSaveEdit}
+                                    disabled={saving || !editFormData.full_name.trim() || editFormData.roles.length === 0}
+                                    className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 font-bold"
+                                    data-testid="btn-save-member-edit"
+                                >
+                                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                                    Cập nhật
+                                </Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>

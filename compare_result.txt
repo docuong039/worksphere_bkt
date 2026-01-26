@@ -1,0 +1,78 @@
+Current routes in source code (62):
+  /activity
+  /admin/audit-logs
+  /admin/custom-fields
+  /admin/impersonation
+  /admin/org-approvals
+  /admin/org-recycle-bin
+  /admin/organizations
+  /admin/platform-dashboard
+  /admin/quotas
+  /admin/roles
+  /admin/roles/customize
+  /admin/users
+  /admin/users/[id]
+  /dashboard
+  /executive/dashboard
+  /forgot-password
+  /hr/contracts
+  /hr/employees
+  /hr/employees/[id]
+  /hr/employees/[id]/timeline
+  /hr/salary
+  /join
+  /login
+  /notifications
+  /personal-board
+  /projects
+  /projects/[id]
+  /projects/[id]/activity
+  /projects/[id]/cost
+  /projects/[id]/documents
+  /projects/[id]/gantt
+  /projects/[id]/import-export
+  /projects/[id]/overview
+  /projects/[id]/performance
+  /projects/[id]/quality
+  /projects/[id]/resources
+  /projects/[id]/settings
+  /projects/[id]/settings/custom-fields
+  /projects/[id]/settings/field-permissions
+  /projects/[id]/settings/lockdown
+  /projects/[id]/settings/notifications
+  /projects/[id]/settings/recycle-bin
+  /projects/[id]/settings/tags
+  /projects/[id]/time-locks
+  /projects/[id]/time-logs
+  /projects/new
+  /recycle-bin
+  /register-org
+  /reports
+  /reports/[id]
+  /reports/cost-analysis
+  /reports/performance
+  /reset-password
+  /settings/auto-lock
+  /settings/lookups
+  /settings/profile
+  /settings/recycle-bin
+  /settings/workspace
+  /tasks
+  /tasks/[id]
+  /tasks/new
+  /time-logs
+
+Routes in Excel (57):
+
+--- Giao diện có trong Excel nhưng KHÔNG có trong code (Cần xóa): ---
+  /admin/members
+  /admin/invites
+
+--- Giao diện mới có trong code nhưng KHÔNG có trong Excel (Cần thêm): ---
+  /admin/custom-fields
+  /projects/[id]/activity
+  /projects/[id]/settings
+  /projects/[id]/settings/lockdown
+  /projects/[id]/settings/recycle-bin
+  /projects/[id]/time-logs
+  /register-org

@@ -12,6 +12,14 @@ import {
     Award, ArrowLeft, FileText, Download, User, DollarSign,
     RefreshCw, Save, Clock, History, LayoutPanelLeft
 } from 'lucide-react';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
@@ -34,6 +42,7 @@ export default function EmployeeProfilePage() {
     const [compensation, setCompensation] = useState<any>(null);
     const [jobLevels, setJobLevels] = useState<any[]>([]);
     const [activities, setActivities] = useState<any[]>([]);
+    const [documents, setDocuments] = useState<any[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
     // Form states for compensation
@@ -46,8 +55,11 @@ export default function EmployeeProfilePage() {
 
     const isOrgAdmin = user?.role === 'ORG_ADMIN' || user?.role === 'SYS_ADMIN';
     const isPM = user?.role === 'PROJECT_MANAGER';
+    const isCEO = user?.role === 'CEO';
     const canEditCompensation = hasPermission(PERMISSIONS.COMPENSATION_UPDATE);
-    const canEditProfile = isOrgAdmin; // PM cannot edit profile info
+    const canEditProfile = isOrgAdmin;
+    const canViewTimeline = isOrgAdmin || isCEO;
+    const canEditCompensationAll = isOrgAdmin; // usually HR/Admin edits salary config
 
     useEffect(() => {
         fetchData();
@@ -100,6 +112,12 @@ export default function EmployeeProfilePage() {
             const actData = await actRes.json();
             if (actData.success) {
                 setActivities(actData.data);
+            }
+            // 5. Fetch Documents (CEO/Admin only)
+            if (isOrgAdmin || isCEO) {
+                const docsRes = await fetch(`/api/hr/employees/${employeeId}/documents`);
+                const docsData = await docsRes.json();
+                if (docsData.success) setDocuments(docsData.data);
             }
         } catch (error) {
             console.error(error);
@@ -190,16 +208,16 @@ export default function EmployeeProfilePage() {
                             </div>
                             <div className="flex flex-col gap-3">
                                 {canEditProfile && (
-                                    <>
-                                        <Button variant="secondary" className="bg-white text-indigo-900 hover:bg-slate-100 font-bold" data-testid="btn-edit-profile">
-                                            Chỉnh sửa hồ sơ
-                                        </Button>
-                                        <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 font-bold" asChild data-testid="btn-view-general-timeline">
-                                            <Link href={`/hr/employees/${employeeId}/timeline`}>
-                                                Xem lịch sử tổng quát
-                                            </Link>
-                                        </Button>
-                                    </>
+                                    <Button variant="secondary" className="bg-white text-indigo-900 hover:bg-slate-100 font-bold" data-testid="btn-edit-profile">
+                                        Chỉnh sửa hồ sơ
+                                    </Button>
+                                )}
+                                {canViewTimeline && (
+                                    <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 font-bold" asChild data-testid="btn-view-general-timeline">
+                                        <Link href={`/hr/employees/${employeeId}/timeline`}>
+                                            Xem lịch sử tổng quát
+                                        </Link>
+                                    </Button>
                                 )}
                             </div>
                         </div>
@@ -214,6 +232,9 @@ export default function EmployeeProfilePage() {
                         <PermissionGuard permission={PERMISSIONS.COMPENSATION_READ}>
                             <TabsTrigger value="compensation" data-testid="tab-trigger-compensation" className="font-bold rounded-lg px-6">Lương & Cấp bậc</TabsTrigger>
                         </PermissionGuard>
+                        {(isOrgAdmin || isCEO) && (
+                            <TabsTrigger value="documents" data-testid="tab-trigger-documents" className="font-bold rounded-lg px-6">Hồ sơ & Pháp lý</TabsTrigger>
+                        )}
                     </TabsList>
 
                     {/* Tab: Overview (Read-only for PM) */}
@@ -241,6 +262,34 @@ export default function EmployeeProfilePage() {
                                                 <Calendar className="h-3.5 w-3.5 text-slate-400" /> {employee?.joined_at || '15/01/2024'}
                                             </p>
                                         </div>
+
+                                        {(isCEO || isOrgAdmin) && (
+                                            <div className="pt-4 border-t border-slate-100 space-y-4">
+                                                <p className="text-xs font-black text-indigo-600 uppercase tracking-widest">Thông tin pháp lý</p>
+                                                <div className="space-y-3">
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Ngày sinh</p>
+                                                        <p className="text-sm font-bold text-slate-700">{employee?.dob || 'N/A'}</p>
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Số CCCD / Passport</p>
+                                                        <p className="text-sm font-bold text-slate-700">{employee?.id_number || 'N/A'}</p>
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Mã số thuế</p>
+                                                        <p className="text-sm font-bold text-slate-700">{employee?.tax_code || 'N/A'}</p>
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Số tài khoản ngân hàng</p>
+                                                        <p className="text-sm font-bold text-slate-700">{employee?.bank_account || 'N/A'}</p>
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Địa chỉ thường trú</p>
+                                                        <p className="text-sm font-bold text-slate-700 leading-snug">{employee?.address || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                         {isPM && (
                                             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] text-slate-500 font-bold leading-tight">
                                                 LƯU Ý: Với vai trò PM, bạn chỉ xem được hồ sơ năng lực để phân công công việc. Mọi thay đổi thông tin cá nhân phải thông qua Org Admin.
@@ -466,6 +515,79 @@ export default function EmployeeProfilePage() {
                                     <Badge variant="outline" className="text-[9px] font-black uppercase text-slate-300 border-slate-200 tracking-[0.2em] px-4 py-1">
                                         Resource Financial Data Access Point (US-MNG-03-03)
                                     </Badge>
+                                </div>
+
+                                {/* History Section - US-CEO-01-02 */}
+                                <div className="pt-8 border-t border-slate-100">
+                                    <h5 className="text-sm font-black text-slate-900 flex items-center gap-2 mb-4">
+                                        <History className="h-4 w-4 text-slate-400" /> Biểu đồ lịch sử thay đổi (History of Compensation)
+                                    </h5>
+                                    <div className="rounded-2xl border border-slate-100 overflow-hidden">
+                                        <Table>
+                                            <TableHeader className="bg-slate-50">
+                                                <TableRow>
+                                                    <TableHead className="text-[10px] font-black uppercase">Ngày hiệu lực</TableHead>
+                                                    <TableHead className="text-[10px] font-black uppercase">Cấp bậc</TableHead>
+                                                    <TableHead className="text-[10px] font-black uppercase text-right">Lương tháng</TableHead>
+                                                    <TableHead className="text-[10px] font-black uppercase text-right">Cost Rate/h</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                <TableRow>
+                                                    <TableCell className="text-sm font-medium">01/01/2024</TableCell>
+                                                    <TableCell className="text-sm">Senior (S1)</TableCell>
+                                                    <TableCell className="text-sm text-right font-bold">35.000.000đ</TableCell>
+                                                    <TableCell className="text-sm text-right font-bold">210.000đ</TableCell>
+                                                </TableRow>
+                                                <TableRow className="bg-emerald-50/30">
+                                                    <TableCell className="text-sm font-bold text-emerald-700">01/01/2025 (Hiện tại)</TableCell>
+                                                    <TableCell className="text-sm">Senior (S2)</TableCell>
+                                                    <TableCell className="text-sm text-right font-bold text-emerald-700">40.000.000đ</TableCell>
+                                                    <TableCell className="text-sm text-right font-bold text-emerald-700">240.000đ</TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Tab: Documents (CEO/Admin: US-CEO-01-02: CV/Contract access) */}
+                    <TabsContent value="documents" className="animate-in fade-in duration-300">
+                        <Card className="border-none shadow-sm" data-testid="card-documents-list">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 font-black">
+                                    <FileText className="h-5 w-5 text-indigo-600" /> Hồ sơ & Pháp lý (CV, Hợp đồng)
+                                </CardTitle>
+                                <CardDescription>Truy cập nhanh vào các tài liệu nền tảng của nhân sự (US-CEO-01-02)</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {documents.length > 0 ? documents.map((doc) => (
+                                        <div key={doc.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group transition-all hover:bg-white hover:shadow-md" data-testid={`doc-item-${doc.id}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-12 w-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-indigo-600 shadow-sm">
+                                                    {doc.type === 'CV' ? <User size={20} /> : <FileText size={20} />}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors uppercase text-xs tracking-tight">{doc.name}</p>
+                                                    <div className="flex items-center gap-3 mt-1.5">
+                                                        <Badge variant="outline" className="text-[10px] font-black bg-indigo-50 text-indigo-600 border-none px-2">{doc.type}</Badge>
+                                                        <span className="text-[10px] font-bold text-slate-400">{doc.size}</span>
+                                                        <span className="text-[10px] font-bold text-slate-400">Tải lên: {doc.uploaded_at}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-slate-400 hover:text-indigo-600" data-testid={`btn-download-${doc.id}`}>
+                                                <Download size={18} />
+                                            </Button>
+                                        </div>
+                                    )) : (
+                                        <div className="col-span-2 text-center py-10">
+                                            <p className="text-slate-400 font-bold italic">Không có tài liệu nào được tải lên cho nhân sự này.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>

@@ -446,7 +446,7 @@ export default function ReportsPage() {
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                             <Input
-                                                placeholder="Tìm theo tên nhân sự..."
+                                                placeholder="Tìm theo tên nhân sự hoặc nội dung..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                                 className="pl-9"
@@ -469,7 +469,7 @@ export default function ReportsPage() {
                                 </Select>
 
                                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                    <SelectTrigger className="w-[160px]" data-testid="reports-filter-type">
+                                    <SelectTrigger className="w-[140px]" data-testid="reports-filter-type">
                                         <SelectValue placeholder="Loại báo cáo" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -479,6 +479,33 @@ export default function ReportsPage() {
                                         <SelectItem value="QUARTER" data-testid="type-option-quarter">Hàng quý</SelectItem>
                                     </SelectContent>
                                 </Select>
+
+                                {isManager && (
+                                    <>
+                                        <Select defaultValue="ALL">
+                                            <SelectTrigger className="w-[160px]" data-testid="reports-filter-project">
+                                                <SelectValue placeholder="Theo Dự án" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="ALL">Tất cả dự án</SelectItem>
+                                                <SelectItem value="WS001">WorkSphere 2.0</SelectItem>
+                                                <SelectItem value="MOB01">Mobile App</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+
+                                        <Select defaultValue="ALL">
+                                            <SelectTrigger className="w-[160px]" data-testid="reports-filter-dept">
+                                                <SelectValue placeholder="Phòng ban" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="ALL">Tất cả phòng</SelectItem>
+                                                <SelectItem value="DEV">Kỹ thuật</SelectItem>
+                                                <SelectItem value="DESIGN">Thiết kế</SelectItem>
+                                                <SelectItem value="HR">Nhân sự</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </>
+                                )}
 
                                 {isManager && (
                                     <Button
@@ -541,163 +568,190 @@ export default function ReportsPage() {
                         )
                     }
 
-                    {/* Create Report Dialog */}
+                    {/* Create Report Dialog - Redesigned for Premium Look */}
                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                        <DialogContent className="sm:max-w-xl" data-testid="dialog-create-report">
-                            <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                    <FileText className="h-5 w-5 text-blue-600" />
-                                    Tạo Báo Cáo
-                                </DialogTitle>
+                        <DialogContent className="sm:max-w-3xl p-0 overflow-hidden border-none rounded-3xl shadow-2xl" data-testid="dialog-create-report">
+                            <DialogHeader className="p-8 pb-0">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                                        <FileText className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <DialogTitle className="text-2xl font-black text-slate-900">Viết Báo Cáo Định Kỳ</DialogTitle>
+                                        <p className="text-slate-500 text-sm font-medium">Hoàn thành báo cáo để cấp trên nắm bắt tiến độ của bạn.</p>
+                                    </div>
+                                </div>
                             </DialogHeader>
 
-                            <div className="space-y-4 py-4">
+                            <div className="p-8 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
                                 {formErrors.submit && (
-                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2 animate-in shake duration-300">
-                                        <AlertCircle size={16} className="mt-0.5" />
-                                        {formErrors.submit}
+                                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-700 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                                        <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                                        <span className="font-bold">{formErrors.submit}</span>
                                     </div>
                                 )}
-                                {/* Period Type */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-slate-700">
-                                        Loại báo cáo <span className="text-red-500">*</span>
-                                    </label>
-                                    <Select value={periodType} onValueChange={(val: any) => handlePeriodTypeChange(val)}>
-                                        <SelectTrigger data-testid="select-period-type">
-                                            <SelectValue placeholder="Chọn loại kỳ báo cáo" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="WEEK">Báo cáo Tuần</SelectItem>
-                                            <SelectItem value="MONTH">Báo cáo Tháng</SelectItem>
-                                            <SelectItem value="QUARTER">Báo cáo Quý</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+
+                                {/* Section 1: Configuration */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-slate-50/50 rounded-3xl border border-slate-100">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loại kỳ hạn</label>
+                                        <Select value={periodType} onValueChange={(val: any) => handlePeriodTypeChange(val)}>
+                                            <SelectTrigger className="h-11 bg-white border-slate-200 rounded-xl font-bold text-slate-700 shadow-sm" data-testid="select-period-type">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="WEEK" className="font-medium">Báo cáo Tuần</SelectItem>
+                                                <SelectItem value="MONTH" className="font-medium">Báo cáo Tháng</SelectItem>
+                                                <SelectItem value="QUARTER" className="font-medium">Báo cáo Quý</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Từ ngày</label>
+                                            <div className="relative">
+                                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                                                <Input
+                                                    type="date"
+                                                    value={periodStart}
+                                                    onChange={(e) => setPeriodStart(e.target.value)}
+                                                    className={cn("pl-10 h-11 bg-white border-slate-200 rounded-xl font-bold text-slate-700 shadow-sm", formErrors.periodStart && "border-rose-300 ring-rose-50")}
+                                                    data-testid="input-period-start"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Đến ngày</label>
+                                            <div className="relative">
+                                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                                                <Input
+                                                    type="date"
+                                                    value={periodEnd}
+                                                    onChange={(e) => setPeriodEnd(e.target.value)}
+                                                    className={cn("pl-10 h-11 bg-white border-slate-200 rounded-xl font-bold text-slate-700 shadow-sm", formErrors.periodEnd && "border-rose-300 ring-rose-50")}
+                                                    data-testid="input-period-end"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* Period Dates */}
-                                <div className="grid grid-cols-2 gap-4">
+                                {/* Section 2: Main Content */}
+                                <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-semibold text-slate-700">
-                                            Từ ngày <span className="text-red-500">*</span>
-                                        </label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tiêu đề báo cáo</label>
                                         <Input
-                                            type="date"
-                                            value={periodStart}
-                                            onChange={(e) => setPeriodStart(e.target.value)}
-                                            className={formErrors.periodStart ? 'border-red-300' : ''}
-                                            data-testid="input-period-start"
+                                            placeholder="Tiêu đề gợi ý..."
+                                            value={title}
+                                            onChange={(e) => setTitle(e.target.value)}
+                                            className={cn("h-12 bg-white border-slate-200 rounded-xl font-extrabold text-slate-900 text-lg shadow-sm focus:border-blue-500", formErrors.title && "border-rose-300")}
+                                            data-testid="reports-input-title"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-semibold text-slate-700">
-                                            Đến ngày <span className="text-red-500">*</span>
-                                        </label>
-                                        <Input
-                                            type="date"
-                                            value={periodEnd}
-                                            onChange={(e) => setPeriodEnd(e.target.value)}
-                                            className={formErrors.periodEnd ? 'border-red-300' : ''}
-                                            data-testid="input-period-end"
-                                        />
-                                    </div>
-                                </div>
 
-                                {/* Title */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-slate-700">
-                                        Tiêu đề <span className="text-red-500">*</span>
-                                    </label>
-                                    <Input
-                                        placeholder="Báo cáo công việc tuần..."
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                        className={formErrors.title ? 'border-red-300' : ''}
-                                        data-testid="reports-input-title"
-                                    />
-                                </div>
-
-                                {/* Content */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-sm font-semibold text-slate-700">
-                                            Nội dung <span className="text-red-500">*</span>
-                                        </label>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 text-[10px] font-black uppercase text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                            onClick={async () => {
-                                                if (!user || !periodStart || !periodEnd) return;
-                                                try {
-                                                    const res = await fetch(`/api/time-logs?date_from=${periodStart}&date_to=${periodEnd}`, {
-                                                        headers: { 'x-user-id': user.id }
-                                                    });
-                                                    const data = await res.json();
-                                                    const logs = data.data || [];
-                                                    if (logs.length === 0) {
-                                                        alert("Không tìm thấy dữ liệu Log Time trong khoảng thời gian này.");
-                                                        return;
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between px-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nội dung chi tiết</label>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold rounded-lg px-3 gap-2"
+                                                onClick={async () => {
+                                                    if (!user || !periodStart || !periodEnd) return;
+                                                    try {
+                                                        const res = await fetch(`/api/time-logs?date_from=${periodStart}&date_to=${periodEnd}`, {
+                                                            headers: { 'x-user-id': user.id }
+                                                        });
+                                                        const data = await res.json();
+                                                        const logs = data.data || [];
+                                                        if (logs.length === 0) {
+                                                            toast({ title: "Thông báo", description: "Không tìm thấy dữ liệu Log Time trong kỳ này.", variant: "default" });
+                                                            return;
+                                                        }
+                                                        let logText = `1. CÔNG VIỆC ĐÃ HOÀN THÀNH (${periodStart} đến ${periodEnd}):\n`;
+                                                        logs.forEach((l: any) => {
+                                                            const dur = l.minutes >= 60 ? `${Math.floor(l.minutes / 60)}h ${l.minutes % 60}m` : `${l.minutes}m`;
+                                                            logText += `- [${l.project.code}] ${l.task.title}${l.subtask ? ` / ${l.subtask.title}` : ''}: ${dur}${l.note ? ` (${l.note})` : ''}\n`;
+                                                        });
+                                                        logText += "\n2. KHÓ KHĂN & ĐỀ XUẤT:\n- (Nhập tại đây)\n\n3. KẾ HOẠCH TIẾP THEO:\n- (Nhập tại đây)";
+                                                        setContent(logText);
+                                                    } catch (e) {
+                                                        toast({ title: "Lỗi", description: "Không thể kết nối máy chủ.", variant: "destructive" });
                                                     }
-
-                                                    let logText = `1. CÔNG VIỆC ĐÃ HOÀN THÀNH (${periodStart} đến ${periodEnd}):\n`;
-                                                    logs.forEach((l: any) => {
-                                                        const duration = l.minutes >= 60 ? `${Math.floor(l.minutes / 60)}h ${l.minutes % 60}m` : `${l.minutes}m`;
-                                                        logText += `- [${l.project.code}] ${l.task.title}${l.subtask ? ` / ${l.subtask.title}` : ''}: ${duration}${l.note ? ` (${l.note})` : ''}\n`;
-                                                    });
-
-                                                    logText += "\n2. KHÓ KHĂN & ĐỀ XUẤT:\n- (Vui lòng nhập tại đây)\n\n3. KẾ HOẠCH TIẾP THEO:\n- (Vui lòng nhập tại đây)";
-                                                    setContent(logText);
-                                                } catch (e) {
-                                                    console.error(e);
-                                                    alert("Lỗi khi lấy dữ liệu Log Time.");
-                                                }
-                                            }}
-                                            title="Hệ thống tự động lấy danh sách Task/Subtask đã hoàn thành & có log time đổ vào nội dung nháp"
-                                        >
-                                            <Clock className="mr-1 h-3 w-3" /> Lấy dữ liệu Log Time
-                                        </Button>
+                                                }}
+                                            >
+                                                <Clock className="h-3.5 w-3.5" /> Lấy dữ liệu công việc thực tế
+                                            </Button>
+                                        </div>
+                                        <div className="relative group">
+                                            <Textarea
+                                                placeholder="Sử dụng Markdown để viết báo cáo chuyên nghiệp hơn..."
+                                                value={content}
+                                                onChange={(e) => setContent(e.target.value)}
+                                                rows={10}
+                                                className={cn("bg-white border-slate-200 rounded-2xl font-medium text-slate-700 leading-relaxed shadow-inner p-5 resize-none", formErrors.content && "border-rose-300 ring-rose-50")}
+                                                data-testid="input-content"
+                                            />
+                                            <div className="absolute right-3 bottom-3 text-[10px] font-bold text-slate-300 pointer-events-none uppercase tracking-widest">
+                                                Markdown Supported
+                                            </div>
+                                        </div>
                                     </div>
-                                    {formErrors.content && <p className="text-[10px] font-bold text-red-600 mb-1">{formErrors.content}</p>}
-                                    <Textarea
-                                        placeholder="1. Công việc đã hoàn thành&#10;- ...&#10;&#10;2. Khó khăn gặp phải&#10;- ..."
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        rows={8}
-                                        className={formErrors.content ? 'border-red-300' : ''}
-                                        data-testid="input-content"
-                                    />
+                                </div>
+
+                                {/* Section 3: Attachments */}
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tài liệu đính kèm (Ảnh, PDF, Excel...)</label>
+                                    <div
+                                        className="border-2 border-dashed border-slate-200 rounded-3xl p-10 text-center hover:bg-blue-50/50 hover:border-blue-300 transition-all cursor-pointer group relative overflow-hidden bg-slate-50/30"
+                                        data-testid="report-upload-area"
+                                    >
+                                        <div className="flex flex-col items-center gap-3 relative z-10 transition-transform group-hover:scale-105 duration-300">
+                                            <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors">
+                                                <Plus className="h-8 w-8" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800">Chọn tệp đính kèm</p>
+                                                <p className="text-sm text-slate-400 mt-1 font-medium italic">Kéo thả file minh chứng kết quả công việc của bạn tại đây.</p>
+                                            </div>
+                                        </div>
+                                        <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/5 transition-colors pointer-events-none"></div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <DialogFooter className="gap-2">
+                            <DialogFooter className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4">
                                 <DialogClose asChild>
-                                    <Button variant="outline" data-testid="reports-btn-cancel">
-                                        Hủy
+                                    <Button variant="ghost" className="h-12 font-bold text-slate-500 hover:text-slate-900 px-6">
+                                        Đóng lại
                                     </Button>
                                 </DialogClose>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => handleSubmit(true)}
-                                    disabled={isSubmitting}
-                                    data-testid="btn-save-draft"
-                                >
-                                    <Edit2 className="mr-2 h-4 w-4" />
-                                    Lưu nháp
-                                </Button>
-                                <Button
-                                    onClick={() => handleSubmit(false)}
-                                    disabled={isSubmitting}
-                                    className="bg-blue-600 hover:bg-blue-700"
-                                    data-testid="reports-btn-submit"
-                                >
-                                    {isSubmitting ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Send className="mr-2 h-4 w-4" />
-                                    )}
-                                    Gửi báo cáo
-                                </Button>
+                                <div className="flex items-center gap-3">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => handleSubmit(true)}
+                                        disabled={isSubmitting}
+                                        className="h-12 border-slate-200 rounded-xl font-bold bg-white hover:bg-slate-50 px-6 shadow-sm"
+                                        data-testid="btn-save-draft"
+                                    >
+                                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="mr-2 h-4 w-4" />}
+                                        Lưu bản nháp
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleSubmit(false)}
+                                        disabled={isSubmitting}
+                                        className="h-12 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100 rounded-xl font-black px-10 text-white transition-all hover:scale-105"
+                                        data-testid="reports-btn-submit"
+                                    >
+                                        {isSubmitting ? (
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Send className="mr-2 h-4 w-4" />
+                                        )}
+                                        GỬI BÁO CÁO NGAY
+                                    </Button>
+                                </div>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>

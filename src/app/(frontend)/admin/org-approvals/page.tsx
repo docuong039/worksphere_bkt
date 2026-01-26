@@ -44,8 +44,12 @@ import {
     Calendar,
     Users,
     Mail,
+    Shield
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { PERMISSIONS } from '@/lib/permissions';
+import { cn } from '@/lib/utils';
 
 interface OrgApplication {
     id: string;
@@ -77,75 +81,52 @@ export default function OrgApprovalsPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        fetchApplications();
-    }, []);
+        if (user) fetchApplications();
+    }, [user]);
 
     const fetchApplications = async () => {
         setLoading(true);
         try {
-            // Mock data - US-SYS-01-01/02
-            const mockApps: OrgApplication[] = [
-                {
-                    id: 'app-1', org_name: 'TechStart Vietnam', org_slug: 'techstart-vn',
-                    owner_name: 'Nguyễn Văn Founder', owner_email: 'founder@techstart.vn',
-                    plan_requested: 'PROFESSIONAL', employee_count: 50, industry: 'Technology',
-                    status: 'PENDING', submitted_at: '2025-01-19T14:00:00Z'
-                },
-                {
-                    id: 'app-2', org_name: 'Design Studio XYZ', org_slug: 'design-studio-xyz',
-                    owner_name: 'Trần Thị Designer', owner_email: 'designer@xyz.com',
-                    plan_requested: 'BASIC', employee_count: 15, industry: 'Design',
-                    status: 'PENDING', submitted_at: '2025-01-18T10:00:00Z'
-                },
-                {
-                    id: 'app-3', org_name: 'Marketing Pro', org_slug: 'marketing-pro',
-                    owner_name: 'Lê Văn Marketer', owner_email: 'marketer@pro.com',
-                    plan_requested: 'ENTERPRISE', employee_count: 200, industry: 'Marketing',
-                    status: 'PENDING', submitted_at: '2025-01-17T09:00:00Z'
-                },
-                {
-                    id: 'app-4', org_name: 'Old Company', org_slug: 'old-company',
-                    owner_name: 'Phạm Văn Old', owner_email: 'old@company.com',
-                    plan_requested: 'FREE', employee_count: 5, industry: 'Other',
-                    status: 'APPROVED', submitted_at: '2025-01-10T08:00:00Z',
-                    processed_at: '2025-01-11T10:00:00Z', processed_by: 'System Admin'
-                },
-                {
-                    id: 'app-5', org_name: 'Fake Corp', org_slug: 'fake-corp',
-                    owner_name: 'Unknown Person', owner_email: 'fake@suspicious.com',
-                    plan_requested: 'ENTERPRISE', employee_count: 1000, industry: 'Other',
-                    status: 'REJECTED', submitted_at: '2025-01-09T12:00:00Z',
-                    processed_at: '2025-01-10T14:00:00Z', processed_by: 'System Admin',
-                    reason: 'Thông tin không xác thực'
-                },
-            ];
-            setApplications(mockApps);
+            const res = await fetch('/api/admin/org-approvals', {
+                headers: {
+                    'x-user-id': user?.id || '',
+                    'x-user-role': user?.role || ''
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                setApplications(data.data);
+            }
         } catch (error) {
-            console.error(error);
+            console.error('Error fetching applications:', error);
         } finally {
             setLoading(false);
         }
-    };
-
-    const openDetailDialog = (app: OrgApplication) => {
-        setSelectedApp(app);
-        setRejectReason('');
-        setDialogOpen(true);
     };
 
     const handleApprove = async () => {
         if (!selectedApp) return;
         setIsSubmitting(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setApplications(applications.map(a =>
-                a.id === selectedApp.id
-                    ? { ...a, status: 'APPROVED' as const, processed_at: new Date().toISOString(), processed_by: user?.full_name }
-                    : a
-            ));
-            setDialogOpen(false);
+            const res = await fetch(`/api/admin/org-approvals/${selectedApp.id}/approve`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-id': user?.id || '',
+                    'x-user-role': user?.role || ''
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                setApplications(applications.map(a =>
+                    a.id === selectedApp.id
+                        ? { ...a, status: 'APPROVED' as const, processed_at: new Date().toISOString(), processed_by: user?.full_name }
+                        : a
+                ));
+                setDialogOpen(false);
+            }
         } catch (error) {
-            console.error(error);
+            console.error('Error approving application:', error);
         } finally {
             setIsSubmitting(false);
         }
@@ -155,18 +136,26 @@ export default function OrgApprovalsPage() {
         if (!selectedApp || !rejectReason.trim()) return;
         setIsSubmitting(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setApplications(applications.map(a =>
-                a.id === selectedApp.id
-                    ? {
-                        ...a, status: 'REJECTED' as const, reason: rejectReason,
-                        processed_at: new Date().toISOString(), processed_by: user?.full_name
-                    }
-                    : a
-            ));
-            setDialogOpen(false);
+            const res = await fetch(`/api/admin/org-approvals/${selectedApp.id}/reject`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-id': user?.id || '',
+                    'x-user-role': user?.role || ''
+                },
+                body: JSON.stringify({ reason: rejectReason })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setApplications(applications.map(a =>
+                    a.id === selectedApp.id
+                        ? { ...a, status: 'REJECTED' as const, reason: rejectReason, processed_at: new Date().toISOString(), processed_by: user?.full_name }
+                        : a
+                ));
+                setDialogOpen(false);
+            }
         } catch (error) {
-            console.error(error);
+            console.error('Error rejecting application:', error);
         } finally {
             setIsSubmitting(false);
         }
@@ -206,276 +195,290 @@ export default function OrgApprovalsPage() {
 
     return (
         <AppLayout>
-            <div className="space-y-6 animate-in fade-in duration-700" data-testid="org-approvals-page">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-approvals-page-title">
-                            <Building2 className="inline-block mr-3 h-8 w-8 text-blue-600" />
-                            Duyệt đăng ký Org
-                        </h1>
-                        <p className="text-slate-500 mt-1 font-medium">
-                            Xét duyệt yêu cầu tạo Organization mới (US-SYS-01-01/02)
-                        </p>
+            <PermissionGuard permission={PERMISSIONS.PLATFORM_ORG_APPROVE} showFullPageError>
+                <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-700" data-testid="org-approvals-container">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="org-approvals-title">
+                                <CheckCircle2 className="inline-block mr-2 h-8 w-8 text-indigo-600" />
+                                Phê duyệt Tổ chức
+                            </h1>
+                            <p className="text-slate-500 mt-1 font-medium">
+                                Xem và xét duyệt các yêu cầu đăng ký tổ chức mới tham gia nền tảng.
+                            </p>
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 font-bold border-slate-200"
+                            onClick={fetchApplications}
+                            data-testid="btn-refresh-approvals"
+                        >
+                            <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
+                            Làm mới
+                        </Button>
                     </div>
-                    <Button variant="outline" onClick={fetchApplications} data-testid="admin-approvals-btn-refresh">
-                        <RefreshCw className="mr-2 h-4 w-4" /> Làm mới
-                    </Button>
-                </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4">
-                    <Card className="border-none shadow-sm border-l-4 border-l-amber-500" data-testid="stat-pending">
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center">
-                                <Clock className="h-6 w-6 text-amber-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500">Chờ duyệt</p>
-                                <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="border-none shadow-sm border-l-4 border-l-emerald-500" data-testid="stat-approved">
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500">Đã duyệt</p>
-                                <p className="text-2xl font-bold text-emerald-600">{stats.approved}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="border-none shadow-sm border-l-4 border-l-red-500" data-testid="stat-rejected">
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                                <XCircle className="h-6 w-6 text-red-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500">Từ chối</p>
-                                <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                    {/* Stats Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card className="border-none shadow-sm border-l-4 border-l-amber-500" data-testid="stat-pending">
+                            <CardContent className="p-4 flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center">
+                                    <Clock className="h-5 w-5 text-amber-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 font-medium">Chờ duyệt</p>
+                                    <p className="text-xl font-black text-slate-900">{stats.pending}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-none shadow-sm border-l-4 border-l-emerald-500" data-testid="stat-approved">
+                            <CardContent className="p-4 flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center">
+                                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 font-medium">Đã duyệt</p>
+                                    <p className="text-xl font-black text-slate-900">{stats.approved}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="border-none shadow-sm border-l-4 border-l-rose-500" data-testid="stat-rejected">
+                            <CardContent className="p-4 flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-full bg-rose-50 flex items-center justify-center">
+                                    <XCircle className="h-5 w-5 text-rose-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500 font-medium">Từ chối</p>
+                                    <p className="text-xl font-black text-slate-900">{stats.rejected}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                {/* Filters */}
-                <Card className="border-none shadow-sm" data-testid="admin-approvals-filters-card">
-                    <CardContent className="p-4">
-                        <div className="flex flex-wrap items-center gap-4">
-                            <div className="flex-1 min-w-[200px]">
-                                <div className="relative">
+                    {/* Applications List */}
+                    <Card className="border-none shadow-sm overflow-hidden" data-testid="approvals-table-card">
+                        <CardHeader className="bg-slate-50/50 pb-4">
+                            <div className="flex flex-col md:flex-row gap-4 justify-between">
+                                <div className="relative max-w-sm w-full">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                     <Input
-                                        placeholder="Tìm theo tên org hoặc email..."
+                                        placeholder="Tìm theo tên hoặc người đăng ký..."
+                                        className="pl-9 bg-white border-slate-200"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-9"
-                                        data-testid="admin-approvals-input-search"
+                                        data-testid="input-search-approvals"
                                     />
                                 </div>
+                                <div className="flex gap-2">
+                                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                        <SelectTrigger className="w-[180px] bg-white border-slate-200" data-testid="select-status-filter">
+                                            <Filter className="mr-2 h-4 w-4 text-slate-400" />
+                                            <SelectValue placeholder="Trạng thái" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
+                                            <SelectItem value="PENDING">Chờ duyệt</SelectItem>
+                                            <SelectItem value="APPROVED">Đã duyệt</SelectItem>
+                                            <SelectItem value="REJECTED">Đã từ chối</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[160px]" data-testid="admin-approvals-filter-status">
-                                    <SelectValue placeholder="Trạng thái" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ALL">Tất cả</SelectItem>
-                                    <SelectItem value="PENDING">Chờ duyệt</SelectItem>
-                                    <SelectItem value="APPROVED">Đã duyệt</SelectItem>
-                                    <SelectItem value="REJECTED">Từ chối</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Applications Table */}
-                <Card className="border-none shadow-sm" data-testid="applications-card">
-                    <CardHeader className="border-b border-slate-100">
-                        <CardTitle className="text-lg font-bold">Danh sách yêu cầu</CardTitle>
-                        <CardDescription>Các tổ chức đang chờ xét duyệt</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        {loading ? (
-                            <div className="p-6 space-y-4" data-testid="admin-approvals-loading-skeleton">
-                                {[1, 2, 3].map(i => (
-                                    <Skeleton key={i} className="h-16 w-full" />
-                                ))}
-                            </div>
-                        ) : filteredApps.length > 0 ? (
-                            <Table data-testid="applications-table">
-                                <TableHeader>
-                                    <TableRow className="bg-slate-50/50">
-                                        <TableHead className="font-bold">Tổ chức</TableHead>
-                                        <TableHead className="font-bold">Người đăng ký</TableHead>
-                                        <TableHead className="font-bold">Gói</TableHead>
-                                        <TableHead className="font-bold">Quy mô</TableHead>
-                                        <TableHead className="font-bold">Trạng thái</TableHead>
-                                        <TableHead className="text-right font-bold">Thao tác</TableHead>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader className="bg-slate-50/50">
+                                    <TableRow>
+                                        <TableHead className="font-bold text-slate-900">Tổ chức</TableHead>
+                                        <TableHead className="font-bold text-slate-900">Người đăng ký</TableHead>
+                                        <TableHead className="font-bold text-slate-900">Gói & Quy mô</TableHead>
+                                        <TableHead className="font-bold text-slate-900">Trạng thái</TableHead>
+                                        <TableHead className="font-bold text-right text-slate-900">Hành động</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredApps.map((app) => (
-                                        <TableRow key={app.id} data-testid={`app-row-${app.id}`}>
-                                            <TableCell>
-                                                <div>
-                                                    <p className="font-medium" data-testid={`app-name-${app.id}`}>{app.org_name}</p>
-                                                    <p className="text-xs text-slate-400">{app.industry}</p>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <Avatar className="h-8 w-8">
-                                                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xs font-bold">
-                                                            {app.owner_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                                                        </AvatarFallback>
-                                                    </Avatar>
+                                    {loading ? (
+                                        [1, 2, 3].map(i => (
+                                            <TableRow key={i}>
+                                                <TableCell colSpan={5}><Skeleton className="h-12 w-full" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : filteredApps.length > 0 ? (
+                                        filteredApps.map((app) => (
+                                            <TableRow key={app.id} className="group hover:bg-slate-50/50 transition-colors" data-testid={`approval-row-${app.org_slug}`}>
+                                                <TableCell>
                                                     <div>
-                                                        <p className="text-sm font-medium">{app.owner_name}</p>
+                                                        <p className="font-bold text-slate-900" data-testid={`cell-org-name-${app.org_slug}`}>{app.org_name}</p>
+                                                        <p className="text-xs text-slate-500 font-mono">{app.org_slug}</p>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div>
+                                                        <p className="font-medium text-slate-700" data-testid={`cell-owner-name-${app.org_slug}`}>{app.owner_name}</p>
                                                         <p className="text-xs text-slate-400">{app.owner_email}</p>
                                                     </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell data-testid={`app-plan-${app.id}`}>
-                                                {getPlanBadge(app.plan_requested)}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1 text-sm">
-                                                    <Users className="h-3 w-3 text-slate-400" />
-                                                    {app.employee_count}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell data-testid={`app-status-${app.id}`}>
-                                                {getStatusBadge(app.status)}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => openDetailDialog(app)}
-                                                    data-testid={`btn-view-${app.id}`}
-                                                >
-                                                    <Eye className="mr-2 h-4 w-4" />
-                                                    {app.status === 'PENDING' ? 'Xét duyệt' : 'Xem'}
-                                                </Button>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="space-y-1">
+                                                        {getPlanBadge(app.plan_requested)}
+                                                        <p className="text-xs text-slate-500" data-testid={`cell-employees-${app.org_slug}`}>{app.employee_count} nhân viên</p>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {getStatusBadge(app.status)}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                                        onClick={() => {
+                                                            setSelectedApp(app);
+                                                            setRejectReason('');
+                                                            setDialogOpen(true);
+                                                        }}
+                                                        data-testid={`btn-view-app-${app.org_slug}`}
+                                                    >
+                                                        <Eye className="mr-2 h-4 w-4" />
+                                                        {app.status === 'PENDING' ? 'Xét duyệt' : 'Xem chi tiết'}
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-64 text-center">
+                                                <Building2 className="mx-auto h-12 w-12 text-slate-200 mb-4" />
+                                                <h3 className="text-slate-900 font-bold mb-1">Không tìm thấy yêu cầu nào</h3>
+                                                <p className="text-slate-500 text-sm">Hãy thử thay đổi tiêu chí lọc hoặc làm mới danh sách.</p>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    )}
                                 </TableBody>
                             </Table>
-                        ) : (
-                            <div className="p-12 text-center" data-testid="admin-approvals-empty-state">
-                                <CheckCircle2 className="h-12 w-12 text-emerald-300 mx-auto mb-4" />
-                                <p className="text-slate-500 font-medium">Không có yêu cầu nào</p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
 
-                {/* Detail/Action Dialog */}
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogContent className="sm:max-w-lg" data-testid="detail-dialog">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-bold">Chi tiết yêu cầu</DialogTitle>
-                            <DialogDescription>
-                                Xem và xử lý yêu cầu tạo Organization
-                            </DialogDescription>
-                        </DialogHeader>
-                        {selectedApp && (
-                            <div className="space-y-4 py-4">
-                                {/* Org Info */}
-                                <div className="p-4 bg-slate-50 rounded-xl">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold">
-                                            {selectedApp.org_name.slice(0, 2).toUpperCase()}
+                    {/* Detail/Action Dialog */}
+                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                        <DialogContent className="sm:max-w-[550px]" data-testid="dialog-approval-detail">
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-bold">
+                                    {selectedApp?.status === 'PENDING' ? 'Xét duyệt Đơn đăng ký' : 'Chi tiết Đơn đăng ký'}
+                                </DialogTitle>
+                                <DialogDescription>
+                                    Mã đơn: <span className="font-mono">{selectedApp?.id}</span>
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            {selectedApp && (
+                                <div className="space-y-6">
+                                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-4">
+                                        <div className="h-12 w-12 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xl shadow-sm">
+                                            {selectedApp.org_name.charAt(0)}
                                         </div>
                                         <div>
-                                            <p className="font-bold text-lg">{selectedApp.org_name}</p>
-                                            <p className="text-slate-500 text-sm">{selectedApp.org_slug}</p>
+                                            <h3 className="font-bold text-slate-900">{selectedApp.org_name}</h3>
+                                            <p className="text-sm text-slate-500">Mã Slug: {selectedApp.org_slug}</p>
+                                        </div>
+                                        <div className="ml-auto">
+                                            {getStatusBadge(selectedApp.status)}
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Details Grid */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-xs text-slate-500 font-medium">Người đăng ký</p>
-                                        <p className="font-medium">{selectedApp.owner_name}</p>
-                                        <p className="text-xs text-slate-400">{selectedApp.owner_email}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-slate-500 font-medium">Gói đăng ký</p>
-                                        <div className="mt-1">{getPlanBadge(selectedApp.plan_requested)}</div>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-slate-500 font-medium">Quy mô</p>
-                                        <p className="font-medium">{selectedApp.employee_count} nhân viên</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-slate-500 font-medium">Ngành nghề</p>
-                                        <p className="font-medium">{selectedApp.industry}</p>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <p className="text-xs text-slate-500 font-medium">Ngày đăng ký</p>
-                                        <p className="font-medium">
-                                            {new Date(selectedApp.submitted_at).toLocaleString('vi-VN')}
-                                        </p>
-                                    </div>
-                                    {selectedApp.status === 'REJECTED' && selectedApp.reason && (
-                                        <div className="col-span-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                            <p className="text-xs text-red-500 font-medium">Lý do từ chối</p>
-                                            <p className="text-red-700">{selectedApp.reason}</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-xs text-slate-500 font-medium">Người đăng ký</p>
+                                            <p className="font-medium" data-testid="detail-owner-name">{selectedApp.owner_name}</p>
+                                            <p className="text-xs text-slate-400">{selectedApp.owner_email}</p>
                                         </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 font-medium">Gói đăng ký</p>
+                                            <div className="mt-1" data-testid="detail-plan">{getPlanBadge(selectedApp.plan_requested)}</div>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 font-medium">Quy mô</p>
+                                            <p className="font-medium" data-testid="detail-employees">{selectedApp.employee_count} nhân viên</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 font-medium">Ngành nghề</p>
+                                            <p className="font-medium" data-testid="detail-industry">{selectedApp.industry || 'N/A'}</p>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <p className="text-xs text-slate-500 font-medium">Ngày đăng ký</p>
+                                            <p className="font-medium text-slate-700">
+                                                {new Date(selectedApp.submitted_at).toLocaleString('vi-VN')}
+                                            </p>
+                                        </div>
+
+                                        {selectedApp.status === 'PENDING' && (
+                                            <div className="col-span-2 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 animate-pulse" data-testid="sod-warning-box">
+                                                <Shield size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                                                <div>
+                                                    <p className="text-[11px] font-bold text-amber-800 uppercase">Kiểm soát rủi ro (SoD)</p>
+                                                    <p className="text-[11px] text-amber-700">Hệ thống đang kiểm tra tính độc lập giữa người tạo và người duyệt đơn.</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {selectedApp.status === 'REJECTED' && selectedApp.reason && (
+                                            <div className="col-span-2 p-3 bg-red-50 border border-red-200 rounded-lg" data-testid="detail-reject-reason-box">
+                                                <p className="text-xs text-red-500 font-medium">Lý do từ chối</p>
+                                                <p className="text-red-700">{selectedApp.reason}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {selectedApp.status === 'PENDING' && (
+                                        <>
+                                            <div className="space-y-2 pt-4 border-t">
+                                                <label className="text-sm font-semibold text-slate-700">
+                                                    Phản hồi / Lý do từ chối
+                                                </label>
+                                                <Textarea
+                                                    placeholder="Nhập ghi chú hoặc lý do nếu từ chối..."
+                                                    value={rejectReason}
+                                                    onChange={(e) => setRejectReason(e.target.value)}
+                                                    rows={3}
+                                                    data-testid="input-reject-reason"
+                                                    className="resize-none border-slate-200 focus:ring-indigo-500"
+                                                />
+                                            </div>
+                                            <div className="flex gap-3">
+                                                <Button
+                                                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 font-bold"
+                                                    onClick={handleApprove}
+                                                    disabled={isSubmitting}
+                                                    data-testid="btn-approve"
+                                                >
+                                                    {isSubmitting ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                                                    Phê duyệt ngay
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    className="flex-1 text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-bold"
+                                                    onClick={handleReject}
+                                                    disabled={isSubmitting || !rejectReason.trim()}
+                                                    data-testid="btn-reject"
+                                                >
+                                                    {isSubmitting ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+                                                    Từ chối đơn
+                                                </Button>
+                                            </div>
+                                            <p className="text-[10px] text-center text-slate-400 italic">
+                                                * Khi phê duyệt, hệ thống sẽ tự động khởi tạo Org Admin và gửi email bàn giao.
+                                            </p>
+                                        </>
                                     )}
                                 </div>
-
-                                {/* Action Section for PENDING */}
-                                {selectedApp.status === 'PENDING' && (
-                                    <>
-                                        <div className="space-y-2 pt-4 border-t">
-                                            <label className="text-sm font-medium text-slate-700">
-                                                Lý do từ chối (nếu từ chối)
-                                            </label>
-                                            <Textarea
-                                                placeholder="Nhập lý do từ chối..."
-                                                value={rejectReason}
-                                                onChange={(e) => setRejectReason(e.target.value)}
-                                                rows={3}
-                                                data-testid="input-reject-reason"
-                                            />
-                                        </div>
-                                        <div className="flex gap-3">
-                                            <Button
-                                                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                                                onClick={handleApprove}
-                                                disabled={isSubmitting}
-                                                data-testid="btn-approve"
-                                            >
-                                                {isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                <CheckCircle2 className="mr-2 h-4 w-4" />
-                                                Phê duyệt
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-                                                onClick={handleReject}
-                                                disabled={isSubmitting || !rejectReason.trim()}
-                                                data-testid="btn-reject"
-                                            >
-                                                {isSubmitting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-                                                <XCircle className="mr-2 h-4 w-4" />
-                                                Từ chối
-                                            </Button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </DialogContent>
-                </Dialog>
-            </div>
+                            )}
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </PermissionGuard>
         </AppLayout>
     );
 }
+

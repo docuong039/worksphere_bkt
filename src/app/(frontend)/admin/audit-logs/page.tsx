@@ -139,38 +139,40 @@ const AuditLogItem = ({ log, onViewDetail }: { log: AuditLog; onViewDetail: () =
                         </div>
 
                         <div className="flex items-center gap-2 mt-1">
-                            <Badge className={cn("px-2 py-0.5 text-xs font-bold border-none", actionConfig.color)}>
+                            <Badge className={cn("px-2 py-0.5 text-[10px] font-bold border-none uppercase tracking-wider", actionConfig.color)}>
                                 {actionConfig.label}
                             </Badge>
-                            {log.entity_title && (
-                                <span className="text-sm font-medium text-slate-700">
+                            {log.entity_title && log.entity_title !== log.actor?.email && (
+                                <span className="text-sm font-semibold text-slate-800">
                                     {log.entity_title}
                                 </span>
                             )}
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500">
-                            <span className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+                            {log.org && (
+                                <span className="flex items-center gap-1 font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                                    🏢 {log.org.name}
+                                </span>
+                            )}
+
+                            <span className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded">
                                 <Avatar className="h-4 w-4">
                                     <AvatarFallback className="text-[8px]">
                                         {log.actor?.full_name?.charAt(0) || '?'}
                                     </AvatarFallback>
                                 </Avatar>
-                                {log.actor?.email || 'Không xác định'}
+                                {log.actor?.email || 'N/A'}
                             </span>
 
+                            {log.ip_address && (
+                                <span className="opacity-70">🌐 {log.ip_address}</span>
+                            )}
+
                             {log.is_impersonation && log.impersonation_subject && (
-                                <span className="text-red-600">
+                                <span className="text-red-600 font-medium">
                                     ↳ dưới danh nghĩa {log.impersonation_subject.email}
                                 </span>
-                            )}
-
-                            {log.org && (
-                                <span>🏢 {log.org.name}</span>
-                            )}
-
-                            {log.ip_address && (
-                                <span>🌐 {log.ip_address}</span>
                             )}
                         </div>
                     </div>

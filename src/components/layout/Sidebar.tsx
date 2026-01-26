@@ -24,6 +24,8 @@ import {
     Users,
     DollarSign,
     FileText,
+    CheckCircle2,
+    Sliders,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
@@ -55,13 +57,15 @@ const HR_ITEMS: MenuItem[] = [
 ];
 
 const ADMIN_ITEMS: MenuItem[] = [
-    { label: 'Tổ chức', href: '/admin/organizations', icon: Building2, requiredPermission: PERMISSIONS.PLATFORM_ORG_READ },
-    { label: 'Hạn mức hệ thống', href: '/admin/quotas', icon: HardDrive, requiredPermission: PERMISSIONS.PLATFORM_ORG_READ }, // Should probably have its own perm but this is close
-    { label: 'Người dùng', href: '/admin/users', icon: User, requiredPermission: PERMISSIONS.ORG_USER_UPDATE },
-    { label: 'Phân quyền & Vai trò', href: '/admin/roles', icon: Lock, requiredPermission: PERMISSIONS.ROLE_PERM_UPDATE },
-    { label: 'Nhật ký hệ thống', href: '/admin/audit-logs', icon: Activity, requiredPermission: PERMISSIONS.SYS_AUDIT_READ },
-    { label: 'Giả lập người dùng', href: '/admin/impersonation', icon: Shield, requiredPermission: PERMISSIONS.SESSION_IMPERSONATE },
-    { label: 'Thùng rác hệ thống', href: '/admin/org-recycle-bin', icon: History, requiredPermission: PERMISSIONS.RECYCLE_BIN_ALL },
+    { label: 'Hệ thống Tổ chức', href: '/admin/organizations', icon: Building2, requiredPermission: PERMISSIONS.PLATFORM_ORG_READ },
+    { label: 'Duyệt đơn đăng ký', href: '/admin/org-approvals', icon: CheckCircle2, requiredPermission: PERMISSIONS.PLATFORM_ORG_APPROVE },
+    { label: 'Cấu hình Quota', href: '/admin/quotas', icon: HardDrive, requiredPermission: PERMISSIONS.PLATFORM_ORG_READ },
+    { label: 'Người dùng toàn cục', href: '/admin/users', icon: User, requiredPermission: PERMISSIONS.ORG_USER_READ },
+    { label: 'Vai trò Hệ thống', href: '/admin/roles', icon: Lock, requiredPermission: PERMISSIONS.ROLE_PERM_READ },
+    { label: 'Trường tùy chỉnh', href: '/admin/custom-fields', icon: Sliders, requiredPermission: PERMISSIONS.TENANT_ORG_UPDATE },
+    { label: 'Nhật ký toàn cục', href: '/admin/audit-logs', icon: Activity, requiredPermission: PERMISSIONS.SYS_AUDIT_READ },
+    { label: 'Truy cập ủy quyền', href: '/admin/impersonation', icon: Shield, requiredPermission: PERMISSIONS.SESSION_IMPERSONATE },
+    { label: 'Thùng rác Nền tảng', href: '/admin/org-recycle-bin', icon: History, requiredPermission: PERMISSIONS.PLATFORM_ORG_READ },
 ];
 
 const SETTINGS_ITEMS: MenuItem[] = [
@@ -76,14 +80,40 @@ export default function Sidebar() {
 
     const filterMenuItems = (items: MenuItem[]) => {
         return items.filter(item => {
+            // SysAdmin should not see tenant-specific items in their global context
+            if (userRole === 'SYS_ADMIN') {
+                const tenantSpecificHrefs = [
+                    '/tasks', '/projects', '/time-logs', '/personal-board',
+                    '/hr/employees', '/hr/salary', '/hr/contracts',
+                    '/reports', '/activity', '/recycle-bin', '/settings/workspace'
+                ];
+                if (tenantSpecificHrefs.includes(item.href)) return false;
+            }
+
             if (!item.requiredPermission) return true;
             return hasPermission(item.requiredPermission);
         });
     };
 
-    const mainItems = filterMenuItems(MENU_ITEMS);
+    const mainItems = filterMenuItems(MENU_ITEMS).map(item => {
+        if (item.href === '/dashboard' && (userRole === 'CEO' || userRole === 'ORG_ADMIN')) {
+            return { ...item, label: 'Bảng điều hành', href: '/executive/dashboard' };
+        }
+        if (item.href === '/dashboard' && userRole === 'SYS_ADMIN') {
+            return { ...item, label: 'Bảng quản trị', href: '/admin/platform-dashboard' };
+        }
+        return item;
+    });
     const hrItems = filterMenuItems(HR_ITEMS);
-    const adminItems = filterMenuItems(ADMIN_ITEMS);
+    const adminItems = filterMenuItems(ADMIN_ITEMS).map(item => {
+        if (userRole === 'SYS_ADMIN') return item;
+
+        // Custom labels for Tenant Admins in the same hrefs
+        if (item.href === '/admin/users') return { ...item, label: 'Quản lý Nhân sự' };
+        if (item.href === '/admin/roles') return { ...item, label: 'Vai trò nội bộ' };
+        if (item.href === '/admin/audit-logs') return { ...item, label: 'Nhật ký hoạt động' };
+        return item;
+    });
     const settingsItems = filterMenuItems(SETTINGS_ITEMS);
 
     return (
@@ -99,26 +129,53 @@ export default function Sidebar() {
 
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto p-4 space-y-8 py-8">
-                <div>
-                    <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Danh mục chính</p>
-                    <ul className="space-y-1">
-                        {mainItems.map((item) => (
-                            <li key={item.href}>
-                                <Link
-                                    href={item.href}
-                                    className={cn(
-                                        "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 hover:text-white",
-                                        pathname === item.href ? "bg-blue-600/10 text-blue-500" : "text-slate-400"
-                                    )}
-                                    data-testid={`sidebar-link-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-                                >
-                                    <item.icon size={18} />
-                                    {item.label}
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                {userRole === 'SYS_ADMIN' ? (
+                    <div>
+                        <ul className="space-y-1">
+                            {mainItems.map((item) => (
+                                <li key={item.href}>
+                                    <Link
+                                        href={item.href}
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 hover:text-white",
+                                            pathname === item.href ? "bg-blue-600/10 text-blue-500" : "text-slate-400"
+                                        )}
+                                        data-testid={`sidebar-link-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                                    >
+                                        <item.icon size={18} />
+                                        {item.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ) : (
+                    <div>
+                        <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Danh mục chính</p>
+                        <ul className="space-y-1">
+                            {mainItems.map((item) => {
+                                // Hide Formal Project Tasks for CEO, they only use Personal Board
+                                if (item.href === '/tasks' && userRole === 'CEO') return null;
+
+                                return (
+                                    <li key={item.href}>
+                                        <Link
+                                            href={item.href}
+                                            className={cn(
+                                                "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-800 hover:text-white",
+                                                pathname === item.href ? "bg-blue-600/10 text-blue-500" : "text-slate-400"
+                                            )}
+                                            data-testid={`sidebar-link-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                                        >
+                                            <item.icon size={18} />
+                                            {item.label}
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                )}
 
                 {hrItems.length > 0 && (
                     <div>

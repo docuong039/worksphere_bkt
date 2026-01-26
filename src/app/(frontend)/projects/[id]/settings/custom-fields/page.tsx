@@ -15,6 +15,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
     Dialog,
     DialogContent,
@@ -52,6 +54,7 @@ import {
     CheckSquare,
     GripVertical,
     AlertTriangle,
+    ChevronLeft
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
@@ -214,11 +217,18 @@ export default function CustomFieldsPage({ params }: { params: Promise<{ id: str
         <div className="space-y-6 animate-in fade-in duration-700 pb-20" data-testid="custom-fields-page">
             {/* Header - now using shared layout */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-xl font-black tracking-tight text-slate-800 flex items-center gap-2" data-testid="project-custom-fields-page-title">
-                        <Sliders className="h-5 w-5 text-indigo-600" />
-                        Trường tùy chỉnh
-                    </h2>
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white shadow-sm border border-slate-100" asChild data-testid="btn-back-to-settings">
+                        <Link href={`/projects/${projectId}/settings`}>
+                            <ChevronLeft size={20} className="text-slate-600" />
+                        </Link>
+                    </Button>
+                    <div>
+                        <h2 className="text-xl font-black tracking-tight text-slate-800 flex items-center gap-2" data-testid="project-custom-fields-page-title">
+                            <Sliders className="h-5 w-5 text-indigo-600" />
+                            Trường tùy chỉnh
+                        </h2>
+                    </div>
                 </div>
                 <Button
                     className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 h-9 font-bold"
@@ -380,14 +390,50 @@ export default function CustomFieldsPage({ params }: { params: Promise<{ id: str
                             </div>
                         )}
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700">Giá trị mặc định</label>
-                            <Input
-                                placeholder={formData.field_type === 'CHECKBOX' ? 'true hoặc false' : 'Giá trị mặc định'}
-                                value={formData.default_value}
-                                onChange={(e) => setFormData({ ...formData, default_value: e.target.value })}
-                                data-testid="input-default-value"
-                            />
+                        <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-bold text-slate-700">Giá trị mặc định</label>
+                                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest bg-white">Gợi ý dữ liệu</Badge>
+                            </div>
+
+                            {formData.field_type === 'CHECKBOX' ? (
+                                <div className="flex items-center gap-3 py-2">
+                                    <Switch
+                                        checked={formData.default_value === 'true'}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, default_value: checked ? 'true' : 'false' })}
+                                        data-testid="input-default-value-checkbox"
+                                    />
+                                    <span className="text-sm font-medium text-slate-600">
+                                        {formData.default_value === 'true' ? 'Được chọn sẵn' : 'Không chọn sẵn'}
+                                    </span>
+                                </div>
+                            ) : formData.field_type === 'DROPDOWN' ? (
+                                <Select
+                                    value={formData.default_value}
+                                    onValueChange={(v) => setFormData({ ...formData, default_value: v })}
+                                >
+                                    <SelectTrigger className="bg-white" data-testid="input-default-value-dropdown">
+                                        <SelectValue placeholder="Chọn một giá trị từ danh sách trên" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {formData.options.split('\n').filter(o => o.trim()).map((opt, i) => (
+                                            <SelectItem key={i} value={opt.trim()}>{opt.trim()}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Input
+                                    type={formData.field_type === 'NUMBER' ? 'number' : formData.field_type === 'DATE' ? 'date' : 'text'}
+                                    placeholder={formData.field_type === 'DATE' ? 'Chọn ngày mặc định' : "Nhập giá trị khi tạo task mới..."}
+                                    value={formData.default_value}
+                                    onChange={(e) => setFormData({ ...formData, default_value: e.target.value })}
+                                    className="bg-white border-slate-200"
+                                    data-testid="input-default-value"
+                                />
+                            )}
+                            <p className="text-[10px] font-medium text-slate-400 italic">
+                                * Giá trị này sẽ được điền sẵn vào Task mới mỗi khi thành viên tạo việc.
+                            </p>
                         </div>
 
                         <div className="flex items-center gap-2">

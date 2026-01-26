@@ -71,6 +71,7 @@ const PERMISSION_CATEGORIES = [
     { key: 'TIME', label: 'Nhật ký thời gian' },
     { key: 'REPORT', label: 'Báo cáo' },
     { key: 'USER', label: 'Người dùng' },
+    { key: 'HR', label: 'Nhân sự & Lương' },
     { key: 'ORG', label: 'Tổ chức' },
 ];
 
@@ -339,10 +340,12 @@ export default function AdminRolesPage() {
                         <div>
                             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900" data-testid="admin-roles-title">
                                 <Shield className="inline-block mr-2 h-8 w-8 text-blue-600" />
-                                Quản lý Vai trò
+                                {user?.role === 'SYS_ADMIN' ? 'Master Roles & Permissions' : 'Quản lý Vai trò nội bộ'}
                             </h1>
                             <p className="text-slate-500 mt-1 font-medium">
-                                Định nghĩa vai trò và phân quyền (Permissions) trong hệ thống.
+                                {user?.role === 'SYS_ADMIN'
+                                    ? 'Định nghĩa bộ khung vai trò và quyền hạn chuẩn cho toàn hệ thống.'
+                                    : 'Thiết lập các vai trò và quyền hạn quản trị trong tổ chức của bạn.'}
                             </p>
                         </div>
 
